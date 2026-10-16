@@ -4,13 +4,12 @@
 #include "ui/theme.h"
 
 #include <cmath>
+#include <optional>
 
 namespace jls::ui
 {
 namespace
 {
-
-using namespace theme;
 
 // Keep keyboard focus on the main window so Space etc. always reach the transport.
 void noFocus(juce::Component& c)
@@ -20,6 +19,15 @@ void noFocus(juce::Component& c)
 }
 
 constexpr int padding = 8;
+constexpr int hardShadowOffset = 5; // themes with a hard shadow draw it in this margin
+
+// Soft glow around a shape, for themes that have one.
+void drawGlow(juce::Graphics& g, const juce::Path& shape, std::optional<theme::Argb> glow,
+              int radius)
+{
+    if (glow)
+        juce::DropShadow(colour(*glow), radius, {}).drawForPath(g, shape);
+}
 
 } // namespace
 
@@ -36,10 +44,17 @@ void LedButton::setOn(bool shouldBeOn)
 
 void LedButton::paint(juce::Graphics& g)
 {
+    const auto& t = currentTheme();
     const auto led = getLocalBounds().toFloat().withSizeKeepingCentre(9.0f, 9.0f);
-    g.setColour(on ? colours::ledOn : colours::ledOff);
+    if (on)
+    {
+        juce::Path dot;
+        dot.addEllipse(led);
+        drawGlow(g, dot, t.effects.ledGlow, 6);
+    }
+    g.setColour(colour(on ? t.colours.led : t.colours.ledOff));
     g.fillEllipse(led);
-    g.setColour(colours::panelOutline);
+    g.setColour(colour(t.colours.outline));
     g.drawEllipse(led, 1.0f);
 }
 
@@ -89,18 +104,37 @@ void StepGrid::setPlayingStep(int step)
 
 void StepGrid::paint(juce::Graphics& g)
 {
+    const auto& t = currentTheme();
+    const float radius = t.shape.stepRadius;
+
     for (int s = 0; s < static_cast<int>(steps.size()); ++s)
     {
+        const bool on = steps[static_cast<std::size_t>(s)];
         const auto r =
-            juce::Rectangle<int>(stepX(s), 2, metrics::stepWidth, getHeight() - 4).toFloat();
-        const auto offColour = (s / 4) % 2 == 0 ? colours::stepOffA : colours::stepOffB;
-        g.setColour(steps[static_cast<std::size_t>(s)] ? colours::stepOn : offColour);
-        g.fillRoundedRectangle(r, metrics::cornerRadius);
+            juce::Rectangle<int>(stepX(s), 3, metrics::stepWidth, getHeight() - 6).toFloat();
+
+        if (on)
+        {
+            juce::Path shape;
+            shape.addRoundedRectangle(r, radius);
+            drawGlow(g, shape, t.effects.stepGlow, 8);
+        }
+
+        const auto offColour = (s / 4) % 2 == 0 ? t.colours.stepOffA : t.colours.stepOffB;
+        g.setColour(colour(on ? t.colours.stepOn : offColour));
+        g.fillRoundedRectangle(r, radius);
+
+        if (t.shape.stepOutline > 0.0f)
+        {
+            g.setColour(colour(t.colours.outline));
+            g.drawRoundedRectangle(r.reduced(t.shape.stepOutline / 2.0f), radius,
+                                   t.shape.stepOutline);
+        }
 
         if (s == playingStep)
         {
-            g.setColour(colours::playhead);
-            g.drawRoundedRectangle(r.reduced(0.5f), metrics::cornerRadius, 1.5f);
+            g.setColour(colour(t.colours.playhead));
+            g.drawRoundedRectangle(r.reduced(1.0f), radius, 2.0f);
         }
     }
 }
@@ -295,29 +329,47 @@ void ChannelRack::refresh()
 
 int ChannelRack::preferredWidth() const
 {
-    return padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) + 4 +
-           metrics::nameWidth + 8 + StepGrid::widthFor(doc.project().pattern.lengthInSteps);
+    return hardShadowOffset + padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
+           4 + metrics::nameWidth + 8 + StepGrid::widthFor(doc.project().pattern.lengthInSteps);
 }
 
 int ChannelRack::preferredHeight() const
 {
     const int n = static_cast<int>(doc.project().channels.size());
-    return padding * 2 + n * (metrics::rowHeight + metrics::rowGap) + metrics::rowHeight;
+    return hardShadowOffset + padding * 2 + n * (metrics::rowHeight + metrics::rowGap) +
+           metrics::rowHeight;
 }
 
 void ChannelRack::paint(juce::Graphics& g)
 {
-    g.setColour(colours::panel);
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
-    g.setColour(colours::panelOutline);
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f, 1.0f);
+    const auto& t = currentTheme();
+    const float radius = t.shape.windowRadius;
+    auto panel = getLocalBounds().toFloat();
+
+    if (t.effects.hardShadow)
+    {
+        // Solid offset shadow (Citrus): panel shifted up-left, shadow fills the gap.
+        g.setColour(colour(t.colours.shadow));
+        g.fillRoundedRectangle(
+            panel.withTrimmedLeft(hardShadowOffset).withTrimmedTop(hardShadowOffset), radius);
+        panel = panel.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
+    }
+
+    g.setColour(colour(t.colours.panel));
+    g.fillRoundedRectangle(panel, radius);
+    if (t.shape.borderWidth > 0.0f)
+    {
+        g.setColour(colour(t.colours.outline));
+        g.drawRoundedRectangle(panel.reduced(t.shape.borderWidth / 2.0f), radius,
+                               t.shape.borderWidth);
+    }
 }
 
 void ChannelRack::paintOverChildren(juce::Graphics& g)
 {
     if (!dragging)
         return;
-    g.setColour(colours::dropHighlight);
+    g.setColour(colour(currentTheme().colours.accent).withAlpha(0.25f));
     if (dropRow >= 0 && dropRow < static_cast<int>(rows.size()))
         g.fillRect(rows[static_cast<std::size_t>(dropRow)]->getBounds());
     else

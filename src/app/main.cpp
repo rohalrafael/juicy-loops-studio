@@ -9,14 +9,11 @@ namespace jls
 class MainWindow final : public juce::DocumentWindow
 {
   public:
-    explicit MainWindow(const juce::String& name)
-        : DocumentWindow(
-              name,
-              juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(backgroundColourId),
-              allButtons)
+    MainWindow(const juce::String& name, ui::ThemeManager& themes)
+        : DocumentWindow(name, ui::colour(ui::currentTheme().colours.background), allButtons)
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new MainComponent(), true);
+        setContentOwned(new MainComponent(themes), true);
         setResizable(true, true);
         centreWithSize(getWidth(), getHeight());
         setVisible(true);
@@ -25,6 +22,12 @@ class MainWindow final : public juce::DocumentWindow
     void closeButtonPressed() override
     {
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
+    }
+
+    void lookAndFeelChanged() override
+    {
+        DocumentWindow::lookAndFeelChanged();
+        setBackgroundColour(ui::colour(ui::currentTheme().colours.background));
     }
 
   private:
@@ -40,20 +43,28 @@ class Application final : public juce::JUCEApplication
 
     void initialise(const juce::String&) override
     {
-        juce::LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
-        mainWindow = std::make_unique<MainWindow>(getApplicationName());
+        themes = std::make_unique<ui::ThemeManager>();
+        juce::LookAndFeel::setDefaultLookAndFeel(&themes->lookAndFeel());
+        mainWindow = std::make_unique<MainWindow>(getApplicationName(), *themes);
     }
 
     void shutdown() override
     {
+        // Close any open dialogs (e.g. Theme) first: they hold a reference to `themes`.
+        auto& desktop = juce::Desktop::getInstance();
+        for (int i = desktop.getNumComponents(); --i >= 0;)
+            if (auto* dialog = dynamic_cast<juce::DialogWindow*>(desktop.getComponent(i)))
+                delete dialog;
+
         mainWindow = nullptr;
         juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
+        themes = nullptr;
     }
 
     void systemRequestedQuit() override { quit(); }
 
   private:
-    ui::theme::LookAndFeel lookAndFeel; // must outlive every component
+    std::unique_ptr<ui::ThemeManager> themes; // owns the LookAndFeel: must outlive all windows
     std::unique_ptr<MainWindow> mainWindow;
 };
 

@@ -10,9 +10,16 @@ target_sources(JuicyLoopsStudio PRIVATE
     main_component.cpp
     ../io/sample_loader.cpp
     ../ui/channel_rack.cpp
-    ../ui/theme.cpp)
+    ../ui/theme.cpp
+    ../ui/theme_dialog.cpp)
 
 target_include_directories(JuicyLoopsStudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+juce_add_binary_data(JlsFonts SOURCES
+    ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/bricolagegrotesque/BricolageGrotesque.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/sora/Sora.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit.ttf)
 
 target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_WEB_BROWSER=0
@@ -23,8 +30,10 @@ target_compile_definitions(JuicyLoopsStudio PRIVATE
 
 target_link_libraries(JuicyLoopsStudio
     PRIVATE
+        JlsFonts
         jls_model
         jls_engine
+        jls_theme
         juce::juce_audio_utils
         juce::juce_gui_extra
     PUBLIC

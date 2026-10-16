@@ -1,13 +1,32 @@
 #include "main_component.h"
 
+#include "ui/theme_dialog.h"
+
 #include <array>
 #include <cmath>
 
 namespace jls
 {
+namespace
+{
 
-MainComponent::MainComponent()
-    : document(model::makeDefaultProject()), channelRack(document, engine.transport(), sampleLoader)
+enum MenuItem
+{
+    quitItem = 1,
+    undoItem,
+    redoItem,
+    themeItem,
+    audioSettingsItem,
+    aboutItem,
+};
+
+constexpr int menuBarHeight = 24;
+
+} // namespace
+
+MainComponent::MainComponent(ui::ThemeManager& themeManager)
+    : themes(themeManager), document(model::makeDefaultProject()),
+      channelRack(document, engine.transport(), sampleLoader)
 {
     auto& transport = engine.transport();
 
@@ -51,18 +70,28 @@ MainComponent::MainComponent()
              &positionLabel, &audioSettingsButton, &channelRack})
         addAndMakeVisible(c);
 
+#if JUCE_MAC
+    juce::MenuBarModel::setMacMainMenu(this);
+#else
+    menuBar = std::make_unique<juce::MenuBarComponent>(this);
+    addAndMakeVisible(*menuBar);
+#endif
+
     document.onChange = [this] { documentChanged(); };
     engine.setState(model::toEngineState(document.project()));
 
     setWantsKeyboardFocus(true);
     setSize(std::max(960, channelRack.preferredWidth() + 24),
-            12 + 40 + 12 + channelRack.preferredHeight() + 12);
+            (menuBar ? menuBarHeight : 0) + 12 + 40 + 12 + channelRack.preferredHeight() + 12);
     setAudioChannels(0, 2);
     startTimerHz(30);
 }
 
 MainComponent::~MainComponent()
 {
+#if JUCE_MAC
+    juce::MenuBarModel::setMacMainMenu(nullptr);
+#endif
     document.onChange = nullptr;
     shutdownAudio();
 }
@@ -102,7 +131,11 @@ void MainComponent::paint(juce::Graphics& g)
 
 void MainComponent::resized()
 {
-    auto area = getLocalBounds().reduced(12);
+    auto bounds = getLocalBounds();
+    if (menuBar)
+        menuBar->setBounds(bounds.removeFromTop(menuBarHeight));
+
+    auto area = bounds.reduced(12);
     auto bar = area.removeFromTop(40);
 
     playButton.setBounds(bar.removeFromLeft(80));
@@ -146,6 +179,75 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
     if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
         return document.redo(), true;
     return false;
+}
+
+juce::StringArray MainComponent::getMenuBarNames()
+{
+    return {"File", "Edit", "Options", "Help"};
+}
+
+juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
+{
+    juce::PopupMenu menu;
+    switch (index)
+    {
+    case 0:
+        menu.addItem(juce::PopupMenu::Item("Quit").setID(quitItem));
+        break;
+    case 1:
+        menu.addItem(juce::PopupMenu::Item("Undo").setID(undoItem).setEnabled(document.canUndo()));
+        menu.addItem(juce::PopupMenu::Item("Redo").setID(redoItem).setEnabled(document.canRedo()));
+        break;
+    case 2:
+        menu.addItem(juce::PopupMenu::Item("Theme...").setID(themeItem));
+        menu.addItem(juce::PopupMenu::Item("Audio settings...").setID(audioSettingsItem));
+        break;
+    case 3:
+        menu.addItem(juce::PopupMenu::Item("About Juicy Loops Studio").setID(aboutItem));
+        break;
+    default:
+        break;
+    }
+    return menu;
+}
+
+void MainComponent::menuItemSelected(int itemId, int)
+{
+    switch (itemId)
+    {
+    case quitItem:
+        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        break;
+    case undoItem:
+        document.undo();
+        break;
+    case redoItem:
+        document.redo();
+        break;
+    case themeItem:
+        ui::ThemeDialog::show(themes);
+        break;
+    case audioSettingsItem:
+        showAudioSettings();
+        break;
+    case aboutItem:
+        showAbout();
+        break;
+    default:
+        break;
+    }
+}
+
+void MainComponent::showAbout()
+{
+    juce::AlertWindow::showAsync(
+        juce::MessageBoxOptions::makeOptionsOk(
+            juce::MessageBoxIconType::NoIcon, "Juicy Loops Studio",
+            "Version " + juce::JUCEApplication::getInstance()->getApplicationVersion() +
+                "\n\nA free, open-source DAW. Licensed under the GNU AGPLv3.\n\n"
+                "Bundled fonts (IBM Plex Sans, Bricolage Grotesque, Sora, Outfit) are under the "
+                "SIL Open Font License.\n\nNot affiliated with Image-Line."),
+        nullptr);
 }
 
 void MainComponent::timerCallback()

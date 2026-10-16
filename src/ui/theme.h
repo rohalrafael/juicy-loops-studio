@@ -1,33 +1,19 @@
 #pragma once
 
+#include "theme/theme.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// All colours and sizes used by the UI live here, so the look can be changed in one place.
-// Placeholder look for now; the visual design is still to be decided with the user.
-namespace jls::ui::theme
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
+// UI side of theming: the active theme, the LookAndFeel built from it, bundled fonts,
+// user theme files and the saved choice. Colours and shapes come from the active theme;
+// only layout sizes (metrics) are fixed here.
+namespace jls::ui
 {
-
-namespace colours
-{
-inline const juce::Colour background{0xff2b3035};
-inline const juce::Colour panel{0xff363c42};
-inline const juce::Colour panelOutline{0xff1f2327};
-inline const juce::Colour text{0xffdfe3e6};
-inline const juce::Colour textDim{0xff8a949c};
-inline const juce::Colour accent{0xffff9a3c};
-
-// Step buttons alternate colour every 4 steps (one beat) so the grid is easy to read.
-inline const juce::Colour stepOffA{0xff4a5158};
-inline const juce::Colour stepOffB{0xff5b4b52};
-inline const juce::Colour stepOn{0xffd8dde1};
-inline const juce::Colour playhead{0xffff9a3c};
-
-inline const juce::Colour ledOn{0xff7cdc5a};
-inline const juce::Colour ledOff{0xff3b4146};
-inline const juce::Colour knobTrack{0xff23272b};
-inline const juce::Colour knobValue{0xffff9a3c};
-inline const juce::Colour dropHighlight{0x40ff9a3c};
-} // namespace colours
 
 namespace metrics
 {
@@ -39,17 +25,64 @@ inline constexpr int nameWidth = 110;
 inline constexpr int stepWidth = 20;
 inline constexpr int stepGap = 3;
 inline constexpr int beatGap = 6; // extra space between groups of 4 steps
-inline constexpr float cornerRadius = 3.0f;
 } // namespace metrics
 
-// Applies the theme to standard JUCE widgets and draws knobs.
+inline juce::Colour colour(theme::Argb argb)
+{
+    return juce::Colour(argb);
+}
+
+// The active theme. Valid while a ThemeManager exists (before that: the default theme).
+const theme::Theme& currentTheme();
+
 class LookAndFeel final : public juce::LookAndFeel_V4
 {
   public:
-    LookAndFeel();
+    void applyTheme(const theme::Theme& theme, juce::Typeface::Ptr bundledFont);
 
+    void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour& background,
+                              bool highlighted, bool down) override;
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height, float position,
                           float startAngle, float endAngle, juce::Slider&) override;
 };
 
-} // namespace jls::ui::theme
+class ThemeManager final : public juce::ChangeBroadcaster
+{
+  public:
+    ThemeManager();
+    ~ThemeManager() override;
+
+    const theme::Theme& current() const { return active; }
+    // Built-in themes first, then the user's, in file-name order.
+    std::vector<theme::Theme> available() const;
+    // Switches theme (unknown ids fall back to the default) and remembers the choice.
+    void select(const std::string& id);
+
+    juce::File themesFolder() const;
+    // Re-reads the themes folder (e.g. after the user edited a file there).
+    void rescan();
+
+    // Validates a theme file, copies it into the themes folder and selects it.
+    // On success `message` lists any problems that were skipped over.
+    struct ImportResult
+    {
+        bool ok = false;
+        juce::String message;
+    };
+    ImportResult importFile(const juce::File& file);
+    juce::Result exportCurrent(const juce::File& destination) const;
+
+    juce::LookAndFeel& lookAndFeel() { return laf; }
+
+  private:
+    void apply();
+    juce::Typeface::Ptr bundledFont(const std::string& family) const;
+
+    LookAndFeel laf;
+    std::unique_ptr<juce::PropertiesFile> settings;
+    std::map<juce::String, juce::Typeface::Ptr> fonts; // lower-case family name -> typeface
+    std::vector<theme::Theme> userThemes;
+    theme::Theme active;
+};
+
+} // namespace jls::ui

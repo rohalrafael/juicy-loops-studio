@@ -49,16 +49,18 @@ src/app/      JUCE app shell: window, transport bar, MainComponent (owns Documen
 src/engine/   Real-time, JUCE-free: Engine, Transport, StepSequencer, Sampler, Metronome,
               DrumSynth (built-in sounds), SpscQueue, EngineState snapshot
 src/model/    JUCE-free project data: Project (channels, pattern), Document (undo/redo)
-src/ui/       JUCE components: ChannelRack (+ rows, step grid, LED), theme (all colours/sizes)
+src/theme/    JUCE-free theme data + JSON theme files (nlohmann/json) + 4 built-in themes
+src/ui/       JUCE components: ChannelRack, ThemeManager + LookAndFeel (ui/theme), ThemeDialog
 src/io/       JUCE-based file I/O: SampleLoader (WAV/AIFF/FLAC/Ogg/MP3 -> SampleBuffer)
 src/plugins/  Plugin hosting + built-in instruments/effects                     [planned]
 tests/        Catch2 unit tests (link engine/model only, never JUCE)
 ```
 
-Targets: `jls_engine` and `jls_model` (static libs, plain C++, **no JUCE**), the
+Targets: `jls_engine`, `jls_model` and `jls_theme` (static libs, plain C++, **no JUCE**), the
 `JuicyLoopsStudio` app (compiles `src/app`, `src/ui`, `src/io` with JUCE), `jls_tests`.
 Includes are rooted at `src/`, e.g. `#include "engine/transport.h"`. Namespaces: `jls`,
-`jls::engine`, `jls::model`, `jls::ui`, `jls::io`.
+`jls::engine`, `jls::model`, `jls::theme`, `jls::ui`, `jls::io`.
+Resources: `resources/fonts/` (bundled OFL fonts, compiled in as `BinaryData`).
 
 Data flow: UI → `model::Document::apply()` (undoable edit) → `onChange` → MainComponent
 rebuilds `model::toEngineState()` → `Engine::setState()` pushes it through a lock-free
@@ -83,9 +85,13 @@ Key rules:
   `shared_ptr` so copies are cheap). Every user edit goes through `Document::apply()`;
   continuous gestures (drag-painting steps, turning a knob) pass one gesture id so they
   undo as a single step. Serialization is still to do (roadmap 8).
-- UI look: every colour and size lives in `src/ui/theme.h`. Never hard-code colours in
-  components. The current look is a **placeholder**; the user wants a say in the final
-  visual design. Mockups: https://claude.ai/artifact/V8rnfPk2sneMEfNvescNi1 (private canvas).
+- UI look comes from the active **theme** (`ui::currentTheme()`); never hard-code colours,
+  radii or fonts in components. Read them in `paint()`, since themes switch at runtime
+  (ThemeManager calls `sendLookAndFeelChange()` on all windows). Only layout sizes are
+  fixed (`ui::metrics`). New themeable properties go in `theme::Theme`, in the parse/serialize
+  tables in `theme.cpp`, in all 4 built-in JSONs and in `docs/themes.md`. The user wants a
+  say in visual design. Mockups: https://claude.ai/artifact/V8rnfPk2sneMEfNvescNi1
+  (private canvas).
 
 ## Build & run
 
@@ -152,7 +158,15 @@ and run it before milestones or after platform-specific changes.
   deliberately *not* FL-like. Plan: themes become data, selectable in Options › Theme,
   with import/export of custom theme JSON files. A theme sets colours *and* font, corner
   radii, border width and glow; anything missing falls back to the default. Format
-  draft is on the mockup canvas's ThemePicker board. Not built yet.
+  draft is on the mockup canvas's ThemePicker board.
+- 2026-10-16: Theme system built. Built-ins Juicy (default), Citrus, Watermelon,
+  Blueberry are JSON strings in `src/theme/builtin_themes.cpp`, parsed like user files.
+  `Theme`'s member defaults == Juicy (tested). Options › Theme… opens ThemeDialog (cards,
+  import/export/open folder). User themes live in `<settings dir>/themes/*.json`, ids
+  `custom:<file>`. Settings: `$XDG_CONFIG_HOME/JuicyLoopsStudio/` on Linux (JUCE's
+  default would be a folder directly in $HOME). Fonts are bundled as **static** Regular
+  TTFs: variable fonts loaded at their default axis (Outfit = Thin). Menu bar: File/Edit/
+  Options/Help (native on macOS). Format doc: `docs/themes.md`.
 
 ## Dev environment notes
 
@@ -160,7 +174,12 @@ and run it before milestones or after platform-specific changes.
   missing tool.
 - Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh, ImageMagick.
 - Screenshot the app (XWayland) without capturing the rest of the screen:
-  `import -window "Juicy Loops Studio" out.png`, then Read the PNG.
+  `import -window "Juicy Loops Studio" out.png`, then Read the PNG. Start the app with `&`
+  and `kill $!`. **Don't `pkill -f`** with the app path: it matches and kills its own shell.
+  To shoot another theme, set `val` in `~/.config/JuicyLoopsStudio/JuicyLoopsStudio.settings`
+  before launch and put it back to `juicy` afterwards.
+- `grep` here is ugrep and differs from GNU grep for some patterns; use Python for tricky
+  text extraction.
 - Pushing: Claude may push. Its shell doesn't inherit `SSH_AUTH_SOCK`; the agent socket
   lives in `~/.ssh/agent/`: `SSH_AUTH_SOCK=$(ls -t ~/.ssh/agent/s.* | head -1) git push`.
 - Windows/macOS CI is skipped for now (Linux-native first). Don't dispatch the full

@@ -64,7 +64,17 @@ class Application final : public juce::JUCEApplication
         themes = nullptr;
     }
 
-    void systemRequestedQuit() override { quit(); }
+    void systemRequestedQuit() override
+    {
+        // Ask to save unsaved changes first.
+        if (mainWindow != nullptr)
+            if (auto* content = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+            {
+                content->requestQuit();
+                return;
+            }
+        quit();
+    }
 
   private:
     std::unique_ptr<ui::ThemeManager> themes; // owns the LookAndFeel: must outlive all windows

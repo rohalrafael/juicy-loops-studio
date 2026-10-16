@@ -40,6 +40,10 @@ class MainComponent final : public juce::AudioAppComponent,
     bool keyPressed(const juce::KeyPress& key) override;
     void mouseDown(const juce::MouseEvent& e) override;
 
+    // Quits, after asking to save unsaved changes (called for the window's close button too).
+    void requestQuit();
+    void parentHierarchyChanged() override;
+
     juce::StringArray getMenuBarNames() override;
     juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override;
     void menuItemSelected(int itemId, int menuIndex) override;
@@ -63,6 +67,18 @@ class MainComponent final : public juce::AudioAppComponent,
     void showAudioSettings();
     void showAbout();
 
+    // File handling. confirmDiscard() runs `then` right away if there's nothing unsaved,
+    // otherwise asks Save / Don't save / Cancel first.
+    void confirmDiscard(std::function<void()> then);
+    void newProject();
+    void openProject();
+    void openFile(const juce::File& file);
+    void saveProject(std::function<void(bool saved)> done = {});
+    void saveProjectAs(std::function<void(bool saved)> done = {});
+    bool writeProject(const juce::File& file);
+    void exportWav();
+    void updateTitle();
+
     ui::ThemeManager& themes;
 
     engine::Engine engine;
@@ -85,6 +101,9 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::MixerView mixer;         // docked below them (F9)
     ui::EffectPanel effectPanel;
     bool effectPanelPlaced = false;
+    juce::File currentFile;   // where the project was last saved/opened; empty if never
+    juce::File projectFolder; // where file choosers start: the last project's folder
+    std::unique_ptr<juce::FileChooser> fileChooser;
     double formatRate = 0.0; // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;

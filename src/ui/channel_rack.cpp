@@ -637,30 +637,47 @@ void ChannelRack::chooseSampleFor(model::ChannelId id)
                                  addChannelsFromFiles(fc.getResults());
                                  return;
                              }
-                             const auto file = fc.getResult();
-                             if (auto sample = loader.load(file))
-                                 edit(
-                                     [id, sample](model::Project& p)
-                                     {
-                                         if (auto* c = p.findChannel(id))
-                                             c->sample = sample;
-                                     });
+                             replaceSample(id, fc.getResult());
                          });
+}
+
+void ChannelRack::replaceSample(model::ChannelId id, const juce::File& file)
+{
+    const auto sample = loader.load(file);
+    if (sample == nullptr)
+        return;
+    const auto path = file.getFullPathName().toStdString();
+    edit(
+        [id, sample, path](model::Project& p)
+        {
+            if (auto* c = p.findChannel(id))
+            {
+                c->sample = sample;
+                c->samplePath = path;
+                c->builtinSample.clear();
+            }
+        });
 }
 
 void ChannelRack::addChannelsFromFiles(const juce::Array<juce::File>& files)
 {
-    std::vector<std::pair<std::string, std::shared_ptr<const engine::SampleBuffer>>> loaded;
+    struct Loaded
+    {
+        std::string name, path;
+        std::shared_ptr<const engine::SampleBuffer> sample;
+    };
+    std::vector<Loaded> loaded;
     for (const auto& file : files)
         if (auto sample = loader.load(file))
-            loaded.emplace_back(file.getFileNameWithoutExtension().toStdString(), sample);
+            loaded.push_back({file.getFileNameWithoutExtension().toStdString(),
+                              file.getFullPathName().toStdString(), sample});
 
     if (!loaded.empty())
         edit(
             [&loaded](model::Project& p)
             {
-                for (auto& [channelName, sample] : loaded)
-                    p.addChannel(channelName, sample);
+                for (const auto& l : loaded)
+                    p.findChannel(p.addChannel(l.name, l.sample))->samplePath = l.path;
             });
 }
 
@@ -736,16 +753,7 @@ void ChannelRack::filesDropped(const juce::StringArray& paths, int, int y)
     // Dropped on a row: replace that channel's sample (first file). Elsewhere: new channels.
     if (auto* row = rowAt(y))
     {
-        if (auto sample = loader.load(files.getFirst()))
-        {
-            const auto id = row->channelId();
-            edit(
-                [id, sample](model::Project& p)
-                {
-                    if (auto* c = p.findChannel(id))
-                        c->sample = sample;
-                });
-        }
+        replaceSample(row->channelId(), files.getFirst());
         return;
     }
     addChannelsFromFiles(files);

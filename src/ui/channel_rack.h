@@ -156,6 +156,7 @@ class ChannelRack final : public juce::Component,
   private:
     void timerCallback() override;
     void addChannelsFromFiles(const juce::Array<juce::File>& files);
+    void replaceSample(model::ChannelId id, const juce::File& file);
     ChannelRow* rowAt(int y);
 
     model::Document& doc;

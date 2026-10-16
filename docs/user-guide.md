@@ -23,10 +23,28 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 | F4 | New pattern |
 | F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
 | Ctrl+M | Metronome on/off |
+| Ctrl+N / Ctrl+O | New project / open project |
+| Ctrl+S / Ctrl+Shift+S | Save / save as |
+| Ctrl+R | Export the song as a WAV file |
 | Ctrl+Z | Undo |
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 
 On macOS use Cmd instead of Ctrl.
+
+## Projects and export
+
+- **File › Save** writes a `.jls` project file. The title bar shows the project name, with `*`
+  when there are unsaved changes. You're asked before unsaved changes would be lost (New, Open,
+  Quit).
+- **Samples:** projects reference your sample files instead of copying them. Keep samples in a
+  folder next to the project to move or share them together; they're found there first.
+- **Missing samples:** if a project's samples can't be found, the channels stay silent and you
+  get a list of what's missing.
+- **File › Export WAV** (Ctrl+R) renders the song (or the current pattern, if the Playlist is
+  empty) to a 24-bit stereo WAV, plus 2 seconds for reverb and delay tails. The metronome is
+  never included.
+
+Details of the file format: [project-format.md](project-format.md).
 
 ## Transport bar
 

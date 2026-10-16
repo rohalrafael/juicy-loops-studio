@@ -254,20 +254,33 @@ void Project::removeEffect(EffectId id)
         std::erase_if(track.effects, [id](const EffectSlot& s) { return s.id == id; });
 }
 
-Project makeDefaultProject(double sampleRate)
+std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& name,
+                                                          double sampleRate)
 {
     using engine::DrumSound;
-    auto make = [sampleRate](DrumSound sound)
-    {
-        return std::make_shared<const engine::SampleBuffer>(
-            engine::synthesizeDrum(sound, sampleRate));
-    };
+    DrumSound sound;
+    if (name == "kick")
+        sound = DrumSound::kick;
+    else if (name == "clap")
+        sound = DrumSound::clap;
+    else if (name == "hat")
+        sound = DrumSound::hat;
+    else if (name == "snare")
+        sound = DrumSound::snare;
+    else
+        return nullptr;
+    return std::make_shared<const engine::SampleBuffer>(engine::synthesizeDrum(sound, sampleRate));
+}
 
+Project makeDefaultProject(double sampleRate)
+{
     Project project;
-    project.addChannel("Kick", make(DrumSound::kick));
-    project.addChannel("Clap", make(DrumSound::clap));
-    project.addChannel("Hat", make(DrumSound::hat));
-    project.addChannel("Snare", make(DrumSound::snare));
+    for (const auto& [name, builtin] : {std::pair{"Kick", "kick"}, std::pair{"Clap", "clap"},
+                                        std::pair{"Hat", "hat"}, std::pair{"Snare", "snare"}})
+    {
+        const auto id = project.addChannel(name, builtinSample(builtin, sampleRate));
+        project.findChannel(id)->builtinSample = builtin;
+    }
     project.selectedChannel = project.channels.front().id;
     return project;
 }

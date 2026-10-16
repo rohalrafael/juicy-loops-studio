@@ -20,11 +20,27 @@ void keepViewState(const Project& from, Project& to)
 
 } // namespace
 
-Document::Document(Project initial) : current(std::move(initial)) {}
+Document::Document(Project initial) : current{std::move(initial), 0} {}
 
 void Document::setViewState(const std::function<void(Project&)>& change)
 {
-    change(current);
+    change(current.project);
+    notify();
+}
+
+void Document::reset(Project project)
+{
+    current = {std::move(project), nextRevision++};
+    savedRevision = current.revision;
+    undoStack.clear();
+    redoStack.clear();
+    lastGestureId = 0;
+    notify();
+}
+
+void Document::markSaved()
+{
+    savedRevision = current.revision;
     notify();
 }
 
@@ -37,10 +53,11 @@ void Document::apply(const std::function<void(Project&)>& edit, int gestureId)
         if (undoStack.size() > maxUndoSteps)
             undoStack.erase(undoStack.begin());
         redoStack.clear();
+        current.revision = nextRevision++;
     }
     lastGestureId = gestureId;
 
-    edit(current);
+    edit(current.project);
     notify();
 }
 
@@ -50,7 +67,7 @@ bool Document::undo()
         return false;
     auto restored = std::move(undoStack.back());
     undoStack.pop_back();
-    keepViewState(current, restored);
+    keepViewState(current.project, restored.project);
     redoStack.push_back(std::move(current));
     current = std::move(restored);
     lastGestureId = 0;
@@ -64,7 +81,7 @@ bool Document::redo()
         return false;
     auto restored = std::move(redoStack.back());
     redoStack.pop_back();
-    keepViewState(current, restored);
+    keepViewState(current.project, restored.project);
     undoStack.push_back(std::move(current));
     current = std::move(restored);
     lastGestureId = 0;

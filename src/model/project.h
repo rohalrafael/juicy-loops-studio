@@ -30,6 +30,10 @@ struct Channel
     ChannelId id = 0;
     std::string name;
     std::shared_ptr<const engine::SampleBuffer> sample;
+    // Where the sample came from, so projects can be saved: a built-in sound ("kick", see
+    // engine::DrumSound) or an audio file path. Both empty = no sample.
+    std::string builtinSample;
+    std::string samplePath;
     float volume = 0.8f; // linear gain 0..1
     float pan = 0.0f;    // -1 (left) .. +1 (right)
     bool muted = false;
@@ -140,7 +144,8 @@ struct Project
     std::vector<Pattern> patterns; // in pattern-selector order; never empty
     Playlist playlist;
     Mixer mixer;
-    int beatsPerBar = 4; // time signature numerator (n/4)
+    double tempo = 130.0; // BPM
+    int beatsPerBar = 4;  // time signature numerator (n/4)
 
     // View state: kept across undo/redo (see Document).
     PatternId currentPattern = 0;
@@ -183,6 +188,10 @@ struct Project
     const EffectSlot* findEffect(EffectId id, int* trackOut = nullptr) const;
     void removeEffect(EffectId id);
 };
+
+// A built-in synthesized sound by name ("kick", "clap", "hat", "snare"); null if unknown.
+std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& name,
+                                                          double sampleRate = 44100.0);
 
 // Kick, Clap, Hat, Snare with built-in synthesized sounds, like FL's empty template.
 // The Kick is selected.

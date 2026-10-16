@@ -1,0 +1,66 @@
+# Project file format (.jls)
+
+A project is one JSON file, readable and diff-friendly. Samples aren't embedded: a project
+references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
+
+## Example (shortened)
+
+```json
+{
+  "format": "juicy-loops-studio-project",
+  "version": 1,
+  "tempo": 130.0,
+  "beatsPerBar": 4,
+  "channels": [
+    { "id": 1, "name": "Kick", "sample": { "builtin": "kick" },
+      "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 1 },
+    { "id": 5, "name": "Vox", "sample": { "path": "/home/me/songs/samples/vox.wav",
+                                          "relativePath": "samples/vox.wav" },
+      "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 5 }
+  ],
+  "patterns": [
+    { "id": 1, "name": "Pattern 1", "minLength": 16,
+      "notes": [ { "channel": 1, "notes": [[0, 24, 60, 0.78125], [96, 24, 60, 0.78125]] } ] }
+  ],
+  "playlist": { "tracks": 16, "clips": [ { "pattern": 1, "track": 0, "start": 0, "length": 16 } ] },
+  "mixer": { "tracks": [
+    { "name": "Master", "volumeDb": 0.0, "pan": 0.0, "muted": false, "solo": false, "effects": [] },
+    { "name": "Insert 1", "volumeDb": -3.0, "pan": 0.0, "muted": false, "solo": false,
+      "effects": [ { "id": 1, "type": "reverb", "enabled": true,
+                     "params": { "Size": 0.6, "Damping": 0.4, "Width": 1.0, "Mix": 0.25 } } ] }
+  ] },
+  "view": { "currentPattern": 1, "selectedChannel": 1, "selectedMixerTrack": 1, "songMode": false },
+  "nextIds": { "channel": 6, "pattern": 2, "effect": 2 }
+}
+```
+
+## Fields
+
+| Field | Meaning |
+|---|---|
+| `format`, `version` | Always `"juicy-loops-studio-project"`; format version (currently 1) |
+| `tempo` | BPM, 10 to 999 |
+| `beatsPerBar` | Time signature numerator (n/4), 1 to 16 |
+| `channels[]` | In Channel Rack order. `id` is referenced by patterns. `mixerTrack` is 0 for Master, otherwise an insert |
+| `channels[].sample` | `{"builtin": "kick"/"clap"/"hat"/"snare"}`, or `{"path": absolute, "relativePath": relative to the project file}`, or `null` |
+| `patterns[]` | In pattern-selector order. `minLength` is in steps; the pattern grows to fit its notes |
+| `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
+| `playlist.clips[]` | `start` and `length` in steps; a clip longer than its pattern repeats it |
+| `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
+| `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`); `params` are by name, in real units |
+| `view` | Selections and PAT/SONG mode, restored on open |
+| `nextIds` | Id counters for new channels, patterns and effects |
+
+## Loading rules
+
+- **Rejected:** only files that aren't JSON or don't carry the `format` tag.
+- **Repaired, with a warning shown after opening:**
+  - values out of range are clamped
+  - unknown effects, notes for missing channels and clips for missing patterns are skipped
+  - duplicate ids are dropped
+- **Samples** are looked up next to the project first (`relativePath`), then at the absolute
+  `path`, so a project folder with its samples can be moved or shared. A missing sample leaves
+  the channel silent but keeps its reference, so saving again doesn't lose it.
+- **Effect parameters** are matched by name. A missing parameter gets its default, so new
+  parameters can be added to an effect without breaking old projects.
+- **Newer versions:** a newer `version` still loads, with a warning that some parts may be missing.

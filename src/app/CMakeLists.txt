@@ -8,6 +8,7 @@ juce_add_gui_app(JuicyLoopsStudio
 target_sources(JuicyLoopsStudio PRIVATE
     main.cpp
     main_component.cpp
+    ../io/audio_export.cpp
     ../io/sample_loader.cpp
     ../ui/channel_rack.cpp
     ../ui/theme.cpp

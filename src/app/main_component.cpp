@@ -4,6 +4,9 @@
 
 #include "main_component.h"
 
+#include "io/audio_export.h"
+#include "model/project_file.h"
+#include "model/render.h"
 #include "ui/theme_dialog.h"
 
 #include <array>
@@ -16,7 +19,12 @@ namespace
 
 enum MenuItem
 {
-    quitItem = 1,
+    newItem = 1,
+    openItem,
+    saveItem,
+    saveAsItem,
+    exportItem,
+    quitItem,
     undoItem,
     redoItem,
     newPatternItem,
@@ -49,6 +57,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), document(model::makeDefaultProject()),
       playlist(document, engine.transport()), pianoRoll(document, engine.transport()),
       mixer(document), effectPanel(document),
+      projectFolder(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)),
       channelRack(document, engine.transport(), sampleLoader)
 {
     auto& transport = engine.transport();
@@ -75,9 +84,13 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     tempoSlider.setSliderStyle(juce::Slider::IncDecButtons);
     tempoSlider.setRange(engine::Transport::minTempo, engine::Transport::maxTempo, 0.001);
     tempoSlider.setNumDecimalPlacesToDisplay(3);
-    tempoSlider.setValue(transport.tempo(), juce::dontSendNotification);
     tempoSlider.setTextValueSuffix(" BPM");
-    tempoSlider.onValueChange = [this, &transport] { transport.setTempo(tempoSlider.getValue()); };
+    tempoSlider.onValueChange = [this]
+    {
+        const double bpm = tempoSlider.getValue();
+        if (std::abs(bpm - document.project().tempo) > 1.0e-6)
+            document.apply([bpm](model::Project& p) { p.tempo = bpm; });
+    };
 
     for (int beats = engine::Transport::minBeatsPerBar; beats <= engine::Transport::maxBeatsPerBar;
          ++beats)
@@ -151,7 +164,9 @@ void MainComponent::documentChanged()
 {
     const auto& project = document.project();
     engine.transport().setBeatsPerBar(project.beatsPerBar);
+    engine.transport().setTempo(project.tempo);
     publishState();
+    updateTitle();
     channelRack.refresh();
     playlist.refresh();
     pianoRoll.refresh();
@@ -184,6 +199,7 @@ void MainComponent::refreshTransportBar()
     }
 
     timeSignatureBox.setSelectedId(project.beatsPerBar, juce::dontSendNotification);
+    tempoSlider.setValue(project.tempo, juce::dontSendNotification);
 }
 
 void MainComponent::setSongMode(bool song)
@@ -386,6 +402,16 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         return showPianoRoll(), true;
     if (key == KeyPress(KeyPress::F9Key))
         return toggleMixer(), true;
+    if (key == KeyPress('n', cmd, 0))
+        return newProject(), true;
+    if (key == KeyPress('o', cmd, 0))
+        return openProject(), true;
+    if (key == KeyPress('s', cmd, 0))
+        return saveProject(), true;
+    if (key == KeyPress('s', cmd | ModifierKeys::shiftModifier, 0))
+        return saveProjectAs(), true;
+    if (key == KeyPress('r', cmd, 0))
+        return exportWav(), true;
     if (key == KeyPress('z', cmd, 0))
         return document.undo(), true;
     if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
@@ -405,8 +431,22 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     switch (index)
     {
     case 0:
+    {
+        auto withKey = [](Item item, const char* key)
+        {
+            item.shortcutKeyDescription = key;
+            return item;
+        };
+        menu.addItem(withKey(Item("New").setID(newItem), "Ctrl+N"));
+        menu.addItem(withKey(Item("Open...").setID(openItem), "Ctrl+O"));
+        menu.addItem(withKey(Item("Save").setID(saveItem), "Ctrl+S"));
+        menu.addItem(withKey(Item("Save as...").setID(saveAsItem), "Ctrl+Shift+S"));
+        menu.addSeparator();
+        menu.addItem(withKey(Item("Export WAV...").setID(exportItem), "Ctrl+R"));
+        menu.addSeparator();
         menu.addItem(Item("Quit").setID(quitItem));
         break;
+    }
     case 1:
         menu.addItem(Item("Undo").setID(undoItem).setEnabled(document.canUndo()));
         menu.addItem(Item("Redo").setID(redoItem).setEnabled(document.canRedo()));
@@ -476,8 +516,23 @@ void MainComponent::menuItemSelected(int itemId, int)
 {
     switch (itemId)
     {
+    case newItem:
+        newProject();
+        break;
+    case openItem:
+        openProject();
+        break;
+    case saveItem:
+        saveProject();
+        break;
+    case saveAsItem:
+        saveProjectAs();
+        break;
+    case exportItem:
+        exportWav();
+        break;
     case quitItem:
-        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        requestQuit();
         break;
     case undoItem:
         document.undo();
@@ -521,6 +576,208 @@ void MainComponent::menuItemSelected(int itemId, int)
     default:
         break;
     }
+}
+
+// ----------------------------------------------------------------------------- File handling
+
+void MainComponent::parentHierarchyChanged()
+{
+    updateTitle();
+}
+
+void MainComponent::updateTitle()
+{
+    auto* window = getTopLevelComponent();
+    if (window == nullptr || window == this)
+        return;
+    const auto name = currentFile == juce::File() ? juce::String("Untitled")
+                                                  : currentFile.getFileNameWithoutExtension();
+    window->setName(name + (document.isModified() ? "*" : "") +
+                    juce::String::fromUTF8(" \xe2\x80\x93 ") + "Juicy Loops Studio");
+}
+
+void MainComponent::confirmDiscard(std::function<void()> then)
+{
+    if (!document.isModified())
+    {
+        then();
+        return;
+    }
+    const auto name =
+        currentFile == juce::File() ? juce::String("Untitled") : currentFile.getFileName();
+    juce::Component::SafePointer<MainComponent> self(this);
+    juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsYesNoCancel(
+                                     juce::MessageBoxIconType::NoIcon, "Unsaved changes",
+                                     "Save the changes to " + name + " first?", "Save",
+                                     "Don't save", "Cancel"),
+                                 [self, then](int result)
+                                 {
+                                     if (self == nullptr)
+                                         return;
+                                     if (result == 1) // Save
+                                         self->saveProject(
+                                             [then](bool saved)
+                                             {
+                                                 if (saved)
+                                                     then();
+                                             });
+                                     else if (result == 2) // Don't save
+                                         then();
+                                 });
+}
+
+void MainComponent::requestQuit()
+{
+    confirmDiscard([] { juce::JUCEApplication::getInstance()->quit(); });
+}
+
+void MainComponent::newProject()
+{
+    confirmDiscard(
+        [this]
+        {
+            engine.transport().stop();
+            currentFile = juce::File();
+            document.reset(model::makeDefaultProject());
+        });
+}
+
+void MainComponent::openProject()
+{
+    confirmDiscard(
+        [this]
+        {
+            fileChooser =
+                std::make_unique<juce::FileChooser>("Open project", projectFolder, "*.jls");
+            fileChooser->launchAsync(juce::FileBrowserComponent::openMode |
+                                         juce::FileBrowserComponent::canSelectFiles,
+                                     [this](const juce::FileChooser& fc)
+                                     {
+                                         if (fc.getResult() != juce::File())
+                                             openFile(fc.getResult());
+                                     });
+        });
+}
+
+void MainComponent::openFile(const juce::File& file)
+{
+    const auto result = model::loadProject(
+        file.loadFileAsString().toStdString(), file.getFullPathName().toStdString(),
+        [this](const std::string& path) { return sampleLoader.load(juce::File(path)); });
+
+    if (!result.project)
+    {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+                                                   "Couldn't open " + file.getFileName(),
+                                                   juce::String::fromUTF8(result.error.c_str())),
+            nullptr);
+        return;
+    }
+
+    engine.transport().stop();
+    currentFile = file;
+    projectFolder = file.getParentDirectory();
+    document.reset(*result.project);
+
+    if (!result.warnings.empty())
+    {
+        juce::String message;
+        for (std::size_t i = 0; i < result.warnings.size() && i < 10; ++i)
+            message << "- " << juce::String::fromUTF8(result.warnings[i].c_str()) << "\n";
+        if (result.warnings.size() > 10)
+            message << "(and " << static_cast<int>(result.warnings.size() - 10) << " more)";
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+                                                   "Opened with problems", message),
+            nullptr);
+    }
+}
+
+bool MainComponent::writeProject(const juce::File& file)
+{
+    const auto text = model::saveProject(document.project(), file.getFullPathName().toStdString());
+    // replaceWithText writes a temporary file first, so a failed save can't corrupt the old one.
+    if (!file.replaceWithText(juce::String::fromUTF8(text.c_str())))
+    {
+        juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
+                                         juce::MessageBoxIconType::WarningIcon, "Couldn't save",
+                                         "Writing " + file.getFullPathName() + " failed."),
+                                     nullptr);
+        return false;
+    }
+    currentFile = file;
+    projectFolder = file.getParentDirectory();
+    document.markSaved();
+    return true;
+}
+
+void MainComponent::saveProject(std::function<void(bool)> done)
+{
+    if (currentFile == juce::File())
+    {
+        saveProjectAs(std::move(done));
+        return;
+    }
+    const bool saved = writeProject(currentFile);
+    if (done)
+        done(saved);
+}
+
+void MainComponent::saveProjectAs(std::function<void(bool)> done)
+{
+    const auto suggested =
+        currentFile != juce::File() ? currentFile : projectFolder.getChildFile("Untitled.jls");
+    fileChooser = std::make_unique<juce::FileChooser>("Save project", suggested, "*.jls");
+    fileChooser->launchAsync(
+        juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+            juce::FileBrowserComponent::warnAboutOverwriting,
+        [this, done](const juce::FileChooser& fc)
+        {
+            const auto file = fc.getResult();
+            const bool saved = file != juce::File() &&
+                               writeProject(file.withFileExtension(model::projectFileExtension));
+            if (done)
+                done(saved);
+        });
+}
+
+void MainComponent::exportWav()
+{
+    const auto base = currentFile != juce::File()
+                          ? currentFile.withFileExtension(".wav")
+                          : juce::File::getSpecialLocation(juce::File::userMusicDirectory)
+                                .getChildFile("Untitled.wav");
+    fileChooser = std::make_unique<juce::FileChooser>("Export WAV", base, "*.wav");
+    fileChooser->launchAsync(
+        juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+            juce::FileBrowserComponent::warnAboutOverwriting,
+        [this](const juce::FileChooser& fc)
+        {
+            if (fc.getResult() == juce::File())
+                return;
+            const auto file = fc.getResult().withFileExtension(".wav");
+            const double rate =
+                engine.preparedSampleRate() > 0.0 ? engine.preparedSampleRate() : 44100.0;
+
+            // Rendering runs much faster than real time, but blocks the UI while it does.
+            juce::MouseCursor::showWaitCursor();
+            const auto audio = model::renderProject(document.project(), rate);
+            const auto result = io::writeWav(file, audio);
+            juce::MouseCursor::hideWaitCursor();
+
+            const int seconds = static_cast<int>(static_cast<double>(audio.left.size()) / rate);
+            const auto length =
+                juce::String(seconds / 60) + ":" + juce::String(seconds % 60).paddedLeft('0', 2);
+            juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
+                                             result.wasOk() ? juce::MessageBoxIconType::InfoIcon
+                                                            : juce::MessageBoxIconType::WarningIcon,
+                                             result.wasOk() ? "Export finished" : "Export failed",
+                                             result.wasOk()
+                                                 ? file.getFileName() + " (" + length + ")"
+                                                 : result.getErrorMessage()),
+                                         nullptr);
+        });
 }
 
 void MainComponent::showAbout()

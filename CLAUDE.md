@@ -246,6 +246,14 @@ and run it before milestones or after platform-specific changes.
   Plugin states are synced into the project before save/export. Known list in
   `<settings>/plugins.xml`, crash file `plugin-scan-crash.txt`. In-process hosting only. All
   JUCE dialogs set `dialogBackgroundColour` from the theme (the default is light grey).
+- 2026-10-17: Tested with LSP plugins (`lsp-plugins-vst3/-lv2`, 198 each): scanning both
+  formats, adding via grouped menu (manufacturer > category > plugin; LV2's " Plugin"
+  category suffix stripped), VST3 editor window, processing (export peak matched the
+  plugin's -39 dB output), state through save/reopen/export. **Open question:** the LV2
+  editor window stayed blank on Xvfb (JUCE's XEmbed host window never got mapped; mapping
+  it by hand showed the UI). VST3 uses the same mechanism and worked, so it may be an Xvfb
+  artifact; needs checking on the real desktop. Message boxes use NoIcon (JUCE's icons
+  are huge and off-theme).
 
 ## Dev environment notes
 
@@ -259,6 +267,10 @@ and run it before milestones or after platform-specific changes.
   The app uses the real settings file, so reset `theme` to `juicy` after testing themes.
   Without a window manager, JUCE logs harmless `BadAtom` errors and dialogs have no title
   bar.
+- In Xvfb there's no window manager: new windows (scan dialogs, message boxes) can open
+  *behind* others, and a modal message box blocks all input until dismissed. List windows
+  with `xdotool search --onlyvisible --name ""` + `getwindowname`, `xdotool windowraise`.
+  Plugins may open their own modal popups (LSP shows a one-time greeting).
 - In Xvfb nothing has keyboard focus at start (no window manager): click an empty spot of
   the transport bar (e.g. 1050,56) before sending keys.
 - On the real desktop Hyprland tiles the window (e.g. 941x501) a few seconds after launch;

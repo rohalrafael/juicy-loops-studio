@@ -296,12 +296,29 @@ class MixerView::Slots final : public juce::Component
             menu.addItem(itemId++, type.name);
 
         // Hosted plugins (VST3 / LV2), found by scanning in Options > Plugins.
-        const auto plugins = view.listPlugins ? view.listPlugins()
-                                              : std::vector<std::pair<std::string, std::string>>{};
+        // Grouped as manufacturer > category > plugin (the list arrives sorted that way).
+        const auto plugins =
+            view.listPlugins ? view.listPlugins() : std::vector<MixerView::PluginItem>{};
         juce::PopupMenu pluginMenu;
-        for (std::size_t i = 0; i < plugins.size(); ++i)
-            pluginMenu.addItem(firstPluginId + static_cast<int>(i),
-                               juce::String::fromUTF8(plugins[i].second.c_str()));
+        for (std::size_t i = 0; i < plugins.size();)
+        {
+            juce::PopupMenu makerMenu;
+            const auto& maker = plugins[i].manufacturer;
+            while (i < plugins.size() && plugins[i].manufacturer == maker)
+            {
+                juce::PopupMenu categoryMenu;
+                const auto& category = plugins[i].category;
+                while (i < plugins.size() && plugins[i].manufacturer == maker &&
+                       plugins[i].category == category)
+                {
+                    categoryMenu.addItem(firstPluginId + static_cast<int>(i),
+                                         juce::String::fromUTF8(plugins[i].name.c_str()));
+                    ++i;
+                }
+                makerMenu.addSubMenu(juce::String::fromUTF8(category.c_str()), categoryMenu);
+            }
+            pluginMenu.addSubMenu(juce::String::fromUTF8(maker.c_str()), makerMenu);
+        }
         if (plugins.empty())
             pluginMenu.addItem(-1, "No plugins found yet: scan in Manage plugins", false);
         menu.addSeparator();
@@ -323,10 +340,9 @@ class MixerView::Slots final : public juce::Component
                 model::EffectId added = 0;
                 if (result >= firstPluginId)
                 {
-                    const auto& [id, name] =
-                        plugins[static_cast<std::size_t>(result - firstPluginId)];
-                    view.doc.apply([&added, track, id, name](model::Project& p)
-                                   { added = p.addPluginEffect(track, id, name); });
+                    const auto& item = plugins[static_cast<std::size_t>(result - firstPluginId)];
+                    view.doc.apply([&added, track, &item](model::Project& p)
+                                   { added = p.addPluginEffect(track, item.id, item.name); });
                 }
                 else
                 {

@@ -63,10 +63,12 @@ class PluginHost final : private juce::ChangeListener
 
     struct Entry
     {
-        std::string id;   // stored in projects (PluginDescription::createIdentifierString)
-        std::string name; // "Name (Manufacturer, format)"
+        std::string id;           // stored in projects (PluginDescription::createIdentifierString)
+        std::string name;         // the plugin's name
+        std::string manufacturer; // with the format, e.g. "LSP VST3 (VST3)", for menu grouping
+        std::string category;     // main category, e.g. "Delay" from "Fx|Delay|Stereo"
     };
-    // Known effect plugins (not instruments), sorted by name.
+    // Known effect plugins (not instruments), sorted by manufacturer, category, name.
     std::vector<Entry> effects() const;
 
     // Creates and restores a plugin effect; null if it isn't known or fails to load.

@@ -127,9 +127,9 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
     mixer.listPlugins = [this]
     {
-        std::vector<std::pair<std::string, std::string>> list;
-        for (const auto& entry : pluginHost.effects())
-            list.emplace_back(entry.id, entry.name);
+        std::vector<ui::MixerView::PluginItem> list;
+        for (const auto& e : pluginHost.effects())
+            list.push_back({e.id, e.name, e.manufacturer, e.category});
         return list;
     };
     mixer.onManagePlugins = [this] { pluginHost.showManager(); };
@@ -220,7 +220,7 @@ void MainComponent::openEffectEditor(model::EffectId id)
     {
         juce::AlertWindow::showAsync(
             juce::MessageBoxOptions::makeOptionsOk(
-                juce::MessageBoxIconType::WarningIcon, "Plugin not available",
+                juce::MessageBoxIconType::NoIcon, "Plugin not available",
                 juce::String::fromUTF8(slot->pluginName.c_str()) +
                     " isn't installed or couldn't be loaded. Scan for plugins in Options > "
                     "Plugins. The effect is kept in the project and passes audio through."),
@@ -753,7 +753,7 @@ void MainComponent::openFile(const juce::File& file)
     if (!result.project)
     {
         juce::AlertWindow::showAsync(
-            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::NoIcon,
                                                    "Couldn't open " + file.getFileName(),
                                                    juce::String::fromUTF8(result.error.c_str())),
             nullptr);
@@ -773,7 +773,7 @@ void MainComponent::openFile(const juce::File& file)
         if (result.warnings.size() > 10)
             message << "(and " << static_cast<int>(result.warnings.size() - 10) << " more)";
         juce::AlertWindow::showAsync(
-            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::WarningIcon,
+            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::NoIcon,
                                                    "Opened with problems", message),
             nullptr);
     }
@@ -787,7 +787,7 @@ bool MainComponent::writeProject(const juce::File& file)
     if (!file.replaceWithText(juce::String::fromUTF8(text.c_str())))
     {
         juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
-                                         juce::MessageBoxIconType::WarningIcon, "Couldn't save",
+                                         juce::MessageBoxIconType::NoIcon, "Couldn't save",
                                          "Writing " + file.getFullPathName() + " failed."),
                                      nullptr);
         return false;
@@ -860,8 +860,7 @@ void MainComponent::exportWav()
             const auto length =
                 juce::String(seconds / 60) + ":" + juce::String(seconds % 60).paddedLeft('0', 2);
             juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
-                                             result.wasOk() ? juce::MessageBoxIconType::InfoIcon
-                                                            : juce::MessageBoxIconType::WarningIcon,
+                                             juce::MessageBoxIconType::NoIcon,
                                              result.wasOk() ? "Export finished" : "Export failed",
                                              result.wasOk()
                                                  ? file.getFileName() + " (" + length + ")"

@@ -210,8 +210,7 @@ void ThemeDialog::importTheme()
             const auto result = themes.importFile(file);
             if (!result.ok || result.message.isNotEmpty())
                 juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
-                                                 result.ok ? juce::MessageBoxIconType::InfoIcon
-                                                           : juce::MessageBoxIconType::WarningIcon,
+                                                 juce::MessageBoxIconType::NoIcon,
                                                  result.ok ? "Theme imported" : "Import failed",
                                                  result.message),
                                              nullptr);
@@ -235,8 +234,8 @@ void ThemeDialog::exportTheme()
             const auto result = themes.exportCurrent(file.withFileExtension(".json"));
             if (result.failed())
                 juce::AlertWindow::showAsync(juce::MessageBoxOptions::makeOptionsOk(
-                                                 juce::MessageBoxIconType::WarningIcon,
-                                                 "Export failed", result.getErrorMessage()),
+                                                 juce::MessageBoxIconType::NoIcon, "Export failed",
+                                                 result.getErrorMessage()),
                                              nullptr);
         });
 }

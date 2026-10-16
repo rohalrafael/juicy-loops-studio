@@ -1,5 +1,7 @@
 #include "plugins/plugin_host.h"
 
+#include <tuple>
+
 namespace jls::plugins
 {
 
@@ -139,12 +141,30 @@ std::vector<PluginHost::Entry> PluginHost::effects() const
 {
     std::vector<Entry> list;
     for (const auto& d : known.getTypes())
-        if (!d.isInstrument)
-            list.push_back({d.createIdentifierString().toStdString(),
-                            (d.name + " (" + d.manufacturerName + ", " + d.pluginFormatName + ")")
-                                .toStdString()});
+    {
+        if (d.isInstrument)
+            continue;
+        // "Fx|Delay|Stereo" -> "Delay"; plain "Delay" stays; empty -> "Other".
+        auto parts = juce::StringArray::fromTokens(d.category, "|", "");
+        parts.removeEmptyStrings();
+        if (parts.size() > 1 && parts[0].equalsIgnoreCase("Fx"))
+            parts.remove(0);
+        auto category = parts.isEmpty() ? juce::String("Other") : parts[0];
+        category = category.trimCharactersAtEnd(" ").upToLastOccurrenceOf(" Plugin", false, false);
+        if (category.isEmpty()) // LV2 classes are named "Delay Plugin", "Reverb Plugin", ...
+            category = parts[0];
+        const auto maker =
+            d.manufacturerName.isEmpty() ? juce::String("Unknown") : d.manufacturerName;
+        list.push_back({d.createIdentifierString().toStdString(), d.name.toStdString(),
+                        (maker + " (" + d.pluginFormatName + ")").toStdString(),
+                        category.toStdString()});
+    }
     std::sort(list.begin(), list.end(),
-              [](const Entry& a, const Entry& b) { return a.name < b.name; });
+              [](const Entry& a, const Entry& b)
+              {
+                  return std::tie(a.manufacturer, a.category, a.name) <
+                         std::tie(b.manufacturer, b.category, b.name);
+              });
     return list;
 }
 

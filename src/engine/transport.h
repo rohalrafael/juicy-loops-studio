@@ -56,6 +56,13 @@ class Transport
     std::atomic<double> bpm{defaultTempo};
     std::atomic<int> barLength{4};
     std::atomic<double> position{0.0}; // written only by the audio thread
+
+    // Audio thread only. The playhead is computed from a whole sample count since the last
+    // tempo/sample-rate change instead of summing per-block increments, so it doesn't drift.
+    double anchorBeat = 0.0;
+    long long samplesSinceAnchor = 0;
+    double anchorBpm = 0.0;
+    double anchorSampleRate = 0.0;
 };
 
 } // namespace jls::engine

@@ -70,7 +70,11 @@ double Transport::positionInBeats() const
 BlockPosition Transport::advance(int numSamples, double sampleRate)
 {
     if (rewindRequested.exchange(false))
+    {
+        anchorBeat = 0.0;
+        samplesSinceAnchor = 0;
         position.store(0.0);
+    }
 
     BlockPosition block;
     block.startBeat = position.load();
@@ -81,7 +85,19 @@ BlockPosition Transport::advance(int numSamples, double sampleRate)
     if (!block.playing)
         return block;
 
-    block.endBeat += numSamples / sampleRate * (bpm.load() / 60.0);
+    const double currentBpm = bpm.load();
+    if (currentBpm != anchorBpm || sampleRate != anchorSampleRate)
+    {
+        anchorBeat = block.startBeat;
+        samplesSinceAnchor = 0;
+        anchorBpm = currentBpm;
+        anchorSampleRate = sampleRate;
+    }
+
+    samplesSinceAnchor += numSamples;
+    // Multiply before dividing: for typical rates/tempos this is exact at beat boundaries.
+    block.endBeat =
+        anchorBeat + static_cast<double>(samplesSinceAnchor) * currentBpm / (60.0 * sampleRate);
     position.store(block.endBeat);
     return block;
 }

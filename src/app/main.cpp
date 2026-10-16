@@ -1,4 +1,5 @@
 #include "main_component.h"
+#include "ui/theme.h"
 
 #include <juce_gui_extra/juce_gui_extra.h>
 
@@ -39,14 +40,20 @@ class Application final : public juce::JUCEApplication
 
     void initialise(const juce::String&) override
     {
+        juce::LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
         mainWindow = std::make_unique<MainWindow>(getApplicationName());
     }
 
-    void shutdown() override { mainWindow = nullptr; }
+    void shutdown() override
+    {
+        mainWindow = nullptr;
+        juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
+    }
 
     void systemRequestedQuit() override { quit(); }
 
   private:
+    ui::theme::LookAndFeel lookAndFeel; // must outlive every component
     std::unique_ptr<MainWindow> mainWindow;
 };
 

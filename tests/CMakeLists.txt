@@ -6,9 +6,11 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(jls_tests
     metronome_tests.cpp
+    model_tests.cpp
+    sequencer_tests.cpp
     transport_tests.cpp)
 
-target_link_libraries(jls_tests PRIVATE jls_engine Catch2::Catch2WithMain)
+target_link_libraries(jls_tests PRIVATE jls_model jls_engine Catch2::Catch2WithMain)
 
 include(${catch2_SOURCE_DIR}/extras/Catch.cmake)
 catch_discover_tests(jls_tests)

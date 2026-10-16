@@ -7,7 +7,12 @@ juce_add_gui_app(JuicyLoopsStudio
 
 target_sources(JuicyLoopsStudio PRIVATE
     main.cpp
-    main_component.cpp)
+    main_component.cpp
+    ../io/sample_loader.cpp
+    ../ui/channel_rack.cpp
+    ../ui/theme.cpp)
+
+target_include_directories(JuicyLoopsStudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_WEB_BROWSER=0
@@ -18,6 +23,7 @@ target_compile_definitions(JuicyLoopsStudio PRIVATE
 
 target_link_libraries(JuicyLoopsStudio
     PRIVATE
+        jls_model
         jls_engine
         juce::juce_audio_utils
         juce::juce_gui_extra

@@ -1,5 +1,9 @@
 add_library(jls_engine STATIC
+    drum_synth.cpp
+    engine.cpp
     metronome.cpp
+    sampler.cpp
+    step_sequencer.cpp
     transport.cpp)
 
 target_include_directories(jls_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

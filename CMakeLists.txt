@@ -11,8 +11,9 @@ option(JLS_BUILD_TESTS "Build unit tests" ON)
 
 include(FetchContent)
 
-# Engine: plain C++, no JUCE or GUI dependency, so it stays unit-testable.
+# Engine and model: plain C++, no JUCE or GUI dependency, so they stay unit-testable.
 add_subdirectory(src/engine)
+add_subdirectory(src/model)
 
 if(JLS_BUILD_APP)
     FetchContent_Declare(JUCE

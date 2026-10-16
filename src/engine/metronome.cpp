@@ -56,7 +56,7 @@ void Metronome::render(float* const* channels, int numChannels, int numSamples,
         {
             const double fraction = (static_cast<double>(beat) - block.startBeat) / span;
             const int offset =
-                std::clamp(static_cast<int>(fraction * numSamples), 0, numSamples - 1);
+                std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
 
             renderClick(channels, numChannels, cursor, offset);
             startClick(block.beatsPerBar > 0 && beat % block.beatsPerBar == 0);

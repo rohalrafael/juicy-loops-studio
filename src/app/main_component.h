@@ -1,15 +1,16 @@
 #pragma once
 
-#include "engine/metronome.h"
-#include "engine/transport.h"
+#include "engine/engine.h"
+#include "io/sample_loader.h"
+#include "model/document.h"
+#include "ui/channel_rack.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
 namespace jls
 {
 
-// Temporary top-level component: transport bar only, until the real
-// Channel Rack / Playlist / Mixer views exist.
+// Top-level component: transport bar + Channel Rack. Owns the document and the audio engine.
 class MainComponent final : public juce::AudioAppComponent, private juce::Timer
 {
   public:
@@ -26,11 +27,12 @@ class MainComponent final : public juce::AudioAppComponent, private juce::Timer
 
   private:
     void timerCallback() override;
+    void documentChanged();
     void showAudioSettings();
 
-    engine::Transport transport;
-    engine::Metronome metronome;
-    double currentSampleRate = 0.0;
+    engine::Engine engine;
+    model::Document document;
+    io::SampleLoader sampleLoader;
 
     juce::TextButton playButton{"Play"};
     juce::TextButton stopButton{"Stop"};
@@ -39,6 +41,8 @@ class MainComponent final : public juce::AudioAppComponent, private juce::Timer
     juce::TextButton metronomeButton{"Metronome"};
     juce::Label positionLabel;
     juce::TextButton audioSettingsButton{"Audio settings"};
+    ui::ChannelRack channelRack;
+    juce::TooltipWindow tooltips{this, 600};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

@@ -1,17 +1,28 @@
 name: CI
 
+# Private repo with limited CI minutes (macOS bills 10x, Windows 2x):
+# pushes/PRs build on Linux only; the full OS matrix runs only when triggered manually
+# (Actions tab -> CI -> Run workflow, or `gh workflow run ci.yml`).
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md', 'LICENSE', '.clang-format']
   pull_request:
+    paths-ignore: ['**.md', 'LICENSE', '.clang-format']
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["ubuntu-latest", "windows-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -20,12 +31,28 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev \
+          sudo apt-get install -y ninja-build ccache libasound2-dev libjack-jackd2-dev \
             libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev \
-            libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
-            libgl1-mesa-dev
+            libxcursor-dev libxext-dev libxi-dev libxinerama-dev libxrandr-dev \
+            libxrender-dev libgl1-mesa-dev
 
-      - name: Configure
+      # ccache makes rebuilds of the (unchanging) JUCE sources nearly free.
+      - name: Cache ccache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Configure (Windows/macOS)
+        if: runner.os != 'Linux'
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build

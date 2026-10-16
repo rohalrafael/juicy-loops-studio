@@ -81,7 +81,11 @@ ctest --test-dir build --output-on-failure
 ```
 
 Options: `-DJLS_BUILD_APP=OFF` (engine + tests only, skips JUCE), `-DJLS_BUILD_TESTS=OFF`.
-CI (`.github/workflows/ci.yml`) builds and tests on Ubuntu, Windows and macOS.
+CI (`.github/workflows/ci.yml`): pushes/PRs build + test on **Linux only** (with ccache);
+the full Ubuntu/Windows/macOS matrix runs only on manual dispatch
+(`gh workflow run ci.yml`). The repo is private with limited CI minutes (macOS 10×,
+Windows 2×), so don't trigger the full matrix casually. Batch commits before pushing,
+and run it before milestones or after platform-specific changes.
 
 ## Conventions
 

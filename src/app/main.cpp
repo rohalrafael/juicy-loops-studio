@@ -1,3 +1,6 @@
+// Application entry point: creates the ThemeManager (which owns the LookAndFeel), then the main
+// window. Shutdown closes dialogs first because they reference the ThemeManager.
+
 #include "main_component.h"
 #include "ui/theme.h"
 

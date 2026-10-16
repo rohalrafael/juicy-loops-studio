@@ -1,3 +1,7 @@
+// For every note, its occurrences k * patternLength + startTick that fall inside the block
+// are found arithmetically (no per-tick loop). Song mode first splits the block at the song's loop
+// point, then asks each clip under the playhead for its pattern's notes in clip-local time.
+
 #include "engine/step_sequencer.h"
 
 #include <algorithm>

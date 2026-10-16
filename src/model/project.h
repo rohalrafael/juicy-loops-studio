@@ -1,5 +1,9 @@
 #pragma once
 
+// The project data model: channels, patterns (notes per channel), the Playlist arrangement and
+// the Mixer. Plain C++ value types, cheap to copy (samples are shared), so the whole project can
+// be snapshotted for undo (see Document) and converted into an engine snapshot.
+
 #include "engine/effect_pool.h"
 #include "engine/engine_state.h"
 #include "engine/sample_buffer.h"

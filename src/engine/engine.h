@@ -1,5 +1,9 @@
 #pragma once
 
+// The real-time core: owns the transport, sampler, metronome and mixer buses, and receives
+// immutable EngineState snapshots from the UI thread through a lock-free queue. This is the only
+// engine object the app talks to.
+
 #include "engine/engine_state.h"
 #include "engine/metronome.h"
 #include "engine/sampler.h"

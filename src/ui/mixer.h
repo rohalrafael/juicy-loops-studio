@@ -1,5 +1,8 @@
 #pragma once
 
+// The docked Mixer panel (strips with meters, faders, pan, mute/solo and effect slots for the
+// selected track) and the floating EffectPanel that edits one effect's parameters.
+
 #include "model/document.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>

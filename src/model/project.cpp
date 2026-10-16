@@ -1,3 +1,6 @@
+// Project operations and toEngineState(), which flattens the model into the audio thread's
+// snapshot: ids become indices, steps become ticks, mute/solo/fader/pan become per-track gains.
+
 #include "model/project.h"
 
 #include "engine/drum_synth.h"

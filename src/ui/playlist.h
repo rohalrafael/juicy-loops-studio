@@ -1,5 +1,8 @@
 #pragma once
 
+// The Playlist: arranges pattern clips on tracks for song mode. A scrollable PlaylistGrid plus a
+// bar ruler and track names that follow its scrolling.
+
 #include "engine/transport.h"
 #include "model/document.h"
 

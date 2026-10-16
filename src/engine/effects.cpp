@@ -1,3 +1,6 @@
+// The built-in effects. Each is self-contained DSP with no allocation in process(); parameter
+// values arrive per block in real units, in the order of the type's ParamInfo list.
+
 #include "engine/effects.h"
 
 #include <algorithm>

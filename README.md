@@ -7,7 +7,20 @@ pattern-based Playlist, and Mixer.
 Juicy Loops Studio is an independent project. It is not affiliated with or endorsed
 by Image-Line, and it contains no Image-Line code or assets.
 
-**Status:** early skeleton. A transport bar and audio device setup, nothing more yet.
+**Status:** early but usable for making beats:
+
+- **Channel Rack** with step sequencer, built-in drum sounds, your own samples (drag and drop)
+- **Patterns** and the **Playlist** for arranging songs (PAT / SONG modes)
+- **Piano Roll** with velocity
+- **Mixer** with 16 inserts, meters and built-in effects (Filter, EQ, Delay, Reverb, Compressor)
+- Four themes (Juicy, Citrus, Watermelon, Blueberry), plus custom theme files
+- FL Studio's shortcuts: Space, L, F4–F9, Ctrl+M, Ctrl+Z
+
+Not there yet: saving projects, audio export, plugin hosting. See the roadmap in
+[CLAUDE.md](CLAUDE.md).
+
+Documentation: [user guide](docs/user-guide.md), [architecture](docs/architecture.md),
+[theme files](docs/themes.md).
 
 ## Building
 

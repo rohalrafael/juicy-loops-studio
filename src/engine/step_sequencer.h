@@ -1,5 +1,8 @@
 #pragma once
 
+// Turns the musical time covered by one audio block into note triggers with exact sample
+// offsets. Pure function of (state, block position): no state, easy to test.
+
 #include "engine/engine_state.h"
 #include "engine/transport.h"
 

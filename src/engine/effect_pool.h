@@ -1,5 +1,9 @@
 #pragma once
 
+// UI-thread cache of effect processors, keyed by effect id. It is how effect state (delay
+// lines, reverb tails) outlives the immutable engine snapshots: each snapshot shares the same
+// processor objects through shared_ptr.
+
 #include "engine/effects.h"
 
 #include <cstdint>

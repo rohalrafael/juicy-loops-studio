@@ -1,5 +1,10 @@
 #pragma once
 
+// The main window's content. Owns the project (model::Document), the audio engine and the
+// effect pool, lays out the transport bar, the Playlist / Piano Roll, the docked Mixer and the
+// floating panels, and handles menus and keyboard shortcuts. Whenever the document changes it
+// publishes a new engine snapshot and refreshes the views (see docs/architecture.md).
+
 #include "engine/effect_pool.h"
 #include "engine/engine.h"
 #include "io/sample_loader.h"

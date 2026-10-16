@@ -1,3 +1,10 @@
+// Audio-thread processing order per block (see docs/architecture.md, "Audio callback"):
+//   1. adopt the newest snapshot (old one goes back to the UI thread for deletion)
+//   2. advance the transport, collect note triggers for the block
+//   3. render sampler voices into their mixer-track buses, split at trigger offsets
+//   4. run each insert's effects + fader/pan + meter, sum into the Master
+//   5. Master effects + fader/pan + meter, add to the output; metronome on top
+
 #include "engine/engine.h"
 
 #include <algorithm>

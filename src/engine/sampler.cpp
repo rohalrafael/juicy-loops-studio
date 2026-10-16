@@ -1,3 +1,7 @@
+// Voices are preallocated; triggering takes a free voice or steals the oldest. Playback is
+// linear interpolation at (sample rate ratio * 2^(semitones/12)), which handles both sample-rate
+// conversion and pitch.
+
 #include "engine/sampler.h"
 
 #include <algorithm>

@@ -1,5 +1,8 @@
 #pragma once
 
+// The snapshot types the UI thread builds (model::toEngineState) and hands to the audio thread.
+// Everything here is read-only once published; positions are in ticks (ticksPerBeat).
+
 #include "engine/effects.h"
 #include "engine/sample_buffer.h"
 

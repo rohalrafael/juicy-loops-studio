@@ -1,5 +1,8 @@
 #pragma once
 
+// The Channel Rack: a floating panel with one row per channel (mute, pan, volume, mixer track,
+// name, steps or a note preview). Edits go through the Document so they are undoable.
+
 #include "engine/transport.h"
 #include "io/sample_loader.h"
 #include "model/document.h"

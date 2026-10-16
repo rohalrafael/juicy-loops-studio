@@ -1,3 +1,7 @@
+// The playhead is anchorBeat + samplesSinceAnchor * bpm / (60 * sampleRate), re-anchored only when
+// the tempo or sample rate changes. Summing per-block increments instead drifts (see the
+// "Playhead doesn't drift" test).
+
 #include "engine/transport.h"
 
 #include <algorithm>

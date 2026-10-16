@@ -1,5 +1,8 @@
 #pragma once
 
+// Options > Theme: a grid of theme cards (built-in and imported) plus import / export / open
+// folder buttons. Selecting a card applies the theme to the whole app immediately.
+
 #include "ui/theme.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>

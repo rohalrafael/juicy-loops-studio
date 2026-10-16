@@ -1,3 +1,7 @@
+// See main_component.h. Keyboard shortcuts follow FL Studio where it has one (Space, L, F4-F9,
+// Ctrl+M); they live here, so keyboard focus is steered back to this component after menus,
+// dialogs and clicks (see mouseDown, menuBarActivated, timerCallback).
+
 #include "main_component.h"
 
 #include "ui/theme_dialog.h"

@@ -1,5 +1,8 @@
 #pragma once
 
+// The Piano Roll: edits the notes of the selected channel in the current pattern. Made of a
+// scrollable NoteGrid plus a keyboard, a ruler and a velocity lane that follow its scrolling.
+
 #include "engine/transport.h"
 #include "model/document.h"
 

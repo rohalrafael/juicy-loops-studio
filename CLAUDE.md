@@ -114,6 +114,12 @@ and run it before milestones or after platform-specific changes.
 
 ## Conventions
 
+- **Documentation is part of every change.** Each source file starts with a comment on its role;
+  classes and non-obvious functions are documented in the header. When behaviour, structure or
+  shortcuts change, update `docs/architecture.md` (how the code fits together, "How to…"
+  recipes), `docs/user-guide.md` (what users can do) and `docs/themes.md` (theme format) in the
+  same commit. The user asked for thorough docs.
+
 - C++20, format with `.clang-format` (Allman braces, 4 spaces, 100 cols).
 - Engine code builds with `-Wall -Wextra -Wpedantic -Werror` (`/W4 /WX` on MSVC).
 - Prefer RAII and value types; no raw `new`/`delete`.

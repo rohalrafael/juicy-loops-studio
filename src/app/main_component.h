@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/metronome.h"
 #include "engine/transport.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -11,7 +12,7 @@ namespace jls
 // Channel Rack / Playlist / Mixer views exist.
 class MainComponent final : public juce::AudioAppComponent, private juce::Timer
 {
-public:
+  public:
     MainComponent();
     ~MainComponent() override;
 
@@ -23,16 +24,19 @@ public:
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
 
-private:
+  private:
     void timerCallback() override;
     void showAudioSettings();
 
     engine::Transport transport;
+    engine::Metronome metronome;
     double currentSampleRate = 0.0;
 
     juce::TextButton playButton{"Play"};
     juce::TextButton stopButton{"Stop"};
     juce::Slider tempoSlider;
+    juce::ComboBox timeSignatureBox;
+    juce::TextButton metronomeButton{"Metronome"};
     juce::Label positionLabel;
     juce::TextButton audioSettingsButton{"Audio settings"};
 

@@ -66,3 +66,32 @@ TEST_CASE("Tempo is clamped to the supported range")
     t.setTempo(5000.0);
     CHECK(t.tempo() == Transport::maxTempo);
 }
+
+TEST_CASE("advance reports the beat span it covered")
+{
+    Transport t;
+    t.setTempo(120.0);
+    t.setBeatsPerBar(3);
+
+    auto stopped = t.advance(48000, 48000.0);
+    CHECK_FALSE(stopped.playing);
+    CHECK(stopped.startBeat == stopped.endBeat);
+
+    t.play();
+    auto first = t.advance(24000, 48000.0);
+    auto second = t.advance(24000, 48000.0);
+    CHECK(first.playing);
+    CHECK(first.beatsPerBar == 3);
+    CHECK(first.startBeat == 0.0);
+    CHECK(first.endBeat == Catch::Approx(1.0));
+    CHECK(second.startBeat == first.endBeat); // contiguous, no gaps or overlaps
+}
+
+TEST_CASE("Beats per bar is clamped")
+{
+    Transport t;
+    t.setBeatsPerBar(0);
+    CHECK(t.beatsPerBar() == Transport::minBeatsPerBar);
+    t.setBeatsPerBar(99);
+    CHECK(t.beatsPerBar() == Transport::maxBeatsPerBar);
+}

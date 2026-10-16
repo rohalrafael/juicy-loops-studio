@@ -5,9 +5,15 @@
 namespace jls::engine
 {
 
-void Transport::play() { playing.store(true); }
+void Transport::play()
+{
+    playing.store(true);
+}
 
-void Transport::pause() { playing.store(false); }
+void Transport::pause()
+{
+    playing.store(false);
+}
 
 void Transport::stop()
 {
@@ -31,24 +37,53 @@ void Transport::togglePause()
         play();
 }
 
-bool Transport::isPlaying() const { return playing.load(); }
+bool Transport::isPlaying() const
+{
+    return playing.load();
+}
 
-void Transport::setTempo(double newBpm) { bpm.store(std::clamp(newBpm, minTempo, maxTempo)); }
+void Transport::setTempo(double newBpm)
+{
+    bpm.store(std::clamp(newBpm, minTempo, maxTempo));
+}
 
-double Transport::tempo() const { return bpm.load(); }
+double Transport::tempo() const
+{
+    return bpm.load();
+}
 
-double Transport::positionInBeats() const { return position.load(); }
+void Transport::setBeatsPerBar(int beats)
+{
+    barLength.store(std::clamp(beats, minBeatsPerBar, maxBeatsPerBar));
+}
 
-void Transport::advance(int numSamples, double sampleRate)
+int Transport::beatsPerBar() const
+{
+    return barLength.load();
+}
+
+double Transport::positionInBeats() const
+{
+    return position.load();
+}
+
+BlockPosition Transport::advance(int numSamples, double sampleRate)
 {
     if (rewindRequested.exchange(false))
         position.store(0.0);
 
-    if (!playing.load() || numSamples <= 0 || sampleRate <= 0.0)
-        return;
+    BlockPosition block;
+    block.startBeat = position.load();
+    block.endBeat = block.startBeat;
+    block.beatsPerBar = barLength.load();
+    block.playing = playing.load() && numSamples > 0 && sampleRate > 0.0;
 
-    const double beats = numSamples / sampleRate * (bpm.load() / 60.0);
-    position.store(position.load() + beats);
+    if (!block.playing)
+        return block;
+
+    block.endBeat += numSamples / sampleRate * (bpm.load() / 60.0);
+    position.store(block.endBeat);
+    return block;
 }
 
 } // namespace jls::engine

@@ -7,12 +7,12 @@ namespace jls
 
 class MainWindow final : public juce::DocumentWindow
 {
-public:
+  public:
     explicit MainWindow(const juce::String& name)
-        : DocumentWindow(name,
-                         juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
-                             backgroundColourId),
-                         allButtons)
+        : DocumentWindow(
+              name,
+              juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(backgroundColourId),
+              allButtons)
     {
         setUsingNativeTitleBar(true);
         setContentOwned(new MainComponent(), true);
@@ -26,13 +26,13 @@ public:
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
     }
 
-private:
+  private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
 class Application final : public juce::JUCEApplication
 {
-public:
+  public:
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
     const juce::String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
     bool moreThanOneInstanceAllowed() override { return true; }
@@ -46,7 +46,7 @@ public:
 
     void systemRequestedQuit() override { quit(); }
 
-private:
+  private:
     std::unique_ptr<MainWindow> mainWindow;
 };
 

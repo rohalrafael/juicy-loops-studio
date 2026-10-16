@@ -46,7 +46,7 @@ plugin *hosting* and GUI support are still immature.
 
 ```
 src/app/      JUCE application shell, windows, (for now) a transport bar   [exists]
-src/engine/   Real-time engine: transport, later graph/sequencing/mixing   [exists]
+src/engine/   Real-time engine: transport, metronome; later graph/mixing   [exists]
 src/ui/       Channel Rack, Piano Roll, Playlist, Mixer, Browser           [planned]
 src/model/    Project data: patterns, channels, clips, tracks, automation  [planned]
 src/plugins/  Plugin hosting + built-in instruments/effects                [planned]
@@ -57,6 +57,12 @@ tests/        Catch2 unit tests (link against engine/model, never JUCE GUI)
 Targets: `jls_engine` (static lib, plain C++, **no JUCE dependency**),
 `JuicyLoopsStudio` (GUI app), `jls_tests`. Includes are rooted at `src/`,
 e.g. `#include "engine/transport.h"`. Namespaces: `jls`, `jls::engine`, ...
+
+Audio callback flow (per block): `Transport::advance()` moves the playhead and returns a
+`BlockPosition` (the beat span `[startBeat, endBeat)` the block covers). Anything that
+must happen "on a beat" (metronome now, sequencer later) takes that span and finds the
+exact sample offset, so timing doesn't depend on block size. Engine components render
+into raw `float* const*` channel arrays, not JUCE buffers.
 
 Key rules:
 - **UI and engine are separate.** The UI edits the model; the engine reads a
@@ -87,8 +93,8 @@ CI (`.github/workflows/ci.yml`) builds and tests on Ubuntu, Windows and macOS.
 ## Roadmap
 
 1. [x] Repo skeleton: CMake, JUCE, Catch2, CI on all three OSes
-2. [ ] Audio device setup + transport (play/pause/stop, tempo). *Partly done:
-       transport class, device settings dialog, Space = play/stop.*
+2. [x] Audio device setup + transport (play/pause/stop, tempo, beats per bar)
+       + sample-accurate metronome (Ctrl+M)
 3. [ ] Channel Rack with step sequencer + a built-in sampler
 4. [ ] Pattern system + Playlist
 5. [ ] Piano Roll
@@ -106,8 +112,13 @@ CI (`.github/workflows/ci.yml`) builds and tests on Ubuntu, Windows and macOS.
   without a GUI.
 - 2026-10-16: Transport semantics follow FL: the Play button toggles play/pause;
   Space and the Stop button stop *and rewind* to the start.
+- 2026-10-16: Metronome: 1760 Hz accent on bar downbeats, 880 Hz on other beats,
+  30 ms decaying sine. Off by default; Ctrl+M toggles it (FL's shortcut). Time
+  signature is numerator only (n/4) for now.
 
 ## Dev environment notes
 
 - The user is happy to install tools on request. Ask instead of working around a
   missing tool.
+- Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh.
+- Pushing: the user pushes to GitHub themselves; my shell has no SSH agent.

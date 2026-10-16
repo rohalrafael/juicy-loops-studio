@@ -5,6 +5,7 @@ FetchContent_Declare(Catch2
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(jls_tests
+    metronome_tests.cpp
     transport_tests.cpp)
 
 target_link_libraries(jls_tests PRIVATE jls_engine Catch2::Catch2WithMain)

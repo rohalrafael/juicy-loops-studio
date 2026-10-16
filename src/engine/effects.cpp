@@ -383,6 +383,42 @@ class Compressor final : public EffectProcessor
     float reductionDb = 0.0f;
 };
 
+// --------------------------------------------------------------------------- Soft clipper
+// Transparent below a threshold, then a tanh shoulder that approaches the ceiling and never
+// goes past it. The shoulder starts with slope 1, so there's no corner where it takes over.
+// (No oversampling yet: heavy drive on bright material can alias.)
+
+class SoftClipper final : public EffectProcessor
+{
+  public:
+    void prepare(double, int) override {}
+    void reset() override {}
+
+    void process(float* left, float* right, int n, std::span<const float> p) override
+    {
+        const float drive = dbToGain(std::max(0.0f, p[0]));
+        const float ceiling = dbToGain(std::min(0.0f, p[1]));
+        const float knee = std::clamp(p[2], 0.01f, 1.0f);
+        const float threshold = ceiling * (1.0f - knee);
+        const float range = ceiling - threshold;
+
+        float* io[2] = {left, right};
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < n; ++i)
+            {
+                const float x = io[ch][i] * drive;
+                const float magnitude = std::abs(x);
+                if (magnitude <= threshold)
+                {
+                    io[ch][i] = x;
+                    continue;
+                }
+                const float shaped = threshold + range * std::tanh((magnitude - threshold) / range);
+                io[ch][i] = std::copysign(shaped, x);
+            }
+    }
+};
+
 template <typename T> std::unique_ptr<EffectProcessor> make()
 {
     return std::make_unique<T>();
@@ -436,6 +472,12 @@ const std::vector<EffectType>& effectTypes()
           {"Release", 10.0f, 1000.0f, 120.0f, "ms", true},
           {"Makeup", 0.0f, 24.0f, 0.0f, "dB"}},
          make<Compressor>},
+        {"softclip",
+         "Soft Clipper",
+         {{"Drive", 0.0f, 24.0f, 0.0f, "dB"},
+          {"Ceiling", -12.0f, 0.0f, -0.3f, "dB"},
+          {"Knee", 0.0f, 1.0f, 0.5f}},
+         make<SoftClipper>},
     };
     return types;
 }

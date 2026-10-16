@@ -282,6 +282,8 @@ Project makeDefaultProject(double sampleRate)
         project.findChannel(id)->builtinSample = builtin;
     }
     project.selectedChannel = project.channels.front().id;
+    // Like the limiter in FL's template: keeps the summed mix from hard-clipping.
+    project.addEffect(0, "softclip");
     return project;
 }
 

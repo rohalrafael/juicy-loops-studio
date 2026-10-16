@@ -287,6 +287,22 @@ TEST_CASE("Rendering plays the song once, then the tail")
     }
 }
 
+TEST_CASE("New projects don't clip, even with every drum on the same step")
+{
+    auto project = makeDefaultProject(48000.0);
+    for (const auto& channel : project.channels)
+        project.current().set(channel.id, 0, true);
+    const auto audio = renderProject(project, 48000.0, 0.0);
+    const float ceiling = std::pow(10.0f, -0.3f / 20.0f); // the Master soft clipper's default
+    CHECK(peak(audio.left, 0, audio.left.size()) <= ceiling);
+    CHECK(peak(audio.right, 0, audio.right.size()) <= ceiling);
+
+    // Without it, the same beat goes over full scale.
+    project.mixer.tracks[0].effects.clear();
+    const auto raw = renderProject(project, 48000.0, 0.0);
+    CHECK(peak(raw.left, 0, raw.left.size()) > 1.0f);
+}
+
 TEST_CASE("Unsaved changes are tracked through undo and redo")
 {
     Document doc(makeDefaultProject());

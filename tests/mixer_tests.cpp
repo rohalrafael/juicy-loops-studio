@@ -157,6 +157,52 @@ TEST_CASE("Compressor: reduces level above the threshold by the ratio")
     CHECK(20.0f * std::log10(peak) == Catch::Approx(-15.0f).margin(1.0f));
 }
 
+TEST_CASE("Soft clipper: transparent below the knee, never above the ceiling")
+{
+    const std::vector<float> params{0.0f, -6.0f, 0.5f}; // ceiling 0.501, knee from 0.25
+    const auto quiet = sine(200.0, 4800, 0.2f);
+    const auto quietOut = run("softclip", quiet, params);
+    for (int i = 0; i < quiet.size(); ++i)
+        REQUIRE(quietOut.left[static_cast<std::size_t>(i)] ==
+                quiet.left[static_cast<std::size_t>(i)]);
+
+    const float ceiling = std::pow(10.0f, -6.0f / 20.0f);
+    const auto loud = run("softclip", sine(200.0, 4800, 4.0f), params);
+    const float peak = *std::max_element(loud.left.begin(), loud.left.end());
+    CHECK(peak <= ceiling); // reaches it only when driven very hard (tanh rounds to 1)
+    CHECK(peak > 0.95f * ceiling);
+
+    // The curve is continuous with slope 1 where it starts: no corner.
+    Stereo ramp(1000);
+    for (int i = 0; i < 1000; ++i)
+        ramp.left[static_cast<std::size_t>(i)] = ramp.right[static_cast<std::size_t>(i)] =
+            i / 1000.0f;
+    const auto shaped = run("softclip", ramp, params);
+    for (int i = 1; i < 1000; ++i)
+    {
+        const float slope = (shaped.left[static_cast<std::size_t>(i)] -
+                             shaped.left[static_cast<std::size_t>(i - 1)]) *
+                            1000.0f;
+        REQUIRE(slope <= 1.0001f);
+        REQUIRE(slope >= 0.0f);
+    }
+}
+
+TEST_CASE("Soft clipper: drive raises the level")
+{
+    const auto in = sine(200.0, 4800, 0.1f);
+    const auto out = run("softclip", in, {12.0f, 0.0f, 0.5f}); // +12 dB: 0.4, below the knee
+    CHECK(rms(out.left) ==
+          Catch::Approx(std::pow(10.0f, 12.0f / 20.0f) * rms(in.left)).epsilon(0.001));
+}
+
+TEST_CASE("New projects get a soft clipper on the Master")
+{
+    const auto project = model::makeDefaultProject();
+    REQUIRE(project.mixer.tracks[0].effects.size() == 1);
+    CHECK(project.mixer.tracks[0].effects[0].type == "softclip");
+}
+
 TEST_CASE("EffectPool keeps one processor per effect id")
 {
     EffectPool pool;

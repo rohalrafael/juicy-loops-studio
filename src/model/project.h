@@ -193,8 +193,8 @@ struct Project
 std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& name,
                                                           double sampleRate = 44100.0);
 
-// Kick, Clap, Hat, Snare with built-in synthesized sounds, like FL's empty template.
-// The Kick is selected.
+// Kick, Clap, Hat, Snare with built-in synthesized sounds, like FL's empty template, and a Soft
+// Clipper on the Master. The Kick is selected.
 Project makeDefaultProject(double sampleRate = 44100.0);
 
 // Snapshot for the audio thread (allocates; UI thread only). Effect processors come from

@@ -47,7 +47,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
 | `playlist.clips[]` | `start` and `length` in steps; a clip longer than its pattern repeats it |
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
-| `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`); `params` are by name, in real units |
+| `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
 | `view` | Selections and PAT/SONG mode, restored on open |
 | `nextIds` | Id counters for new channels, patterns and effects |
 

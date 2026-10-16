@@ -12,7 +12,7 @@ by Image-Line, and it contains no Image-Line code or assets.
 - **Channel Rack** with step sequencer, built-in drum sounds, your own samples (drag and drop)
 - **Patterns** and the **Playlist** for arranging songs (PAT / SONG modes)
 - **Piano Roll** with velocity
-- **Mixer** with 16 inserts, meters and built-in effects (Filter, EQ, Delay, Reverb, Compressor)
+- **Mixer** with 16 inserts, meters and built-in effects (Filter, EQ, Delay, Reverb, Compressor, Soft Clipper)
 - **Save / open projects** (`.jls`) and **export to WAV**
 - Four themes (Juicy, Citrus, Watermelon, Blueberry), plus custom theme files
 - FL Studio's shortcuts: Space, L, F4–F9, Ctrl+M, Ctrl+Z, Ctrl+S, Ctrl+R

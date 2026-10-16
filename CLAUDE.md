@@ -233,9 +233,10 @@ and run it before milestones or after platform-specific changes.
   if the Playlist is empty) + `io::writeWav()` (24-bit). File menu: Ctrl+N/O/S/Shift+S/R,
   title shows name and `*`, Save / Don't save / Cancel prompt on New/Open/Quit.
 - Known gaps (files): export runs on the UI thread (blocks briefly), no recent-files list, no
-  autosave, no "collect samples into project folder". **Summed drums can clip** (hard clip at
-  0 dBFS on export). Decided (2026-10-16): fix with a **soft clipper** effect (user's choice
-  over a limiter), probably on the Master in new projects. Not started; the user asked to wait.
+  autosave, no "collect samples into project folder". Clipping: solved 2026-10-17 with a **Soft
+  Clipper** effect (user's choice over a limiter), on the Master in new projects
+  (`makeDefaultProject`). Linear below the knee, tanh shoulder up to the ceiling (default
+  -0.3 dB); no oversampling yet.
 
 ## Dev environment notes
 

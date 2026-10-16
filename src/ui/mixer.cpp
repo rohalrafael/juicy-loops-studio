@@ -542,6 +542,7 @@ void EffectPanel::rebuild()
         slider->setDoubleClickReturnValue(true, param.defaultValue);
         slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, controlWidth - 8, 18);
         slider->textFromValueFunction = [param](double v) { return formatValue(param, v); };
+        slider->updateText(); // the value may not change below, so format the text now
         slider->onDragStart = [this] { gesture = doc.newGestureId(); };
         slider->onValueChange = [this, i, s = slider.get()]
         { setParam(i, static_cast<float>(s->getValue()), gesture); };

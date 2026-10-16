@@ -102,9 +102,11 @@ length doesn't change the sound yet: samples always play to their end, like FL's
 - **Strips:** Master plus 16 inserts, each with a stereo meter, fader (double-click = 0 dB),
   pan, **M**ute and **S**olo. Click a strip to select it.
 - **Effect slots** (right side, for the selected track):
-  - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb or Compressor.
+  - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb, Compressor or Soft Clipper.
   - Click an effect to open its controls; click its light to bypass it.
   - Right-click for edit, bypass, move up/down and remove.
+- **Soft Clipper on the Master:** new projects start with one, so loud mixes saturate gently
+  instead of hard-clipping. It changes nothing below its knee; remove or bypass it if you like.
 - **Effect panel:** floating; drag it by its title bar. Knobs drag up/down and double-click
   resets them.
 

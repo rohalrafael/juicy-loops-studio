@@ -44,7 +44,7 @@ struct EffectType
     std::vector<float> defaultParams() const;
 };
 
-// The built-in effects, in menu order: Filter, EQ, Delay, Reverb, Compressor.
+// The built-in effects, in menu order: Filter, EQ, Delay, Reverb, Compressor, Soft Clipper.
 const std::vector<EffectType>& effectTypes();
 const EffectType* findEffectType(std::string_view id);
 

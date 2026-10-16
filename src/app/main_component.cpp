@@ -258,27 +258,27 @@ void MainComponent::resized()
     auto area = bounds.reduced(margin);
     auto bar = area.removeFromTop(transportHeight);
 
-    patButton.setBounds(bar.removeFromLeft(56));
-    songButton.setBounds(bar.removeFromLeft(62));
-    bar.removeFromLeft(8);
-    patternBox.setBounds(bar.removeFromLeft(150).reduced(0, 4));
-    newPatternButton.setBounds(bar.removeFromLeft(34).reduced(2, 4));
-    bar.removeFromLeft(12);
-    playButton.setBounds(bar.removeFromLeft(72));
+    // Fits from ~890 px wide; below that the least important controls drop out.
+    patButton.setBounds(bar.removeFromLeft(50));
+    songButton.setBounds(bar.removeFromLeft(58));
     bar.removeFromLeft(6);
-    stopButton.setBounds(bar.removeFromLeft(72));
-    bar.removeFromLeft(12);
-    tempoSlider.setBounds(bar.removeFromLeft(180));
-    bar.removeFromLeft(12);
-    // Least important last: when the window is narrow these drop out instead of clipping.
-    positionLabel.setBounds(bar.removeFromLeft(110));
+    patternBox.setBounds(bar.removeFromLeft(130).reduced(0, 4));
+    newPatternButton.setBounds(bar.removeFromLeft(32).reduced(2, 4));
+    bar.removeFromLeft(10);
+    playButton.setBounds(bar.removeFromLeft(64));
+    bar.removeFromLeft(4);
+    stopButton.setBounds(bar.removeFromLeft(64));
+    bar.removeFromLeft(10);
+    tempoSlider.setBounds(bar.removeFromLeft(170));
     bar.removeFromLeft(6);
-    const bool roomForRest = bar.getWidth() >= 70 + 6 + 100;
+    positionLabel.setBounds(bar.removeFromLeft(92));
+    bar.removeFromLeft(6);
+    const bool roomForRest = bar.getWidth() >= 64 + 4 + 96;
     timeSignatureBox.setVisible(roomForRest);
     metronomeButton.setVisible(roomForRest);
-    timeSignatureBox.setBounds(bar.removeFromLeft(70).reduced(0, 4));
-    bar.removeFromLeft(6);
-    metronomeButton.setBounds(bar.removeFromLeft(100));
+    timeSignatureBox.setBounds(bar.removeFromLeft(64).reduced(0, 4));
+    bar.removeFromLeft(4);
+    metronomeButton.setBounds(bar.removeFromLeft(96));
 
     area.removeFromTop(margin);
     playlist.setBounds(area);

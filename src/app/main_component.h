@@ -29,10 +29,12 @@ class MainComponent final : public juce::AudioAppComponent,
     void paint(juce::Graphics& g) override;
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
+    void mouseDown(const juce::MouseEvent& e) override;
 
     juce::StringArray getMenuBarNames() override;
     juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override;
     void menuItemSelected(int itemId, int menuIndex) override;
+    void menuBarActivated(bool isActive) override;
 
   private:
     void timerCallback() override;

@@ -153,8 +153,19 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
 
 void StepGrid::mouseDrag(const juce::MouseEvent& e)
 {
-    if (!steps.empty())
-        paintStep(stepAt(e.x));
+    if (steps.empty())
+        return;
+
+    // Fast drags report positions several steps apart: paint everything in between too.
+    const int target = stepAt(e.x);
+    if (lastPainted < 0)
+    {
+        paintStep(target);
+        return;
+    }
+    const int direction = target > lastPainted ? 1 : -1;
+    for (int s = lastPainted + direction; s != target + direction; s += direction)
+        paintStep(s);
 }
 
 void StepGrid::paintStep(int step)

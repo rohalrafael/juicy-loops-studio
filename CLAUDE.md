@@ -178,6 +178,11 @@ and run it before milestones or after platform-specific changes.
   right-click deletes, Ctrl+wheel zooms; snap Bar/Beat/Step. Channel Rack is a floating
   panel over the Playlist (drag its title bar; F6 toggles). Keys: L = PAT/SONG, F4 = new
   pattern. Patterns menu: new/clone/rename/delete.
+- 2026-10-16: Keyboard focus: shortcuts live in MainComponent and most widgets don't take
+  focus, so focus must come back after menus and dialogs: `menuBarActivated(false)`, a click
+  anywhere (mouse listener on all children), and a timer safety net (only while our window
+  is the active one). Found by UI testing, along with step painting skipping steps on fast
+  drags (now interpolated).
 - Known gaps: no seeking (clicking the ruler), no pattern length UI, no track names/mute,
   no clip selection or multi-select, the playlist has a fixed 16 tracks.
 
@@ -186,6 +191,15 @@ and run it before milestones or after platform-specific changes.
 - The user is happy to install tools on request. Ask instead of working around a
   missing tool.
 - Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh, ImageMagick.
+- **UI testing: use `tools/ui-test.sh`** (Xvfb display :99 + xdotool + ImageMagick). The
+  user is on **Wayland (Hyprland)**: xdotool can't click the app on the real desktop
+  (synthetic events are ignored, and real injection would move the user's pointer), so
+  never drive the live session. Test on Xvfb instead, read screenshots, then `stop`/`stop-x`.
+  The app uses the real settings file, so reset `theme` to `juicy` after testing themes.
+  Without a window manager, JUCE logs harmless `BadAtom` errors and dialogs have no title
+  bar.
+- On the real desktop Hyprland tiles the window (e.g. 941x501) a few seconds after launch;
+  wait about 6 s before taking screenshots there.
 - Screenshot the app (XWayland) without capturing the rest of the screen:
   `import -window "Juicy Loops Studio" out.png`, then Read the PNG. Start the app with `&`
   and `kill $!`. **Don't `pkill -f`** with the app path: it matches and kills its own shell.

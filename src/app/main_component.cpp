@@ -111,6 +111,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     documentChanged();
 
     setWantsKeyboardFocus(true);
+    addMouseListener(this, true); // see mouseDown(): clicks anywhere restore shortcut focus
     setSize(1280, 800);
     setAudioChannels(0, 2);
     startTimerHz(30);
@@ -371,6 +372,28 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     return menu;
 }
 
+void MainComponent::mouseDown(const juce::MouseEvent&)
+{
+    // Keyboard shortcuts are handled here, but focus can end up nowhere (e.g. after a menu or
+    // dialog closes). Any click takes it back, unless the click went into a text field.
+    if (dynamic_cast<juce::TextEditor*>(getCurrentlyFocusedComponent()) == nullptr)
+        grabKeyboardFocus();
+}
+
+void MainComponent::menuBarActivated(bool isActive)
+{
+    // The menu held keyboard focus; hand it back once it has closed (by selection or Escape).
+    if (isActive)
+        return;
+    juce::Component::SafePointer<MainComponent> self(this);
+    juce::MessageManager::callAsync(
+        [self]
+        {
+            if (self != nullptr && self->isShowing())
+                self->grabKeyboardFocus();
+        });
+}
+
 void MainComponent::menuItemSelected(int itemId, int)
 {
     switch (itemId)
@@ -428,6 +451,12 @@ void MainComponent::showAbout()
 void MainComponent::timerCallback()
 {
     engine.collectGarbage();
+
+    // Safety net for shortcuts: if focus ended up nowhere (e.g. a dialog or popup closed)
+    // while our window is the active one, take it back. Never steals focus from other apps.
+    if (getCurrentlyFocusedComponent() == nullptr && isShowing())
+        if (auto* peer = getPeer(); peer != nullptr && peer->isFocused())
+            grabKeyboardFocus();
 
     // Position within what's looping: the pattern in PAT mode, the song in SONG mode.
     const auto& project = document.project();

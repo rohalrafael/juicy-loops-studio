@@ -234,7 +234,8 @@ and run it before milestones or after platform-specific changes.
   title shows name and `*`, Save / Don't save / Cancel prompt on New/Open/Quit.
 - Known gaps (files): export runs on the UI thread (blocks briefly), no recent-files list, no
   autosave, no "collect samples into project folder". **Summed drums can clip** (hard clip at
-  0 dBFS on export); FL's template puts a limiter on the Master, we have none yet.
+  0 dBFS on export). Decided (2026-10-16): fix with a **soft clipper** effect (user's choice
+  over a limiter), probably on the Master in new projects. Not started; the user asked to wait.
 
 ## Dev environment notes
 

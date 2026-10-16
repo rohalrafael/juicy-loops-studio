@@ -35,6 +35,9 @@ void LookAndFeel::applyTheme(const theme::Theme& t, juce::Typeface::Ptr bundledF
     setColour(juce::ComboBox::textColourId, colour(c.text));
     setColour(juce::ComboBox::arrowColourId, colour(c.textDim));
     setColour(juce::Label::textColourId, colour(c.text));
+    setColour(juce::Slider::thumbColourId, colour(c.accent));
+    setColour(juce::Slider::trackColourId, colour(c.display));
+    setColour(juce::Slider::backgroundColourId, colour(c.display));
     setColour(juce::Slider::textBoxTextColourId, colour(c.displayText));
     setColour(juce::Slider::textBoxBackgroundColourId, colour(c.display));
     setColour(juce::Slider::textBoxOutlineColourId, colour(c.outline));

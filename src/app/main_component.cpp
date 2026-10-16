@@ -22,6 +22,7 @@ enum MenuItem
     playlistItem,
     pianoRollItem,
     channelRackItem,
+    mixerItem,
     themeItem,
     audioSettingsItem,
     aboutItem,
@@ -43,6 +44,7 @@ void noFocus(juce::Component& c)
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), document(model::makeDefaultProject()),
       playlist(document, engine.transport()), pianoRoll(document, engine.transport()),
+      mixer(document), effectPanel(document),
       channelRack(document, engine.transport(), sampleLoader)
 {
     auto& transport = engine.transport();
@@ -101,7 +103,18 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
              &tempoSlider, &timeSignatureBox, &metronomeButton, &positionLabel, &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
-    addAndMakeVisible(channelRack); // after the main views, so it floats on top
+    addChildComponent(mixer);
+    addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
+    addChildComponent(effectPanel);
+    mixer.onOpenEffect = [this](model::EffectId id)
+    {
+        effectPanel.show(id);
+        if (!effectPanelPlaced)
+        {
+            effectPanel.setCentrePosition(getLocalBounds().getCentre());
+            effectPanelPlaced = true;
+        }
+    };
     channelRack.onOpenPianoRoll = [this](model::ChannelId) { showPianoRoll(); };
 
 #if JUCE_MAC
@@ -134,12 +147,20 @@ void MainComponent::documentChanged()
 {
     const auto& project = document.project();
     engine.transport().setBeatsPerBar(project.beatsPerBar);
-    engine.setState(model::toEngineState(project));
+    publishState();
     channelRack.refresh();
     playlist.refresh();
     pianoRoll.refresh();
+    mixer.refresh();
+    if (effectPanel.isVisible())
+        effectPanel.refresh();
     refreshTransportBar();
     menuItemsChanged();
+}
+
+void MainComponent::publishState()
+{
+    engine.setState(model::toEngineState(document.project(), &effectPool));
 }
 
 void MainComponent::refreshTransportBar()
@@ -243,13 +264,21 @@ void MainComponent::showPianoRoll()
     menuItemsChanged();
 }
 
-void MainComponent::prepareToPlay(int, double sampleRate)
+void MainComponent::toggleMixer()
 {
-    engine.prepare(sampleRate);
+    mixer.setVisible(!mixer.isVisible());
+    resized();
+    menuItemsChanged();
+}
+
+void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
+{
+    engine.prepare(sampleRate, samplesPerBlockExpected);
 }
 
 void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
+    juce::ScopedNoDenormals noDenormals; // effects' feedback paths must never go denormal
     bufferToFill.clearActiveBufferRegion();
 
     // Channel pointers offset to the active region; fixed-size so nothing allocates.
@@ -302,6 +331,12 @@ void MainComponent::resized()
     metronomeButton.setBounds(bar.removeFromLeft(96));
 
     area.removeFromTop(margin);
+    if (mixer.isVisible())
+    {
+        const int height = std::min(ui::MixerView::preferredHeight, area.getHeight() / 2);
+        mixer.setBounds(area.removeFromBottom(height));
+        area.removeFromBottom(margin / 2);
+    }
     playlist.setBounds(area);
     pianoRoll.setBounds(area);
 
@@ -345,6 +380,8 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         return toggleChannelRack(), true;
     if (key == KeyPress(KeyPress::F7Key))
         return showPianoRoll(), true;
+    if (key == KeyPress(KeyPress::F9Key))
+        return toggleMixer(), true;
     if (key == KeyPress('z', cmd, 0))
         return document.undo(), true;
     if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
@@ -393,6 +430,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
             Item("Channel rack").setID(channelRackItem).setTicked(channelRack.isVisible()), "F6"));
         menu.addItem(withKey(
             Item("Piano roll").setID(pianoRollItem).setTicked(pianoRoll.isVisible()), "F7"));
+        menu.addItem(withKey(Item("Mixer").setID(mixerItem).setTicked(mixer.isVisible()), "F9"));
         break;
     }
     case 4:
@@ -464,6 +502,9 @@ void MainComponent::menuItemSelected(int itemId, int)
     case channelRackItem:
         toggleChannelRack();
         break;
+    case mixerItem:
+        toggleMixer();
+        break;
     case themeItem:
         ui::ThemeDialog::show(themes);
         break;
@@ -493,6 +534,20 @@ void MainComponent::showAbout()
 void MainComponent::timerCallback()
 {
     engine.collectGarbage();
+
+    // The audio device (re)started with a new format: rebuild effect processors for it.
+    const double rate = engine.preparedSampleRate();
+    const int block = engine.preparedBlockSize();
+    if (rate > 0.0 && (std::abs(rate - formatRate) > 0.5 || block != formatBlock))
+    {
+        formatRate = rate;
+        formatBlock = block;
+        effectPool.setFormat(rate, block);
+        publishState();
+    }
+
+    if (mixer.isVisible())
+        mixer.updateMeters([this](int track, int side) { return engine.takePeak(track, side); });
 
     // Safety net for shortcuts: if focus ended up nowhere (e.g. a dialog or popup closed)
     // while our window is the active one, take it back. Never steals focus from other apps.

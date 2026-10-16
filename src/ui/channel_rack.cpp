@@ -65,6 +65,53 @@ void LedButton::mouseDown(const juce::MouseEvent&)
         onClick();
 }
 
+// ---------------------------------------------------------------------------------- InsertBox
+
+void InsertBox::setValue(int track)
+{
+    if (track != value)
+    {
+        value = track;
+        repaint();
+    }
+}
+
+void InsertBox::paint(juce::Graphics& g)
+{
+    const auto& t = currentTheme();
+    const auto r = getLocalBounds().toFloat().reduced(1.0f, 5.0f);
+    g.setColour(colour(t.colours.display));
+    g.fillRoundedRectangle(r, std::min(4.0f, t.shape.cornerRadius));
+    g.setColour(colour(value == 0 ? t.colours.displayDim : t.colours.displayText));
+    g.setFont(juce::FontOptions(11.0f));
+    g.drawText(value == 0 ? juce::String("--") : juce::String(value), r,
+               juce::Justification::centred);
+}
+
+void InsertBox::change(int track, int gesture)
+{
+    track = juce::jlimit(0, model::Mixer::numInserts, track);
+    if (track != value && onChange)
+        onChange(track, gesture);
+}
+
+void InsertBox::mouseDown(const juce::MouseEvent&)
+{
+    dragStartValue = value;
+    gestureId = newGestureId ? newGestureId() : 0;
+}
+
+void InsertBox::mouseDrag(const juce::MouseEvent& e)
+{
+    change(dragStartValue - e.getDistanceFromDragStartY() / 6, gestureId);
+}
+
+void InsertBox::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
+{
+    if (std::abs(w.deltaY) > 0.0f)
+        change(value + (w.deltaY > 0.0f ? 1 : -1), 0);
+}
+
 // ----------------------------------------------------------------------------------- StepGrid
 
 int StepGrid::stepX(int step)
@@ -293,6 +340,20 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
             rack.select(id);
     };
     name.addMouseListener(this, false);
+
+    insert.setTooltip("Mixer track (drag or scroll; -- = Master)");
+    insert.newGestureId = [this] { return rack.document().newGestureId(); };
+    insert.onChange = [this](int track, int gesture)
+    {
+        rack.edit(
+            [this, track](model::Project& p)
+            {
+                if (auto* c = p.findChannel(id))
+                    c->mixerTrack = track;
+            },
+            gesture);
+    };
+    addAndMakeVisible(insert);
     noFocus(name);
     steps.onOpenNotes = [this] { rack.openPianoRoll(id); };
 
@@ -311,6 +372,7 @@ void ChannelRow::update(const model::Channel& channel, const model::Project& pro
     pan.setValue(channel.pan, juce::dontSendNotification);
     volume.setValue(channel.volume, juce::dontSendNotification);
     name.setButtonText(juce::String::fromUTF8(channel.name.c_str()));
+    insert.setValue(channel.mixerTrack);
     name.setToggleState(project.selectedChannel == channel.id, juce::dontSendNotification);
 
     const auto& pattern = project.current();
@@ -340,6 +402,7 @@ void ChannelRow::resized()
                       .withSizeKeepingCentre(metrics::knobSize, metrics::knobSize));
     volume.setBounds(area.removeFromLeft(metrics::knobSize + 4)
                          .withSizeKeepingCentre(metrics::knobSize, metrics::knobSize));
+    insert.setBounds(area.removeFromLeft(metrics::insertWidth));
     area.removeFromLeft(4);
     name.setBounds(area.removeFromLeft(metrics::nameWidth).reduced(0, 2));
     area.removeFromLeft(8);
@@ -439,7 +502,7 @@ void ChannelRack::refresh()
 int ChannelRack::preferredWidth() const
 {
     return hardShadowOffset + padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
-           4 + metrics::nameWidth + 8 +
+           metrics::insertWidth + 4 + metrics::nameWidth + 8 +
            StepGrid::widthFor(doc.project().lengthInSteps(doc.project().current()));
 }
 
@@ -523,7 +586,8 @@ void ChannelRack::resized()
         row->setBounds(area.removeFromTop(metrics::rowHeight));
         area.removeFromTop(metrics::rowGap);
     }
-    const int nameX = metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) + 4;
+    const int nameX =
+        metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) + metrics::insertWidth + 4;
     addButton.setBounds(padding + nameX, area.getY(), metrics::nameWidth, metrics::rowHeight - 4);
 }
 

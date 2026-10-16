@@ -1,5 +1,7 @@
 add_library(jls_engine STATIC
     drum_synth.cpp
+    effect_pool.cpp
+    effects.cpp
     engine.cpp
     metronome.cpp
     sampler.cpp

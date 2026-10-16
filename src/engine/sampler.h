@@ -26,9 +26,10 @@ class Sampler
     void trigger(const EngineState& state, int channelIndex, int pitch = 60,
                  float velocity = 100.0f / 128.0f);
 
-    // Adds all sounding voices into channels[*][from, to).
-    void render(const EngineState& state, float* const* channels, int numChannels, int from,
-                int to);
+    // Adds all sounding voices into their channel's mixer-track bus, [from, to).
+    // buses[2 * track] is a track's left, buses[2 * track + 1] its right; channels routed to a
+    // track beyond numBuses go to track 0. With numBuses == 1 only track 0's left is written.
+    void render(const EngineState& state, float* const* buses, int numBuses, int from, int to);
 
     int activeVoiceCount() const;
 

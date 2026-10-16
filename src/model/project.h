@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/effect_pool.h"
 #include "engine/engine_state.h"
 #include "engine/sample_buffer.h"
 
@@ -14,6 +15,7 @@ namespace jls::model
 
 using ChannelId = std::uint32_t;
 using PatternId = std::uint32_t;
+using EffectId = std::uint32_t;
 
 inline constexpr int stepsPerBeat = 4;                    // a step is a 16th note
 inline constexpr int ticksPerBeat = engine::ticksPerBeat; // note positions are in ticks
@@ -27,6 +29,45 @@ struct Channel
     float volume = 0.8f; // linear gain 0..1
     float pan = 0.0f;    // -1 (left) .. +1 (right)
     bool muted = false;
+    int mixerTrack = 0; // 0 = Master, 1.. = inserts
+};
+
+// An effect in a mixer track's slot. `type` is an engine::EffectType id.
+struct EffectSlot
+{
+    EffectId id = 0;
+    std::string type;
+    std::vector<float> params; // one per engine::ParamInfo, in real units
+    bool enabled = true;
+
+    bool operator==(const EffectSlot&) const = default;
+};
+
+struct MixerTrack
+{
+    static constexpr float minVolumeDb = -60.0f; // the bottom of the fader is silence
+    static constexpr float maxVolumeDb = 6.0f;
+    static constexpr int maxEffects = 8;
+
+    std::string name;
+    float volumeDb = 0.0f;
+    float pan = 0.0f;
+    bool muted = false;
+    bool solo = false;
+    std::vector<EffectSlot> effects; // in processing order, at most maxEffects
+
+    float gain() const; // linear; 0 at minVolumeDb
+};
+
+// FL-style mixer: tracks[0] is the Master, the rest are inserts that all feed it.
+struct Mixer
+{
+    static constexpr int numInserts = 16;
+
+    std::vector<MixerTrack> tracks; // Master + numInserts
+
+    Mixer();
+    bool anySolo() const;
 };
 
 struct Note
@@ -94,18 +135,22 @@ struct Project
     std::vector<Channel> channels; // in Channel Rack order
     std::vector<Pattern> patterns; // in pattern-selector order; never empty
     Playlist playlist;
+    Mixer mixer;
     int beatsPerBar = 4; // time signature numerator (n/4)
 
     // View state: kept across undo/redo (see Document).
     PatternId currentPattern = 0;
     ChannelId selectedChannel = 0; // 0 = none; the Piano Roll (F7) edits this channel
+    int selectedMixerTrack = 1;    // the mixer track whose effect slots are shown
     bool songMode = false;
 
     ChannelId nextChannelId = 1;
     PatternId nextPatternId = 1;
+    EffectId nextEffectId = 1;
 
     Project(); // starts with one empty pattern, "Pattern 1"
 
+    // New channels go to the first insert no other channel uses (Master if all are taken).
     ChannelId addChannel(std::string name, std::shared_ptr<const engine::SampleBuffer> sample);
     void removeChannel(ChannelId id); // also removes its notes from every pattern
     Channel* findChannel(ChannelId id);
@@ -126,13 +171,22 @@ struct Project
     int lengthInSteps(const Pattern& pattern) const { return pattern.lengthInSteps(stepsPerBar()); }
     // Length of the arrangement: end of the last clip, rounded up to a whole bar (0 if empty).
     int songLengthInSteps() const;
+
+    // Adds an effect with default settings to a mixer track's chain. Returns 0 if the track
+    // is full or the type unknown.
+    EffectId addEffect(int track, const std::string& type);
+    EffectSlot* findEffect(EffectId id, int* trackOut = nullptr);
+    const EffectSlot* findEffect(EffectId id, int* trackOut = nullptr) const;
+    void removeEffect(EffectId id);
 };
 
 // Kick, Clap, Hat, Snare with built-in synthesized sounds, like FL's empty template.
 // The Kick is selected.
 Project makeDefaultProject(double sampleRate = 44100.0);
 
-// Snapshot for the audio thread (allocates; UI thread only).
-std::unique_ptr<engine::EngineState> toEngineState(const Project& project);
+// Snapshot for the audio thread (allocates; UI thread only). Effect processors come from
+// `effects`, which keeps their state between snapshots; without a pool effects are left out.
+std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
+                                                   engine::EffectPool* effects = nullptr);
 
 } // namespace jls::model

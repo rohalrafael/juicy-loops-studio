@@ -8,7 +8,9 @@
 #include "engine/transport.h"
 
 #include <array>
+#include <atomic>
 #include <memory>
+#include <vector>
 
 namespace jls::engine
 {
@@ -35,12 +37,22 @@ class Engine
     // UI thread, call regularly (e.g. from a timer): frees retired states, retries pending ones.
     void collectGarbage();
 
-    void prepare(double sampleRate);
+    // Before audio starts (may allocate). Also prepares the effects in the current state.
+    void prepare(double sampleRate, int maxBlockSize);
     // Audio thread: renders one block into (pre-cleared or not) output channels, additively.
     void process(float* const* channels, int numChannels, int numSamples);
 
+    // Format from the last prepare(), for creating effect processors on the UI thread.
+    double preparedSampleRate() const { return preparedRate.load(); }
+    int preparedBlockSize() const { return preparedBlock.load(); }
+
+    // UI thread: highest absolute level on a mixer track since the last call, after its fader.
+    float takePeak(int track, int side);
+
   private:
     void adoptNewestState();
+    void renderChunk(float* const* channels, int numChannels, int offset, int numSamples);
+    void processTrack(int track, int numSamples);
 
     Transport transportState;
     Metronome metronomeState;
@@ -53,7 +65,14 @@ class Engine
     // Audio thread only.
     EngineState* current = nullptr;
     double sampleRate = 44100.0;
+    int maxBlock = 0;
     std::array<Trigger, 1024> triggers{};
+    std::vector<float> busMemory;                   // maxMixerTracks * 2 * maxBlock
+    std::array<float*, maxMixerTracks * 2> buses{}; // into busMemory
+
+    std::atomic<double> preparedRate{0.0};
+    std::atomic<int> preparedBlock{0};
+    std::array<std::atomic<float>, maxMixerTracks * 2> peaks{};
 };
 
 } // namespace jls::engine

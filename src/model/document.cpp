@@ -15,6 +15,7 @@ void keepViewState(const Project& from, Project& to)
         to.currentPattern = from.currentPattern;
     if (to.findChannel(from.selectedChannel) != nullptr)
         to.selectedChannel = from.selectedChannel;
+    to.selectedMixerTrack = from.selectedMixerTrack;
 }
 
 } // namespace

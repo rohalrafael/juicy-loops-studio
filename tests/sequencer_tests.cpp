@@ -326,7 +326,7 @@ TEST_CASE("Engine plays published state and frees retired states on the UI threa
 {
     std::weak_ptr<const SampleBuffer> watched;
     Engine engine;
-    engine.prepare(sampleRate);
+    engine.prepare(sampleRate, 512);
     engine.transport().setTempo(120.0);
 
     {

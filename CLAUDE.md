@@ -46,11 +46,13 @@ plugin *hosting* and GUI support are still immature.
 
 ```
 src/app/      JUCE app shell: window, transport bar, MainComponent (owns Document + Engine)
-src/engine/   Real-time, JUCE-free: Engine, Transport, StepSequencer, Sampler, Metronome,
-              DrumSynth (built-in sounds), SpscQueue, EngineState snapshot
+src/engine/   Real-time, JUCE-free: Engine (mixer buses), Transport, StepSequencer, Sampler,
+              Metronome, DrumSynth, effects (Filter/EQ/Delay/Reverb/Compressor), EffectPool,
+              SpscQueue, EngineState snapshot
 src/model/    JUCE-free project data: Project (channels, patterns, playlist), Document (undo)
 src/theme/    JUCE-free theme data + JSON theme files (nlohmann/json) + 4 built-in themes
-src/ui/       JUCE components: ChannelRack (floating), PlaylistView, PianoRollView, ThemeManager +
+src/ui/       JUCE components: ChannelRack (floating), PlaylistView, PianoRollView, MixerView +
+              EffectPanel, ThemeManager +
               LookAndFeel (ui/theme), ThemeDialog
 src/io/       JUCE-based file I/O: SampleLoader (WAV/AIFF/FLAC/Ogg/MP3 -> SampleBuffer)
 src/plugins/  Plugin hosting + built-in instruments/effects                     [planned]
@@ -125,7 +127,7 @@ and run it before milestones or after platform-specific changes.
 3. [x] Channel Rack with step sequencer + a built-in sampler
 4. [x] Pattern system + Playlist (PAT/SONG modes)
 5. [x] Piano Roll
-6. [ ] Mixer (inserts, sends, built-in effects)
+6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
 7. [ ] Plugin hosting
 8. [ ] Project save/load, audio export
 
@@ -201,6 +203,20 @@ and run it before milestones or after platform-specific changes.
   Beat/Step/half/third/None; velocity lane sets the nearest stem (and chord) within 8 px.
 - Known gaps (Piano Roll): no note selection/multi-select/copy, no audition when clicking
   keys, no cut-at-note-end option, can't set pattern length by hand.
+- 2026-10-16: Mixer. `Project::mixer.tracks` = Master + 16 inserts (fader dB, pan, mute,
+  solo, up to 8 `EffectSlot`s {id, type, params, enabled}). Channels have `mixerTrack`
+  (defaults Kick..Snare -> 1..4, new channels -> next free insert, 0 = Master). Engine: the
+  sampler renders into per-track stereo buses; inserts run effects, fader/pan, meter, then
+  sum into Master; Master goes to the output; metronome bypasses the mixer. Effect DSP
+  state lives in `EffectProcessor`s owned by `engine::EffectPool` (UI thread, keyed by
+  effect id) and is shared into each snapshot via shared_ptr, so tails survive edits; the
+  audio thread never copies or releases those pointers. Pool is reset when the device
+  format changes (MainComponent timer). Effects are written from scratch (engine stays
+  JUCE-free) and describe their params (`ParamInfo`) so the UI builds knobs generically.
+  Meters: `Engine::takePeak()` (atomic max, read-and-reset by the UI). Mixer docked at the
+  bottom (F9), selected track's slots on the right, `EffectPanel` floats.
+- Known gaps (Mixer): no sends/routing between inserts, no renaming tracks, no param
+  smoothing (fast knob moves can click), no tempo-synced delay.
 
 ## Dev environment notes
 

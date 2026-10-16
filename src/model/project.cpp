@@ -3,6 +3,7 @@
 #include "engine/drum_synth.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 namespace jls::model
@@ -69,6 +70,25 @@ void Pattern::set(ChannelId channel, int step, bool on)
     }
 }
 
+float MixerTrack::gain() const
+{
+    return volumeDb <= minVolumeDb ? 0.0f : std::pow(10.0f, volumeDb / 20.0f);
+}
+
+Mixer::Mixer()
+{
+    tracks.resize(numInserts + 1);
+    tracks[0].name = "Master";
+    for (int i = 1; i <= numInserts; ++i)
+        tracks[static_cast<std::size_t>(i)].name = "Insert " + std::to_string(i);
+}
+
+bool Mixer::anySolo() const
+{
+    return std::any_of(tracks.begin() + 1, tracks.end(),
+                       [](const MixerTrack& t) { return t.solo; });
+}
+
 Project::Project()
 {
     currentPattern = addPattern();
@@ -80,6 +100,13 @@ ChannelId Project::addChannel(std::string name, std::shared_ptr<const engine::Sa
     channel.id = nextChannelId++;
     channel.name = std::move(name);
     channel.sample = std::move(sample);
+    for (int track = 1; track <= Mixer::numInserts; ++track)
+        if (std::none_of(channels.begin(), channels.end(),
+                         [track](const Channel& c) { return c.mixerTrack == track; }))
+        {
+            channel.mixerTrack = track;
+            break;
+        }
     channels.push_back(std::move(channel));
     return channels.back().id;
 }
@@ -184,6 +211,46 @@ int Project::songLengthInSteps() const
     return bar <= 0 ? end : (end + bar - 1) / bar * bar;
 }
 
+EffectId Project::addEffect(int track, const std::string& type)
+{
+    const auto* info = engine::findEffectType(type);
+    if (info == nullptr || track < 0 || track >= static_cast<int>(mixer.tracks.size()))
+        return 0;
+    auto& effects = mixer.tracks[static_cast<std::size_t>(track)].effects;
+    if (static_cast<int>(effects.size()) >= MixerTrack::maxEffects)
+        return 0;
+    EffectSlot slot;
+    slot.id = nextEffectId++;
+    slot.type = type;
+    slot.params = info->defaultParams();
+    effects.push_back(std::move(slot));
+    return effects.back().id;
+}
+
+EffectSlot* Project::findEffect(EffectId id, int* trackOut)
+{
+    for (std::size_t t = 0; t < mixer.tracks.size(); ++t)
+        for (auto& slot : mixer.tracks[t].effects)
+            if (slot.id == id)
+            {
+                if (trackOut != nullptr)
+                    *trackOut = static_cast<int>(t);
+                return &slot;
+            }
+    return nullptr;
+}
+
+const EffectSlot* Project::findEffect(EffectId id, int* trackOut) const
+{
+    return const_cast<Project*>(this)->findEffect(id, trackOut);
+}
+
+void Project::removeEffect(EffectId id)
+{
+    for (auto& track : mixer.tracks)
+        std::erase_if(track.effects, [id](const EffectSlot& s) { return s.id == id; });
+}
+
 Project makeDefaultProject(double sampleRate)
 {
     using engine::DrumSound;
@@ -202,7 +269,8 @@ Project makeDefaultProject(double sampleRate)
     return project;
 }
 
-std::unique_ptr<engine::EngineState> toEngineState(const Project& project)
+std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
+                                                   engine::EffectPool* effects)
 {
     auto state = std::make_unique<engine::EngineState>();
     state->channels.reserve(project.channels.size());
@@ -217,6 +285,8 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project)
         const float pan = std::clamp(channel.pan, -1.0f, 1.0f);
         cs.gainLeft = channel.volume * std::min(1.0f, 1.0f - pan);
         cs.gainRight = channel.volume * std::min(1.0f, 1.0f + pan);
+        cs.mixerTrack =
+            std::clamp(channel.mixerTrack, 0, static_cast<int>(project.mixer.tracks.size()) - 1);
         state->channels.push_back(std::move(cs));
     }
 
@@ -244,6 +314,26 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project)
         state->clips.push_back({static_cast<int>(it - project.patterns.begin()),
                                 clip.startStep * ticksPerStep, clip.lengthInSteps * ticksPerStep});
     }
+
+    // Mixer: fader, pan, mute and solo resolve to two gains per track.
+    const bool anySolo = project.mixer.anySolo();
+    for (std::size_t t = 0; t < project.mixer.tracks.size(); ++t)
+    {
+        const auto& track = project.mixer.tracks[t];
+        engine::TrackState ts;
+        const bool audible = !track.muted && (t == 0 || !anySolo || track.solo);
+        const float gain = audible ? track.gain() : 0.0f;
+        const float pan = std::clamp(track.pan, -1.0f, 1.0f);
+        ts.gainLeft = gain * std::min(1.0f, 1.0f - pan);
+        ts.gainRight = gain * std::min(1.0f, 1.0f + pan);
+        if (effects != nullptr)
+            for (const auto& slot : track.effects)
+                if (auto processor = effects->get(slot.id, slot.type))
+                    ts.effects.push_back({std::move(processor), slot.params, slot.enabled});
+        state->tracks.push_back(std::move(ts));
+    }
+    if (effects != nullptr)
+        effects->collectUnused();
 
     state->songMode = project.songMode;
     state->songLengthTicks = project.songLengthInSteps() * ticksPerStep;

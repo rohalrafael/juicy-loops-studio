@@ -21,6 +21,7 @@ inline constexpr int rowHeight = 30;
 inline constexpr int rowGap = 3;
 inline constexpr int ledWidth = 14;
 inline constexpr int knobSize = 24;
+inline constexpr int insertWidth = 28; // the Channel Rack's mixer track box
 inline constexpr int nameWidth = 110;
 inline constexpr int stepWidth = 20;
 inline constexpr int stepGap = 3;

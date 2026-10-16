@@ -1,9 +1,11 @@
 #pragma once
 
+#include "engine/effect_pool.h"
 #include "engine/engine.h"
 #include "io/sample_loader.h"
 #include "model/document.h"
 #include "ui/channel_rack.h"
+#include "ui/mixer.h"
 #include "ui/piano_roll.h"
 #include "ui/playlist.h"
 #include "ui/theme.h"
@@ -51,12 +53,15 @@ class MainComponent final : public juce::AudioAppComponent,
     void toggleChannelRack();
     void showPlaylist();
     void showPianoRoll();
+    void toggleMixer();
+    void publishState();
     void showAudioSettings();
     void showAbout();
 
     ui::ThemeManager& themes;
 
     engine::Engine engine;
+    engine::EffectPool effectPool; // effect processors live here between snapshots
     model::Document document;
     io::SampleLoader sampleLoader;
 
@@ -72,6 +77,11 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::Label positionLabel;
     ui::PlaylistView playlist;
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
+    ui::MixerView mixer;         // docked below them (F9)
+    ui::EffectPanel effectPanel;
+    bool effectPanelPlaced = false;
+    double formatRate = 0.0; // engine format the effect pool was last set up for
+    int formatBlock = 0;
     ui::ChannelRack channelRack;
     bool channelRackPlaced = false;
     juce::TooltipWindow tooltips{this, 600};

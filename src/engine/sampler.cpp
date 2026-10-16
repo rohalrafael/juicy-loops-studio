@@ -68,10 +68,9 @@ void Sampler::trigger(const EngineState& state, int channelIndex, int pitch, flo
     voice.startedAt = ++triggerCounter;
 }
 
-void Sampler::render(const EngineState& state, float* const* channels, int numChannels, int from,
-                     int to)
+void Sampler::render(const EngineState& state, float* const* buses, int numBuses, int from, int to)
 {
-    if (numChannels <= 0 || from >= to)
+    if (numBuses <= 0 || from >= to)
         return;
 
     for (auto& voice : voices)
@@ -92,6 +91,9 @@ void Sampler::render(const EngineState& state, float* const* channels, int numCh
         const auto& right = sample.numChannels() > 1 ? sample.channels[1] : sample.channels[0];
         const float gainLeft = channel->muted ? 0.0f : channel->gainLeft * voice.gain;
         const float gainRight = channel->muted ? 0.0f : channel->gainRight * voice.gain;
+        const int track = 2 * channel->mixerTrack < numBuses ? channel->mixerTrack : 0;
+        float* outLeft = buses[2 * track];
+        float* outRight = 2 * track + 1 < numBuses ? buses[2 * track + 1] : nullptr;
 
         for (int i = from; i < to; ++i)
         {
@@ -107,9 +109,9 @@ void Sampler::render(const EngineState& state, float* const* channels, int numCh
             const float l = left[index] + frac * (left[index + 1] - left[index]);
             const float r = right[index] + frac * (right[index + 1] - right[index]);
 
-            channels[0][i] += l * gainLeft;
-            if (numChannels > 1)
-                channels[1][i] += r * gainRight;
+            outLeft[i] += l * gainLeft;
+            if (outRight != nullptr)
+                outRight[i] += r * gainRight;
 
             voice.position += voice.increment;
         }

@@ -29,6 +29,28 @@ class LedButton final : public juce::Component, public juce::SettableTooltipClie
     bool on = true;
 };
 
+// A channel's mixer track number ("--" = Master). Drag up/down or scroll to change it.
+class InsertBox final : public juce::Component, public juce::SettableTooltipClient
+{
+  public:
+    void setValue(int track);
+    // (new track, gesture id)
+    std::function<void(int, int)> onChange;
+    std::function<int()> newGestureId;
+
+    void paint(juce::Graphics& g) override;
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override;
+
+  private:
+    void change(int track, int gesture);
+
+    int value = 0;
+    int dragStartValue = 0;
+    int gestureId = 0;
+};
+
 // The row of step buttons. Left-click toggles a step and dragging paints that value across
 // steps; right-click (and drag) erases, as in FL.
 class StepGrid final : public juce::Component
@@ -84,6 +106,7 @@ class ChannelRow final : public juce::Component
     LedButton mute;
     juce::Slider pan;
     juce::Slider volume;
+    InsertBox insert;
     juce::TextButton name;
     StepGrid steps;
     int knobGesture = 0;

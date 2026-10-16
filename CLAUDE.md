@@ -125,4 +125,7 @@ and run it before milestones or after platform-specific changes.
 - The user is happy to install tools on request. Ask instead of working around a
   missing tool.
 - Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh.
-- Pushing: the user pushes to GitHub themselves; my shell has no SSH agent.
+- Pushing: Claude may push. Its shell doesn't inherit `SSH_AUTH_SOCK`; the agent socket
+  lives in `~/.ssh/agent/`: `SSH_AUTH_SOCK=$(ls -t ~/.ssh/agent/s.* | head -1) git push`.
+- Windows/macOS CI is skipped for now (Linux-native first). Don't dispatch the full
+  matrix unless the user asks.

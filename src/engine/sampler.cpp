@@ -1,6 +1,7 @@
 #include "engine/sampler.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace jls::engine
 {
@@ -47,7 +48,7 @@ Sampler::Voice& Sampler::allocateVoice()
                              { return a.startedAt < b.startedAt; });
 }
 
-void Sampler::trigger(const EngineState& state, int channelIndex)
+void Sampler::trigger(const EngineState& state, int channelIndex, int pitch, float velocity)
 {
     if (channelIndex < 0 || channelIndex >= static_cast<int>(state.channels.size()))
         return;
@@ -61,7 +62,9 @@ void Sampler::trigger(const EngineState& state, int channelIndex)
     voice.channelId = channel.id;
     voice.sample = channel.sample.get();
     voice.position = 0.0;
-    voice.increment = channel.sample->sampleRate / sampleRate;
+    voice.increment = channel.sample->sampleRate / sampleRate *
+                      std::exp2((std::clamp(pitch, 0, 127) - 60) / 12.0);
+    voice.gain = std::clamp(velocity, 0.0f, 1.0f) / (100.0f / 128.0f);
     voice.startedAt = ++triggerCounter;
 }
 
@@ -87,8 +90,8 @@ void Sampler::render(const EngineState& state, float* const* channels, int numCh
         const int lastFrame = sample.numFrames() - 1;
         const auto& left = sample.channels[0];
         const auto& right = sample.numChannels() > 1 ? sample.channels[1] : sample.channels[0];
-        const float gainLeft = channel->muted ? 0.0f : channel->gainLeft;
-        const float gainRight = channel->muted ? 0.0f : channel->gainRight;
+        const float gainLeft = channel->muted ? 0.0f : channel->gainLeft * voice.gain;
+        const float gainRight = channel->muted ? 0.0f : channel->gainRight * voice.gain;
 
         for (int i = from; i < to; ++i)
         {

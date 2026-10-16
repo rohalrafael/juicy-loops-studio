@@ -66,7 +66,7 @@ void Engine::process(float* const* channels, int numChannels, int numSamples)
         {
             const auto& trigger = triggers[static_cast<std::size_t>(i)];
             sampler.render(*current, channels, numChannels, cursor, trigger.sampleOffset);
-            sampler.trigger(*current, trigger.channelIndex);
+            sampler.trigger(*current, trigger.channelIndex, trigger.pitch, trigger.velocity);
             cursor = trigger.sampleOffset;
         }
         sampler.render(*current, channels, numChannels, cursor, numSamples);

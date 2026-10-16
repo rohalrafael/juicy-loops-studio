@@ -4,6 +4,7 @@
 #include "io/sample_loader.h"
 #include "model/document.h"
 #include "ui/channel_rack.h"
+#include "ui/piano_roll.h"
 #include "ui/playlist.h"
 #include "ui/theme.h"
 
@@ -12,7 +13,8 @@
 namespace jls
 {
 
-// Top-level component: menu bar, transport bar, the Playlist and the floating Channel Rack.
+// Top-level component: menu bar, transport bar, the Playlist or Piano Roll, and the floating
+// Channel Rack.
 // Owns the document and the audio engine.
 class MainComponent final : public juce::AudioAppComponent,
                             public juce::MenuBarModel,
@@ -47,6 +49,8 @@ class MainComponent final : public juce::AudioAppComponent,
     void renamePattern();
     void deletePattern();
     void toggleChannelRack();
+    void showPlaylist();
+    void showPianoRoll();
     void showAudioSettings();
     void showAbout();
 
@@ -67,6 +71,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::TextButton metronomeButton{"Metronome"};
     juce::Label positionLabel;
     ui::PlaylistView playlist;
+    ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
     ui::ChannelRack channelRack;
     bool channelRackPlaced = false;
     juce::TooltipWindow tooltips{this, 600};

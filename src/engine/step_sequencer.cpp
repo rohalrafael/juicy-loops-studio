@@ -8,24 +8,68 @@ namespace jls::engine
 namespace
 {
 
-// Adds a trigger for every unmuted channel whose step `patternStep` is on.
-// Returns false once `out` is full.
-bool emitPatternStep(const EngineState& state, const PatternState& pattern, int patternStep,
-                     int offset, std::span<Trigger> out, int& count)
+class Collector
 {
-    const auto numChannels = std::min(state.channels.size(), pattern.steps.size());
-    for (std::size_t ch = 0; ch < numChannels; ++ch)
+  public:
+    Collector(const EngineState& s, double blockStartTick, double blockEndTick, int samples,
+              std::span<Trigger> o)
+        : state(s), startTick(blockStartTick), span(blockEndTick - blockStartTick),
+          numSamples(samples), out(o)
     {
-        const auto& row = pattern.steps[ch];
-        if (state.channels[ch].muted || patternStep >= static_cast<int>(row.size()) ||
-            row[static_cast<std::size_t>(patternStep)] == 0)
-            continue;
-        if (count == static_cast<int>(out.size()))
-            return false;
-        out[static_cast<std::size_t>(count++)] = {static_cast<int>(ch), offset};
     }
-    return true;
-}
+
+    // Emits every note of `pattern` whose (looping) pattern-time lies in [from, to).
+    // A note at pattern time x happens at block time x + offset.
+    void emit(const PatternState& pattern, double from, double to, double offset)
+    {
+        const double length = pattern.lengthTicks;
+        if (length <= 0.0)
+            return;
+
+        const auto numChannels = std::min(state.channels.size(), pattern.notes.size());
+        for (std::size_t ch = 0; ch < numChannels; ++ch)
+        {
+            if (state.channels[ch].muted)
+                continue;
+            for (const auto& note : pattern.notes[ch])
+            {
+                // Occurrences note.startTick + k * length that fall in [from, to).
+                for (double k = std::ceil((from - note.startTick) / length);; k += 1.0)
+                {
+                    const double x = note.startTick + k * length;
+                    if (x >= to)
+                        break;
+                    add(static_cast<int>(ch), x + offset, note);
+                }
+            }
+        }
+    }
+
+    int finish()
+    {
+        std::sort(out.begin(), out.begin() + count, [](const Trigger& a, const Trigger& b)
+                  { return a.sampleOffset < b.sampleOffset; });
+        return count;
+    }
+
+  private:
+    void add(int channel, double tick, const NoteState& note)
+    {
+        if (count == static_cast<int>(out.size()))
+            return;
+        const double fraction = (tick - startTick) / span;
+        const int offset =
+            std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
+        out[static_cast<std::size_t>(count++)] = {channel, offset, note.pitch, note.velocity};
+    }
+
+    const EngineState& state;
+    double startTick;
+    double span;
+    int numSamples;
+    std::span<Trigger> out;
+    int count = 0;
+};
 
 } // namespace
 
@@ -35,53 +79,43 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
     if (!block.playing || numSamples <= 0 || block.endBeat <= block.startBeat)
         return 0;
 
-    const double startStep = block.startBeat * stepsPerBeat;
-    const double endStep = block.endBeat * stepsPerBeat;
-    const double span = endStep - startStep;
-    int count = 0;
+    const double t0 = block.startBeat * ticksPerBeat;
+    const double t1 = block.endBeat * ticksPerBeat;
+    Collector collector(state, t0, t1, numSamples, out);
 
-    // Every whole step s with startStep <= s < endStep begins in this block.
-    for (auto step = static_cast<long long>(std::ceil(startStep));
-         static_cast<double>(step) < endStep; ++step)
+    if (!state.songMode)
     {
-        const double fraction = (static_cast<double>(step) - startStep) / span;
-        const int offset =
-            std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
+        if (state.currentPattern >= 0 &&
+            state.currentPattern < static_cast<int>(state.patterns.size()))
+            collector.emit(state.patterns[static_cast<std::size_t>(state.currentPattern)], t0, t1,
+                           0.0);
+        return collector.finish();
+    }
 
-        if (!state.songMode)
-        {
-            if (state.currentPattern < 0 ||
-                state.currentPattern >= static_cast<int>(state.patterns.size()))
-                return count;
-            const auto& pattern = state.patterns[static_cast<std::size_t>(state.currentPattern)];
-            if (pattern.lengthInSteps <= 0)
-                return count;
-            const auto patternStep = static_cast<int>(step % pattern.lengthInSteps);
-            if (!emitPatternStep(state, pattern, patternStep, offset, out, count))
-                return count;
-            continue;
-        }
+    const double songLength = state.songLengthTicks;
+    if (songLength <= 0.0)
+        return 0;
 
-        // Song mode: the arrangement loops; every clip under the playhead plays its pattern
-        // (looping the pattern if the clip is longer than it).
-        if (state.songLengthInSteps <= 0)
-            return count;
-        const auto songStep = static_cast<int>(step % state.songLengthInSteps);
+    // Split the block where the song loops, then play the clips in each piece.
+    for (double from = t0; from < t1;)
+    {
+        const double loopStart = std::floor(from / songLength) * songLength;
+        const double to = std::min(t1, loopStart + songLength);
         for (const auto& clip : state.clips)
         {
-            if (songStep < clip.startStep || songStep >= clip.startStep + clip.lengthInSteps ||
-                clip.patternIndex < 0 ||
+            if (clip.patternIndex < 0 ||
                 clip.patternIndex >= static_cast<int>(state.patterns.size()))
                 continue;
-            const auto& pattern = state.patterns[static_cast<std::size_t>(clip.patternIndex)];
-            if (pattern.lengthInSteps <= 0)
-                continue;
-            const int patternStep = (songStep - clip.startStep) % pattern.lengthInSteps;
-            if (!emitPatternStep(state, pattern, patternStep, offset, out, count))
-                return count;
+            const double clipStart = loopStart + clip.startTick;
+            const double a = std::max(from, clipStart);
+            const double b = std::min(to, clipStart + clip.lengthTicks);
+            if (a < b)
+                collector.emit(state.patterns[static_cast<std::size_t>(clip.patternIndex)],
+                               a - clipStart, b - clipStart, clipStart);
         }
+        from = to;
     }
-    return count;
+    return collector.finish();
 }
 
 } // namespace jls::engine

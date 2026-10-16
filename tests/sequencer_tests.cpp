@@ -26,13 +26,15 @@ std::shared_ptr<const SampleBuffer> constantSample(int frames, double rate = sam
     return buffer;
 }
 
+constexpr int tps = ticksPerStep;
+
 PatternState patternWithSteps(std::vector<int> onSteps, int length = 16)
 {
     PatternState pattern;
-    pattern.lengthInSteps = length;
-    pattern.steps.assign(1, std::vector<std::uint8_t>(static_cast<std::size_t>(length), 0));
+    pattern.lengthTicks = length * tps;
+    pattern.notes.resize(1);
     for (int s : onSteps)
-        pattern.steps[0][static_cast<std::size_t>(s)] = 1;
+        pattern.notes[0].push_back({s * tps, 60, 100.0f / 128.0f});
     return pattern;
 }
 
@@ -46,6 +48,29 @@ EngineState stateWithSteps(std::vector<int> onSteps, int length = 16)
     state.channels.push_back(channel);
     state.patterns.push_back(patternWithSteps(std::move(onSteps), length));
     return state;
+}
+
+// Every trigger over `total` samples, in blocks of `blockSize`, with absolute offsets.
+std::vector<Trigger> collectAll(const EngineState& state, int total, int blockSize)
+{
+    Transport transport;
+    transport.setTempo(120.0);
+    transport.play();
+    std::array<Trigger, 64> out{};
+    std::vector<Trigger> all;
+    for (int start = 0; start < total; start += blockSize)
+    {
+        const int n = std::min(blockSize, total - start);
+        const auto block = transport.advance(n, sampleRate);
+        const int count = collectTriggers(state, block, n, out);
+        for (int i = 0; i < count; ++i)
+        {
+            auto t = out[static_cast<std::size_t>(i)];
+            t.sampleOffset += start;
+            all.push_back(t);
+        }
+    }
+    return all;
 }
 
 // Absolute sample positions of every trigger over `total` samples, in blocks of `blockSize`.
@@ -134,8 +159,8 @@ TEST_CASE("Song mode plays clips at their positions and loops the song")
     EngineState state = stateWithSteps({0});         // pattern 0: hit on step 0
     state.patterns.push_back(patternWithSteps({4})); // pattern 1: hit on step 4
     state.songMode = true;
-    state.clips = {{0, 0, 16}, {1, 16, 16}, {0, 48, 16}}; // bar 1, bar 2, bar 4 (bar 3 empty)
-    state.songLengthInSteps = 64;
+    state.clips = {{0, 0, 16 * tps}, {1, 16 * tps, 16 * tps}, {0, 48 * tps, 16 * tps}};
+    state.songLengthTicks = 64 * tps; // bar 1, bar 2, bar 4 (bar 3 empty)
 
     const auto positions = triggerPositions(state, 2 * 64 * samplesPerStep, 512);
     const std::vector<int> oneLoop{0, (16 + 4) * samplesPerStep, 48 * samplesPerStep};
@@ -151,8 +176,8 @@ TEST_CASE("A clip longer than its pattern repeats it; a shorter one cuts it")
 {
     EngineState state = stateWithSteps({0, 6}, 8);
     state.songMode = true;
-    state.clips = {{0, 0, 20}}; // 2.5 repeats of the 8-step pattern
-    state.songLengthInSteps = 32;
+    state.clips = {{0, 0, 20 * tps}}; // 2.5 repeats of the 8-step pattern
+    state.songLengthTicks = 32 * tps;
     const auto positions = triggerPositions(state, 32 * samplesPerStep, 512);
     const std::vector<int> expected{0, 6, 8, 14, 16}; // the hit at 22 is past the clip end
     REQUIRE(positions.size() == expected.size());
@@ -164,8 +189,8 @@ TEST_CASE("Overlapping clips on different tracks both play")
 {
     EngineState state = stateWithSteps({0});
     state.songMode = true;
-    state.clips = {{0, 0, 16}, {0, 0, 16}};
-    state.songLengthInSteps = 16;
+    state.clips = {{0, 0, 16 * tps}, {0, 0, 16 * tps}};
+    state.songLengthTicks = 16 * tps;
     CHECK(triggerPositions(state, 16 * samplesPerStep, 512).size() == 2);
 }
 
@@ -173,8 +198,33 @@ TEST_CASE("Song mode with an empty playlist is silent")
 {
     EngineState state = stateWithSteps({0, 4, 8, 12});
     state.songMode = true;
-    state.songLengthInSteps = 0;
+    state.songLengthTicks = 0;
     CHECK(triggerPositions(state, 16 * samplesPerStep, 512).empty());
+}
+
+TEST_CASE("Notes between steps trigger on their exact sample")
+{
+    EngineState state = stateWithSteps({});
+    state.patterns[0].notes[0] = {{12, 60, 0.5f}, {tps * 3 + 8, 64, 1.0f}}; // half a step in, ...
+    const auto triggers = collectAll(state, 16 * samplesPerStep, 441);
+    REQUIRE(triggers.size() == 2);
+    CHECK(triggers[0].sampleOffset == samplesPerStep / 2); // 12 ticks = half a 16th
+    CHECK(triggers[0].velocity == 0.5f);
+    CHECK(triggers[1].sampleOffset == 3 * samplesPerStep + samplesPerStep / 3);
+    CHECK(triggers[1].pitch == 64);
+}
+
+TEST_CASE("Triggers from several clips come out in time order")
+{
+    EngineState state = stateWithSteps({1});
+    state.patterns.push_back(patternWithSteps({0}));
+    state.songMode = true;
+    state.clips = {{0, 0, 16 * tps}, {1, 0, 16 * tps}}; // pattern 0 hits step 1, pattern 1 step 0
+    state.songLengthTicks = 16 * tps;
+    const auto positions = triggerPositions(state, 16 * samplesPerStep, 16 * samplesPerStep);
+    REQUIRE(positions.size() == 2);
+    CHECK(positions[0] == 0);
+    CHECK(positions[1] == samplesPerStep);
 }
 
 TEST_CASE("Muted channels don't trigger")
@@ -204,6 +254,32 @@ TEST_CASE("Sampler plays a sample once at channel gain, then frees the voice")
     CHECK(left[98] == Catch::Approx(0.5f));
     CHECK(left[150] == 0.0f); // 100-frame sample has ended
     CHECK(sampler.activeVoiceCount() == 0);
+}
+
+TEST_CASE("Sampler pitches by resampling and scales by velocity")
+{
+    auto state = stateWithSteps({});
+    state.channels[0].sample = constantSample(1200);
+
+    auto sounding = [&](int pitch, float velocity, float& level)
+    {
+        Sampler sampler;
+        sampler.prepare(sampleRate);
+        sampler.trigger(state, 0, pitch, velocity);
+        std::vector<float> out(4000, 0.0f);
+        float* channels[] = {out.data()};
+        sampler.render(state, channels, 1, 0, 4000);
+        level = out[0];
+        return std::count_if(out.begin(), out.end(), [](float s) { return s > 0.0f; });
+    };
+
+    float level = 0.0f;
+    CHECK(std::abs(sounding(60, 100.0f / 128.0f, level) - 1199) <= 1);
+    CHECK(level == Catch::Approx(1.0f));                               // default velocity = unity
+    CHECK(std::abs(sounding(72, 100.0f / 128.0f, level) - 600) <= 2);  // octave up: half as long
+    CHECK(std::abs(sounding(48, 100.0f / 128.0f, level) - 2398) <= 3); // octave down: twice
+    sounding(60, 50.0f / 128.0f, level);
+    CHECK(level == Catch::Approx(0.5f));
 }
 
 TEST_CASE("Sampler converts sample rate")

@@ -19,6 +19,8 @@ enum MenuItem
     clonePatternItem,
     renamePatternItem,
     deletePatternItem,
+    playlistItem,
+    pianoRollItem,
     channelRackItem,
     themeItem,
     audioSettingsItem,
@@ -40,7 +42,7 @@ void noFocus(juce::Component& c)
 
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), document(model::makeDefaultProject()),
-      playlist(document, engine.transport()),
+      playlist(document, engine.transport()), pianoRoll(document, engine.transport()),
       channelRack(document, engine.transport(), sampleLoader)
 {
     auto& transport = engine.transport();
@@ -98,7 +100,9 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
              &tempoSlider, &timeSignatureBox, &metronomeButton, &positionLabel, &playlist})
         addAndMakeVisible(c);
-    addAndMakeVisible(channelRack); // after the Playlist, so it floats on top
+    addChildComponent(pianoRoll);
+    addAndMakeVisible(channelRack); // after the main views, so it floats on top
+    channelRack.onOpenPianoRoll = [this](model::ChannelId) { showPianoRoll(); };
 
 #if JUCE_MAC
     juce::MenuBarModel::setMacMainMenu(this);
@@ -133,6 +137,7 @@ void MainComponent::documentChanged()
     engine.setState(model::toEngineState(project));
     channelRack.refresh();
     playlist.refresh();
+    pianoRoll.refresh();
     refreshTransportBar();
     menuItemsChanged();
 }
@@ -223,6 +228,21 @@ void MainComponent::toggleChannelRack()
     menuItemsChanged();
 }
 
+void MainComponent::showPlaylist()
+{
+    pianoRoll.setVisible(false);
+    playlist.setVisible(true);
+    menuItemsChanged();
+}
+
+void MainComponent::showPianoRoll()
+{
+    playlist.setVisible(false);
+    pianoRoll.setVisible(true);
+    pianoRoll.refresh();
+    menuItemsChanged();
+}
+
 void MainComponent::prepareToPlay(int, double sampleRate)
 {
     engine.prepare(sampleRate);
@@ -283,6 +303,7 @@ void MainComponent::resized()
 
     area.removeFromTop(margin);
     playlist.setBounds(area);
+    pianoRoll.setBounds(area);
 
     // The rack floats: place it once, then keep wherever the user dragged it (sizes follow
     // the channel count).
@@ -318,8 +339,12 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         return setSongMode(!document.project().songMode), true;
     if (key == KeyPress(KeyPress::F4Key))
         return newPattern(), true;
+    if (key == KeyPress(KeyPress::F5Key))
+        return showPlaylist(), true;
     if (key == KeyPress(KeyPress::F6Key))
         return toggleChannelRack(), true;
+    if (key == KeyPress(KeyPress::F7Key))
+        return showPianoRoll(), true;
     if (key == KeyPress('z', cmd, 0))
         return document.undo(), true;
     if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
@@ -356,9 +381,20 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
         break;
     }
     case 3:
+    {
+        auto withKey = [](Item item, const char* key)
+        {
+            item.shortcutKeyDescription = key;
+            return item;
+        };
         menu.addItem(
-            Item("Channel rack").setID(channelRackItem).setTicked(channelRack.isVisible()));
+            withKey(Item("Playlist").setID(playlistItem).setTicked(playlist.isVisible()), "F5"));
+        menu.addItem(withKey(
+            Item("Channel rack").setID(channelRackItem).setTicked(channelRack.isVisible()), "F6"));
+        menu.addItem(withKey(
+            Item("Piano roll").setID(pianoRollItem).setTicked(pianoRoll.isVisible()), "F7"));
         break;
+    }
     case 4:
         menu.addItem(Item("Theme...").setID(themeItem));
         menu.addItem(Item("Audio settings...").setID(audioSettingsItem));
@@ -419,6 +455,12 @@ void MainComponent::menuItemSelected(int itemId, int)
     case deletePatternItem:
         deletePattern();
         break;
+    case playlistItem:
+        showPlaylist();
+        break;
+    case pianoRollItem:
+        showPianoRoll();
+        break;
     case channelRackItem:
         toggleChannelRack();
         break;
@@ -462,7 +504,7 @@ void MainComponent::timerCallback()
     const auto& project = document.project();
     const auto& transport = engine.transport();
     const int loopSteps =
-        project.songMode ? project.songLengthInSteps() : project.current().lengthInSteps;
+        project.songMode ? project.songLengthInSteps() : project.lengthInSteps(project.current());
     double steps = transport.positionInBeats() * model::stepsPerBeat;
     if (loopSteps > 0)
         steps = std::fmod(steps, static_cast<double>(loopSteps));

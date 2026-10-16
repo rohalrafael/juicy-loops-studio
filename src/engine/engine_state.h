@@ -9,6 +9,9 @@
 namespace jls::engine
 {
 
+// Musical time resolution: note and clip positions are in ticks.
+inline constexpr int ticksPerBeat = 96;
+
 // Immutable snapshot of everything the audio thread needs to play the project.
 // Built on the UI thread, handed to the audio thread through Engine::setState().
 struct ChannelState
@@ -20,18 +23,25 @@ struct ChannelState
     bool muted = false;
 };
 
+struct NoteState
+{
+    int startTick = 0; // within the pattern
+    int pitch = 60;    // 60 plays the sample at its original pitch
+    float velocity = 100.0f / 128.0f;
+};
+
 struct PatternState
 {
-    int lengthInSteps = 16;
-    // steps[channelIndex][step], nonzero = on. Indexed like EngineState::channels.
-    std::vector<std::vector<std::uint8_t>> steps;
+    int lengthTicks = 16 * ticksPerBeat / 4;
+    // notes[channelIndex], indexed like EngineState::channels.
+    std::vector<std::vector<NoteState>> notes;
 };
 
 struct ClipState
 {
     int patternIndex = 0; // into EngineState::patterns
-    int startStep = 0;    // position in the song, in steps
-    int lengthInSteps = 16;
+    int startTick = 0;    // position in the song
+    int lengthTicks = 16 * ticksPerBeat / 4;
 };
 
 struct EngineState
@@ -40,9 +50,9 @@ struct EngineState
     std::vector<PatternState> patterns;
     std::vector<ClipState> clips;
 
-    bool songMode = false;     // false: loop patterns[currentPattern]; true: play clips
-    int currentPattern = 0;    // index into patterns
-    int songLengthInSteps = 0; // song mode loops after this; 0 = nothing to play
+    bool songMode = false;   // false: loop patterns[currentPattern]; true: play clips
+    int currentPattern = 0;  // index into patterns
+    int songLengthTicks = 0; // song mode loops after this; 0 = nothing to play
 };
 
 } // namespace jls::engine

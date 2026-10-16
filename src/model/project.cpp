@@ -8,32 +8,65 @@
 namespace jls::model
 {
 
-bool Pattern::isOn(ChannelId channel, int step) const
+bool Note::isStep() const
 {
-    const auto it = steps.find(channel);
-    if (it == steps.end() || step < 0 || step >= static_cast<int>(it->second.size()))
-        return false;
-    return it->second[static_cast<std::size_t>(step)];
+    return pitch == defaultPitch && lengthTicks == ticksPerStep && startTick % ticksPerStep == 0;
 }
 
-void Pattern::set(ChannelId channel, int step, bool on)
+const std::vector<Note>& Pattern::notesFor(ChannelId channel) const
 {
-    if (step < 0 || step >= maxLength)
-        return;
-    auto& row = steps[channel];
-    if (step >= static_cast<int>(row.size()))
-        row.resize(static_cast<std::size_t>(step) + 1, false);
-    row[static_cast<std::size_t>(step)] = on;
+    static const std::vector<Note> none;
+    const auto it = notes.find(channel);
+    return it == notes.end() ? none : it->second;
+}
+
+int Pattern::lengthInSteps(int stepsPerBar) const
+{
+    int lastTick = 0;
+    for (const auto& [channel, list] : notes)
+        for (const auto& note : list)
+            lastTick = std::max(lastTick, note.endTick());
+
+    const int steps = (lastTick + ticksPerStep - 1) / ticksPerStep;
+    const int bar = std::max(1, stepsPerBar);
+    return std::min(maxSteps, std::max(minLengthInSteps, (steps + bar - 1) / bar * bar));
 }
 
 bool Pattern::isEmpty() const
 {
-    return std::none_of(steps.begin(), steps.end(),
-                        [](const auto& entry)
-                        {
-                            const auto& row = entry.second;
-                            return std::find(row.begin(), row.end(), true) != row.end();
-                        });
+    return std::all_of(notes.begin(), notes.end(),
+                       [](const auto& entry) { return entry.second.empty(); });
+}
+
+bool Pattern::hasOnlySteps(ChannelId channel) const
+{
+    const auto& list = notesFor(channel);
+    return std::all_of(list.begin(), list.end(), [](const Note& n) { return n.isStep(); });
+}
+
+bool Pattern::isOn(ChannelId channel, int step) const
+{
+    const auto& list = notesFor(channel);
+    return std::any_of(list.begin(), list.end(), [step](const Note& n)
+                       { return n.isStep() && n.startTick == step * ticksPerStep; });
+}
+
+void Pattern::set(ChannelId channel, int step, bool on)
+{
+    if (step < 0 || step >= maxSteps || isOn(channel, step) == on)
+        return;
+    auto& list = notes[channel];
+    if (on)
+    {
+        Note note;
+        note.startTick = step * ticksPerStep;
+        list.push_back(note);
+    }
+    else
+    {
+        std::erase_if(list, [step](const Note& n)
+                      { return n.isStep() && n.startTick == step * ticksPerStep; });
+    }
 }
 
 Project::Project()
@@ -55,7 +88,9 @@ void Project::removeChannel(ChannelId id)
 {
     std::erase_if(channels, [id](const Channel& c) { return c.id == id; });
     for (auto& pattern : patterns)
-        pattern.steps.erase(id);
+        pattern.notes.erase(id);
+    if (selectedChannel == id)
+        selectedChannel = channels.empty() ? 0 : channels.front().id;
 }
 
 Channel* Project::findChannel(ChannelId id)
@@ -163,6 +198,7 @@ Project makeDefaultProject(double sampleRate)
     project.addChannel("Clap", make(DrumSound::clap));
     project.addChannel("Hat", make(DrumSound::hat));
     project.addChannel("Snare", make(DrumSound::snare));
+    project.selectedChannel = project.channels.front().id;
     return project;
 }
 
@@ -188,15 +224,11 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project)
     {
         const auto& pattern = project.patterns[i];
         engine::PatternState ps;
-        ps.lengthInSteps = pattern.lengthInSteps;
-        ps.steps.resize(project.channels.size());
+        ps.lengthTicks = project.lengthInSteps(pattern) * ticksPerStep;
+        ps.notes.resize(project.channels.size());
         for (std::size_t ch = 0; ch < project.channels.size(); ++ch)
-        {
-            auto& row = ps.steps[ch];
-            row.assign(static_cast<std::size_t>(pattern.lengthInSteps), 0);
-            for (int s = 0; s < pattern.lengthInSteps; ++s)
-                row[static_cast<std::size_t>(s)] = pattern.isOn(project.channels[ch].id, s) ? 1 : 0;
-        }
+            for (const auto& note : pattern.notesFor(project.channels[ch].id))
+                ps.notes[ch].push_back({note.startTick, note.pitch, note.velocity});
         state->patterns.push_back(std::move(ps));
 
         if (pattern.id == project.current().id)
@@ -209,12 +241,12 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project)
                                      [&](const Pattern& p) { return p.id == clip.pattern; });
         if (it == project.patterns.end())
             continue;
-        state->clips.push_back(
-            {static_cast<int>(it - project.patterns.begin()), clip.startStep, clip.lengthInSteps});
+        state->clips.push_back({static_cast<int>(it - project.patterns.begin()),
+                                clip.startStep * ticksPerStep, clip.lengthInSteps * ticksPerStep});
     }
 
     state->songMode = project.songMode;
-    state->songLengthInSteps = project.songLengthInSteps();
+    state->songLengthTicks = project.songLengthInSteps() * ticksPerStep;
     return state;
 }
 

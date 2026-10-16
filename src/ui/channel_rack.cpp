@@ -87,11 +87,21 @@ int StepGrid::stepAt(int x) const
 
 void StepGrid::setSteps(std::vector<bool> newSteps)
 {
-    if (newSteps != steps)
+    if (melodic || newSteps != steps)
     {
+        melodic = false;
+        melodicNotes.clear();
         steps = std::move(newSteps);
         repaint();
     }
+}
+
+void StepGrid::setMelodicPreview(std::vector<model::Note> notes, int lengthInSteps)
+{
+    melodic = true;
+    melodicNotes = std::move(notes);
+    steps.assign(static_cast<std::size_t>(lengthInSteps), false);
+    repaint();
 }
 
 void StepGrid::setPlayingStep(int step)
@@ -107,6 +117,42 @@ void StepGrid::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     const float radius = t.shape.stepRadius;
+
+    if (melodic)
+    {
+        // A mini piano roll across the step area, as in FL.
+        const auto area = juce::Rectangle<float>(
+            0.0f, 3.0f, static_cast<float>(widthFor(static_cast<int>(steps.size()))),
+            static_cast<float>(getHeight() - 6));
+        g.setColour(colour(t.colours.display));
+        g.fillRoundedRectangle(area, radius);
+        if (!melodicNotes.empty() && !steps.empty())
+        {
+            const auto [low, high] = std::minmax_element(
+                melodicNotes.begin(), melodicNotes.end(),
+                [](const model::Note& a, const model::Note& b) { return a.pitch < b.pitch; });
+            const int range = std::max(12, high->pitch - low->pitch + 1);
+            const float ticksTotal = static_cast<float>(steps.size() * model::ticksPerStep);
+            const float rowHeight = (area.getHeight() - 6.0f) / range;
+            const float noteHeight = std::max(3.0f, rowHeight);
+            g.setColour(colour(t.colours.stepOn));
+            for (const auto& note : melodicNotes)
+            {
+                const float x = area.getWidth() * note.startTick / ticksTotal;
+                const float w =
+                    std::max(2.0f, area.getWidth() * note.lengthTicks / ticksTotal - 1.0f);
+                const float y =
+                    area.getBottom() - 3.0f - (note.pitch - low->pitch) * rowHeight - noteHeight;
+                g.fillRect(x, y, w, noteHeight);
+            }
+        }
+        if (playingStep >= 0)
+        {
+            g.setColour(colour(t.colours.playhead));
+            g.fillRect(static_cast<float>(stepX(playingStep)), area.getY(), 2.0f, area.getHeight());
+        }
+        return;
+    }
 
     for (int s = 0; s < static_cast<int>(steps.size()); ++s)
     {
@@ -142,6 +188,12 @@ void StepGrid::paint(juce::Graphics& g)
 
 void StepGrid::mouseDown(const juce::MouseEvent& e)
 {
+    if (melodic)
+    {
+        if (!e.mods.isPopupMenu() && onOpenNotes)
+            onOpenNotes();
+        return;
+    }
     if (steps.empty())
         return;
     const int step = stepAt(e.x);
@@ -153,7 +205,7 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
 
 void StepGrid::mouseDrag(const juce::MouseEvent& e)
 {
-    if (steps.empty())
+    if (melodic || steps.empty())
         return;
 
     // Fast drags report positions several steps apart: paint everything in between too.
@@ -232,8 +284,17 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
     volume.textFromValueFunction = [](double v)
     { return juce::String(static_cast<int>(std::lround(v * 100.0))) + "%"; };
 
-    name.onClick = [this] { showMenu(); };
+    // Left-click selects the channel (the Piano Roll edits the selected one); right-click
+    // opens the channel menu, as in FL.
+    name.setTooltip("Click to select, right-click for options");
+    name.onClick = [this]
+    {
+        if (!juce::ModifierKeys::currentModifiers.isPopupMenu())
+            rack.select(id);
+    };
+    name.addMouseListener(this, false);
     noFocus(name);
+    steps.onOpenNotes = [this] { rack.openPianoRoll(id); };
 
     steps.newGestureId = [this] { return rack.document().newGestureId(); };
     steps.onStepPainted = [this](int step, bool on, int gesture)
@@ -244,17 +305,31 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
     addAndMakeVisible(steps);
 }
 
-void ChannelRow::update(const model::Channel& channel, const model::Pattern& pattern)
+void ChannelRow::update(const model::Channel& channel, const model::Project& project)
 {
     mute.setOn(!channel.muted);
     pan.setValue(channel.pan, juce::dontSendNotification);
     volume.setValue(channel.volume, juce::dontSendNotification);
     name.setButtonText(juce::String::fromUTF8(channel.name.c_str()));
+    name.setToggleState(project.selectedChannel == channel.id, juce::dontSendNotification);
 
-    std::vector<bool> stepValues(static_cast<std::size_t>(pattern.lengthInSteps));
-    for (int s = 0; s < pattern.lengthInSteps; ++s)
+    const auto& pattern = project.current();
+    const int length = project.lengthInSteps(pattern);
+    if (!pattern.hasOnlySteps(channel.id))
+    {
+        steps.setMelodicPreview(pattern.notesFor(channel.id), length);
+        return;
+    }
+    std::vector<bool> stepValues(static_cast<std::size_t>(length));
+    for (int s = 0; s < length; ++s)
         stepValues[static_cast<std::size_t>(s)] = pattern.isOn(channel.id, s);
     steps.setSteps(std::move(stepValues));
+}
+
+void ChannelRow::mouseDown(const juce::MouseEvent& e)
+{
+    if (e.eventComponent == &name && e.mods.isPopupMenu())
+        showMenu();
 }
 
 void ChannelRow::resized()
@@ -274,6 +349,8 @@ void ChannelRow::resized()
 void ChannelRow::showMenu()
 {
     juce::PopupMenu menu;
+    menu.addItem("Piano roll", [this] { rack.openPianoRoll(id); });
+    menu.addSeparator();
     menu.addItem("Rename...", [this] { rack.rename(id); });
     menu.addItem("Replace sample...", [this] { rack.chooseSampleFor(id); });
     menu.addSeparator();
@@ -317,6 +394,19 @@ void ChannelRack::edit(const std::function<void(model::Project&)>& change, int g
     doc.apply(change, gestureId);
 }
 
+void ChannelRack::select(model::ChannelId id)
+{
+    if (doc.project().selectedChannel != id)
+        doc.setViewState([id](model::Project& p) { p.selectedChannel = id; });
+}
+
+void ChannelRack::openPianoRoll(model::ChannelId id)
+{
+    select(id);
+    if (onOpenPianoRoll)
+        onOpenPianoRoll(id);
+}
+
 void ChannelRack::refresh()
 {
     const auto& project = doc.project();
@@ -340,7 +430,7 @@ void ChannelRack::refresh()
     }
 
     for (std::size_t i = 0; i < rows.size(); ++i)
-        rows[i]->update(project.channels[i], project.current());
+        rows[i]->update(project.channels[i], project);
 
     if (auto* parent = getParentComponent())
         parent->resized();
@@ -349,7 +439,8 @@ void ChannelRack::refresh()
 int ChannelRack::preferredWidth() const
 {
     return hardShadowOffset + padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
-           4 + metrics::nameWidth + 8 + StepGrid::widthFor(doc.project().current().lengthInSteps);
+           4 + metrics::nameWidth + 8 +
+           StepGrid::widthFor(doc.project().lengthInSteps(doc.project().current()));
 }
 
 int ChannelRack::preferredHeight() const
@@ -441,7 +532,7 @@ void ChannelRack::timerCallback()
     // Only in pattern mode: in song mode the playhead belongs to the Playlist.
     int step = -1;
     const auto& project = doc.project();
-    const int length = project.current().lengthInSteps;
+    const int length = project.lengthInSteps(project.current());
     if (transport.isPlaying() && !project.songMode && length > 0)
         step = static_cast<int>(std::floor(transport.positionInBeats() * engine::stepsPerBeat)) %
                length;

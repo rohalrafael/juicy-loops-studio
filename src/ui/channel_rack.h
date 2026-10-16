@@ -35,7 +35,10 @@ class StepGrid final : public juce::Component
 {
   public:
     void setSteps(std::vector<bool> newSteps);
+    // Melodic channel: show its notes instead of editable steps; a click calls onOpenNotes.
+    void setMelodicPreview(std::vector<model::Note> notes, int lengthInSteps);
     void setPlayingStep(int step);
+    std::function<void()> onOpenNotes;
 
     // (step, on, gestureId): one gesture per mouse press so a drag undoes as one step.
     std::function<void(int, bool, int)> onStepPainted;
@@ -53,6 +56,8 @@ class StepGrid final : public juce::Component
     void paintStep(int step);
 
     std::vector<bool> steps;
+    std::vector<model::Note> melodicNotes;
+    bool melodic = false;
     int playingStep = -1;
     bool paintValue = true;
     int gestureId = 0;
@@ -65,10 +70,11 @@ class ChannelRow final : public juce::Component
     ChannelRow(ChannelRack& owner, model::ChannelId id);
 
     model::ChannelId channelId() const { return id; }
-    void update(const model::Channel& channel, const model::Pattern& pattern);
+    void update(const model::Channel& channel, const model::Project& project);
     void setPlayingStep(int step) { steps.setPlayingStep(step); }
 
     void resized() override;
+    void mouseDown(const juce::MouseEvent& e) override;
 
   private:
     void showMenu();
@@ -104,6 +110,11 @@ class ChannelRack final : public juce::Component,
     void edit(const std::function<void(model::Project&)>& change, int gestureId = 0);
     void chooseSampleFor(model::ChannelId id);
     void rename(model::ChannelId id);
+    void select(model::ChannelId id);
+    void openPianoRoll(model::ChannelId id);
+
+    // Set by the owner: show the Piano Roll for a channel.
+    std::function<void(model::ChannelId)> onOpenPianoRoll;
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;

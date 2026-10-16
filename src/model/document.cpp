@@ -6,13 +6,15 @@ namespace jls::model
 namespace
 {
 
-// Selection and PAT/SONG mode are view state: undo/redo restores the project's content but
+// Selections and PAT/SONG mode are view state: undo/redo restores the project's content but
 // leaves these as the user has them (as long as the selected pattern still exists).
 void keepViewState(const Project& from, Project& to)
 {
     to.songMode = from.songMode;
     if (to.findPattern(from.currentPattern) != nullptr)
         to.currentPattern = from.currentPattern;
+    if (to.findChannel(from.selectedChannel) != nullptr)
+        to.selectedChannel = from.selectedChannel;
 }
 
 } // namespace

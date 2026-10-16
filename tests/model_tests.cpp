@@ -82,10 +82,11 @@ TEST_CASE("Engine snapshot mirrors steps, mute, volume and pan")
     const auto state = toEngineState(project);
     REQUIRE(state->channels.size() == 4);
     REQUIRE(state->patterns.size() == 1);
-    const auto& kickSteps = state->patterns[0].steps[0];
-    CHECK(kickSteps.size() == 16);
-    CHECK(kickSteps[4] == 1);
-    CHECK(kickSteps[0] == 0);
+    const auto& kickNotes = state->patterns[0].notes[0];
+    REQUIRE(kickNotes.size() == 1);
+    CHECK(kickNotes[0].startTick == 4 * ticksPerStep);
+    CHECK(kickNotes[0].pitch == Note::defaultPitch);
+    CHECK(state->patterns[0].lengthTicks == 16 * ticksPerStep);
     const auto& k = state->channels[0];
     CHECK(k.gainLeft == Catch::Approx(0.5f));
     CHECK(k.gainRight == Catch::Approx(0.0f));
@@ -224,13 +225,13 @@ TEST_CASE("Engine snapshot maps clips and the current pattern to indices")
     const auto state = toEngineState(project);
     CHECK(state->songMode);
     CHECK(state->currentPattern == 1);
-    CHECK(state->songLengthInSteps == 48);
     REQUIRE(state->clips.size() == 2);
     CHECK(state->clips[0].patternIndex == 1);
     CHECK(state->clips[1].patternIndex == 0);
-    CHECK(state->clips[1].startStep == 16);
-    CHECK(state->clips[1].lengthInSteps == 32);
-    CHECK(state->patterns[0].steps.size() == project.channels.size());
+    CHECK(state->clips[1].startTick == 16 * ticksPerStep);
+    CHECK(state->clips[1].lengthTicks == 32 * ticksPerStep);
+    CHECK(state->songLengthTicks == 48 * ticksPerStep);
+    CHECK(state->patterns[0].notes.size() == project.channels.size());
 }
 
 TEST_CASE("Undo restores content but keeps the selected pattern and mode")
@@ -262,4 +263,52 @@ TEST_CASE("View state changes aren't undo steps")
     doc.setViewState([](Project& p) { p.songMode = true; });
     CHECK_FALSE(doc.canUndo());
     CHECK(doc.project().songMode);
+}
+
+TEST_CASE("Steps are notes at the default pitch")
+{
+    Pattern pattern;
+    pattern.set(1, 4, true);
+    REQUIRE(pattern.notesFor(1).size() == 1);
+    const auto& note = pattern.notesFor(1)[0];
+    CHECK(note.startTick == 4 * ticksPerStep);
+    CHECK(note.lengthTicks == ticksPerStep);
+    CHECK(note.isStep());
+    CHECK(pattern.isOn(1, 4));
+
+    pattern.set(1, 4, true); // already on: no duplicate
+    CHECK(pattern.notesFor(1).size() == 1);
+    pattern.set(1, 4, false);
+    CHECK(pattern.notesFor(1).empty());
+}
+
+TEST_CASE("A channel with melodic notes is no longer a step row")
+{
+    Pattern pattern;
+    pattern.set(1, 0, true);
+    CHECK(pattern.hasOnlySteps(1));
+    pattern.notes[1].push_back({ticksPerStep * 2, ticksPerStep * 4, 67, 0.9f});
+    CHECK_FALSE(pattern.hasOnlySteps(1));
+    CHECK_FALSE(pattern.isOn(1, 2)); // a long G5 isn't a step
+    CHECK(pattern.hasOnlySteps(2));  // an empty channel is
+}
+
+TEST_CASE("Pattern length grows in whole bars to fit its notes")
+{
+    Pattern pattern;
+    CHECK(pattern.lengthInSteps(16) == 16);
+    pattern.notes[1].push_back({15 * ticksPerStep, ticksPerStep, 60, 0.8f}); // ends at step 16
+    CHECK(pattern.lengthInSteps(16) == 16);
+    pattern.notes[1].push_back({16 * ticksPerStep, 1, 60, 0.8f}); // one tick into bar 2
+    CHECK(pattern.lengthInSteps(16) == 32);
+    CHECK(pattern.lengthInSteps(12) == 24); // 3/4 bars
+}
+
+TEST_CASE("Removing the selected channel selects another")
+{
+    auto project = makeDefaultProject();
+    const auto kick = project.channels[0].id;
+    CHECK(project.selectedChannel == kick);
+    project.removeChannel(kick);
+    CHECK(project.selectedChannel == project.channels[0].id);
 }

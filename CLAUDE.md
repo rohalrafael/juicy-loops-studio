@@ -50,7 +50,7 @@ src/engine/   Real-time, JUCE-free: Engine, Transport, StepSequencer, Sampler, M
               DrumSynth (built-in sounds), SpscQueue, EngineState snapshot
 src/model/    JUCE-free project data: Project (channels, patterns, playlist), Document (undo)
 src/theme/    JUCE-free theme data + JSON theme files (nlohmann/json) + 4 built-in themes
-src/ui/       JUCE components: ChannelRack (floating), PlaylistView, ThemeManager +
+src/ui/       JUCE components: ChannelRack (floating), PlaylistView, PianoRollView, ThemeManager +
               LookAndFeel (ui/theme), ThemeDialog
 src/io/       JUCE-based file I/O: SampleLoader (WAV/AIFF/FLAC/Ogg/MP3 -> SampleBuffer)
 src/plugins/  Plugin hosting + built-in instruments/effects                     [planned]
@@ -124,7 +124,7 @@ and run it before milestones or after platform-specific changes.
        + sample-accurate metronome (Ctrl+M)
 3. [x] Channel Rack with step sequencer + a built-in sampler
 4. [x] Pattern system + Playlist (PAT/SONG modes)
-5. [ ] Piano Roll
+5. [x] Piano Roll
 6. [ ] Mixer (inserts, sends, built-in effects)
 7. [ ] Plugin hosting
 8. [ ] Project save/load, audio export
@@ -185,6 +185,22 @@ and run it before milestones or after platform-specific changes.
   drags (now interpolated).
 - Known gaps: no seeking (clicking the ruler), no pattern length UI, no track names/mute,
   no clip selection or multi-select, the playlist has a fixed 16 tracks.
+- 2026-10-16: Piano Roll. Patterns store **notes** per channel (`Note`: startTick,
+  lengthTicks, pitch, velocity; 96 ticks/beat, 24/step). A Channel Rack step is a note at
+  C5 (60), one step long, on a step boundary (`Note::isStep`). A channel with any other
+  notes shows a mini note preview in the rack instead of steps; clicking it opens the Piano
+  Roll, as in FL. Pattern length = `minLengthInSteps` (16), grown to whole bars to fit notes
+  (`Project::lengthInSteps(pattern)`). Engine works in ticks; the sequencer collects note
+  starts per block (pattern loop / clip repeats / song loop split) and sorts by offset.
+  Sampler pitch = resample by 2^((p-60)/12); velocity gain = v / (100/128). **Note length
+  isn't audible yet**: samples play to the end, like FL's default sampler.
+  `Project::selectedChannel` is view state (left-click a channel name; right-click = menu).
+  F7 shows the Piano Roll for it, F5 the Playlist (they share the main area). FL note names
+  (C5 = 60). Piano Roll mouse mirrors the Playlist: click adds + drag moves, right edge
+  resizes (sets the length for new notes), right-click deletes, Ctrl+wheel zooms; snap
+  Beat/Step/half/third/None; velocity lane sets the nearest stem (and chord) within 8 px.
+- Known gaps (Piano Roll): no note selection/multi-select/copy, no audition when clicking
+  keys, no cut-at-note-end option, can't set pattern length by hand.
 
 ## Dev environment notes
 
@@ -198,6 +214,8 @@ and run it before milestones or after platform-specific changes.
   The app uses the real settings file, so reset `theme` to `juicy` after testing themes.
   Without a window manager, JUCE logs harmless `BadAtom` errors and dialogs have no title
   bar.
+- In Xvfb nothing has keyboard focus at start (no window manager): click an empty spot of
+  the transport bar (e.g. 1050,56) before sending keys.
 - On the real desktop Hyprland tiles the window (e.g. 941x501) a few seconds after launch;
   wait about 6 s before taking screenshots there.
 - Screenshot the app (XWayland) without capturing the rest of the screen:

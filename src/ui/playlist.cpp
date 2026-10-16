@@ -193,7 +193,7 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
             clip.pattern = p.current().id;
             clip.track = track;
             clip.startStep = start;
-            clip.lengthInSteps = p.current().lengthInSteps;
+            clip.lengthInSteps = p.lengthInSteps(p.current());
             p.playlist.clips.push_back(clip);
         },
         gestureId);
@@ -290,8 +290,8 @@ void PlaylistGrid::paint(juce::Graphics& g)
         g.setColour(colour(t.colours.textDim));
         g.setFont(juce::FontOptions(14.0f));
         g.drawText("Click to place " + juce::String::fromUTF8(project.current().name.c_str()) +
-                       " \xc2\xb7 drag to move \xc2\xb7 right-click deletes \xc2\xb7 "
-                       "press L for song mode",
+                       juce::String::fromUTF8(" \xc2\xb7 drag to move \xc2\xb7 right-click "
+                                              "deletes \xc2\xb7 press L for song mode"),
                    juce::Rectangle<int>(16, 0, 900, PlaylistView::trackHeight * 2),
                    juce::Justification::centredLeft);
     }
@@ -336,25 +336,33 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip) const
     g.drawText(juce::String::fromUTF8(pattern->name.c_str()), strip.reduced(4.0f, 0.0f),
                juce::Justification::centredLeft, true);
 
-    // Miniature of the steps, one thin row per channel; repeats when the clip is longer.
+    // Miniature of the notes, one thin row per channel; repeats when the clip is longer.
     const int numChannels = static_cast<int>(project.channels.size());
-    if (numChannels > 0 && pattern->lengthInSteps > 0)
+    const int patternSteps = project.lengthInSteps(*pattern);
+    if (numChannels > 0 && patternSteps > 0)
     {
         const float rowHeight = std::max(1.0f, (body.getHeight() - 2.0f) / numChannels);
-        const float stepWidth = std::max(1.0f, view.pixelsPerStep() - 1.0f);
+        const float pixelsPerTick = view.pixelsPerStep() / model::ticksPerStep;
+        const int patternTicks = patternSteps * model::ticksPerStep;
+        const int clipTicks = clip.lengthInSteps * model::ticksPerStep;
         g.setColour(colour(t.colours.clipText).withAlpha(0.85f));
-        for (int s = 0; s < clip.lengthInSteps; ++s)
-        {
-            const int ps = s % pattern->lengthInSteps;
+        for (int repeat = 0; repeat < clipTicks; repeat += patternTicks)
             for (int ch = 0; ch < numChannels; ++ch)
-                if (pattern->isOn(project.channels[static_cast<std::size_t>(ch)].id, ps))
-                    g.fillRect(bounds.getX() + view.xForStep(s),
-                               body.getY() + 1.0f + ch * rowHeight, stepWidth,
+                for (const auto& note :
+                     pattern->notesFor(project.channels[static_cast<std::size_t>(ch)].id))
+                {
+                    const int start = repeat + note.startTick;
+                    if (start >= clipTicks)
+                        continue;
+                    const int end = std::min(clipTicks, start + note.lengthTicks);
+                    g.fillRect(bounds.getX() + start * pixelsPerTick,
+                               body.getY() + 1.0f + ch * rowHeight,
+                               std::max(1.0f, (end - start) * pixelsPerTick - 1.0f),
                                std::max(1.0f, rowHeight - 1.0f));
-        }
+                }
 
         g.setColour(colour(t.colours.clipText).withAlpha(0.35f));
-        for (int r = pattern->lengthInSteps; r < clip.lengthInSteps; r += pattern->lengthInSteps)
+        for (int r = patternSteps; r < clip.lengthInSteps; r += patternSteps)
             g.fillRect(bounds.getX() + view.xForStep(r), body.getY(), 1.0f, body.getHeight());
     }
 
@@ -448,7 +456,8 @@ void PlaylistView::updateGridSize()
     const auto& project = doc.project();
     const int bar = project.stepsPerBar();
     const int bars = std::max(minimumBars, project.songLengthInSteps() / bar + spareBars);
-    grid.setSize(static_cast<int>(std::ceil(xForStep(bars * bar))),
+    grid.setSize(std::max(static_cast<int>(std::ceil(xForStep(bars * bar))),
+                          viewport.getMaximumVisibleWidth()),
                  project.playlist.numTracks * trackHeight);
 }
 
@@ -493,6 +502,7 @@ void PlaylistView::resized()
 
     trackNames->setBounds(area.removeFromLeft(trackNameWidth));
     viewport.setBounds(area);
+    updateGridSize();
 }
 
 void PlaylistView::timerCallback()

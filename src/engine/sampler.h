@@ -21,7 +21,10 @@ class Sampler
     // ever points at a sample the current state doesn't keep alive.
     void stateChanged(const EngineState& state);
 
-    void trigger(const EngineState& state, int channelIndex);
+    // Starts the channel's sample. `pitch` 60 plays it unchanged (each semitone resamples by
+    // 2^(1/12)); `velocity` scales the level, with FL's default 100/128 playing at unity.
+    void trigger(const EngineState& state, int channelIndex, int pitch = 60,
+                 float velocity = 100.0f / 128.0f);
 
     // Adds all sounding voices into channels[*][from, to).
     void render(const EngineState& state, float* const* channels, int numChannels, int from,
@@ -37,6 +40,7 @@ class Sampler
         const SampleBuffer* sample = nullptr;
         double position = 0.0;
         double increment = 1.0;
+        float gain = 1.0f; // from velocity
         std::uint64_t startedAt = 0;
     };
 

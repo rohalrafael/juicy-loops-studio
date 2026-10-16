@@ -24,9 +24,9 @@ comments with the details. This page covers how the pieces fit together.
             └───────────────┬───────────────────────┬──────────────────┘
                             │                       │
             ┌───────────────▼──────────┐   ┌────────▼─────────────────┐
-            │ src/ui    JUCE views:    │   │ src/io   JUCE file I/O:  │
-            │ ChannelRack, Playlist,   │   │ SampleLoader (audio      │
-            │ PianoRoll, Mixer,        │   │ files -> SampleBuffer)   │
+            │ src/ui    JUCE views:    │   │ src/io  file I/O, src/   │
+            │ ChannelRack, Playlist,   │   │ plugins  VST3/LV2 hosting│
+            │ PianoRoll, Mixer,        │   │ (JUCE)                   │
             │ EffectPanel, ThemeDialog,│   └──────────────────────────┘
             │ ThemeManager/LookAndFeel │
             └──┬────────────────────┬──┘
@@ -158,6 +158,26 @@ for each chunk:
 - **Rules:** `prepare()` (may allocate) runs on the UI thread when the pool creates a
   processor, or in `Engine::prepare()` before audio starts. `process()` never allocates. The
   pool is reset when the audio device format changes.
+
+### Plugins
+
+Hosted plugins (VST3 and LV2, through JUCE) are effects like any other.
+- **Instances:** a plugin slot has `type: "plugin"` plus the plugin's id, name and saved state.
+  The `EffectPool`'s plugin factory, set by the app to `plugins::PluginHost::createEffect`, turns
+  that into a `plugins::PluginEffect`, which wraps the JUCE plugin instance as an
+  `EffectProcessor`. It preallocates its buffers; what the plugin itself does on the audio
+  thread is up to the plugin.
+- **State:** a plugin's settings live inside it. Before saving or exporting,
+  `MainComponent::syncPluginStates()` copies each live plugin's state into the project (not
+  as an undo step).
+- **Failures:** creating a plugin that isn't installed or fails to load gives no processor. The
+  slot is skipped (audio passes through), and the failure is remembered so it isn't retried on
+  every edit.
+- **Scanning:** `PluginHost` scans with JUCE's `PluginListComponent` (Options › Plugins), keeps
+  the list in `plugins.xml` in the settings folder, and uses a "dead man's pedal" file so a
+  plugin that crashes the scanner is skipped next time.
+- **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
+  Plugin instruments are phase 2: they need note-offs from the sequencer.
 
 ## UI
 

@@ -60,6 +60,8 @@ Project richProject()
     project.findEffect(reverb)->params[0] = 0.9f;
     project.findEffect(reverb)->enabled = false;
     project.addEffect(0, "compressor");
+    const auto plugin = project.addPluginEffect(5, "VST3-Room-abc123", "Room Reverb");
+    project.findEffect(plugin)->pluginState = "QUJDRA==";
 
     project.currentPattern = second;
     project.selectedChannel = hat;

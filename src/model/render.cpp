@@ -27,7 +27,8 @@ double renderLengthSeconds(const Project& project)
     return beats * 60.0 / project.tempo;
 }
 
-RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds)
+RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds,
+                            const engine::EffectPool::PluginFactory& plugins)
 {
     RenderedAudio audio;
     audio.sampleRate = sampleRate;
@@ -42,6 +43,7 @@ RenderedAudio renderProject(const Project& project, double sampleRate, double ta
 
     engine::EffectPool effects;
     effects.setFormat(sampleRate, blockSize);
+    effects.setPluginFactory(plugins);
     auto engine = std::make_unique<engine::Engine>();
     engine->prepare(sampleRate, blockSize);
     engine->transport().setTempo(copy.tempo);

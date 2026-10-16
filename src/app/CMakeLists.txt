@@ -10,6 +10,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     main_component.cpp
     ../io/audio_export.cpp
     ../io/sample_loader.cpp
+    ../plugins/plugin_host.cpp
     ../ui/channel_rack.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp
@@ -29,6 +30,8 @@ target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_JACK=1
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_PLUGINHOST_LV2=1
     JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:JuicyLoopsStudio,JUCE_PRODUCT_NAME>"
     JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:JuicyLoopsStudio,JUCE_VERSION>")
 

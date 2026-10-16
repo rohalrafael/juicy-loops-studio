@@ -212,8 +212,8 @@ TEST_CASE("EffectPool keeps one processor per effect id")
     CHECK(pool.get(1, "delay") != a); // type changed: new processor
     CHECK(pool.get(2, "nonsense") == nullptr);
 
-    pool.collectUnused(); // 1 was used since the last collect
-    CHECK(pool.size() == 1);
+    pool.collectUnused(); // both were used since the last collect (2 as a remembered failure)
+    CHECK(pool.size() == 2);
     pool.collectUnused(); // not used since
     CHECK(pool.size() == 0);
 
@@ -357,4 +357,76 @@ TEST_CASE("Effect processors carry over between snapshots")
     const auto third = model::toEngineState(project, &pool);
     CHECK(third->tracks[1].effects.empty());
     CHECK(pool.size() == 0);
+}
+
+namespace
+{
+
+// Stands in for a hosted plugin: doubles the signal and reports a state string.
+class FakePlugin final : public engine::EffectProcessor
+{
+  public:
+    explicit FakePlugin(std::string s) : state(std::move(s)) {}
+    void prepare(double, int) override {}
+    void reset() override {}
+    void process(float* l, float* r, int n, std::span<const float>) override
+    {
+        for (int i = 0; i < n; ++i)
+        {
+            l[i] *= 2.0f;
+            r[i] *= 2.0f;
+        }
+    }
+    std::string saveState() const override { return state + "+live"; }
+    std::string state;
+};
+
+} // namespace
+
+TEST_CASE("Plugin effects are created by the pool's plugin factory")
+{
+    EffectPool pool;
+    int created = 0;
+    pool.setPluginFactory(
+        [&created](const std::string& id, const std::string& state, double,
+                   int) -> std::unique_ptr<engine::EffectProcessor>
+        {
+            ++created;
+            if (id != "known")
+                return nullptr;
+            return std::make_unique<FakePlugin>(state);
+        });
+
+    auto a = pool.get(1, engine::pluginEffectType, "known", "saved");
+    REQUIRE(a);
+    CHECK(a->saveState() == "saved+live");
+    CHECK(pool.get(1, engine::pluginEffectType, "known", "saved") == a);
+    CHECK(pool.find(1) == a);
+
+    CHECK(pool.get(2, engine::pluginEffectType, "missing") == nullptr);
+    CHECK(pool.get(2, engine::pluginEffectType, "missing") == nullptr);
+    CHECK(created == 2); // the failure is remembered, not retried on every snapshot
+}
+
+TEST_CASE("A plugin effect on an insert processes audio; a missing one passes it through")
+{
+    auto project = oneChannelProject();
+    project.addPluginEffect(1, "known", "Doubler");
+    EffectPool pool;
+    pool.setFormat(rate, 512);
+    pool.setPluginFactory(
+        [](const std::string& id, const std::string& state, double,
+           int) -> std::unique_ptr<engine::EffectProcessor>
+        { return id == "known" ? std::make_unique<FakePlugin>(state) : nullptr; });
+    {
+        engine::Engine engine;
+        engine.prepare(rate, 512);
+        CHECK(renderPeak(project, engine, &pool) == Catch::Approx(2.0f));
+    }
+    project.mixer.tracks[1].effects[0].pluginId = "not-installed";
+    {
+        engine::Engine engine;
+        engine.prepare(rate, 512);
+        CHECK(renderPeak(project, engine, &pool) == Catch::Approx(1.0f));
+    }
 }

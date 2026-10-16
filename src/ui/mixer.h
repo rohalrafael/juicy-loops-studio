@@ -61,6 +61,11 @@ class MixerView final : public juce::Component
 
     // Set by the owner: open the editor for an effect.
     std::function<void(model::EffectId)> onOpenEffect;
+    // Set by the owner: known plugin effects as (id, display name), the "Manage plugins" action,
+    // and whether an effect could be loaded (plugins may be missing on this machine).
+    std::function<std::vector<std::pair<std::string, std::string>>()> listPlugins;
+    std::function<void()> onManagePlugins;
+    std::function<bool(model::EffectId)> isEffectAvailable;
 
     model::Document& document() { return doc; }
     void selectTrack(int track);

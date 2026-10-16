@@ -3,6 +3,7 @@
 // Offline rendering ("export"): plays a project through its own Engine as fast as possible and
 // collects the output. Plain C++, independent of the live audio device.
 
+#include "engine/effect_pool.h"
 #include "model/project.h"
 
 #include <vector>
@@ -19,7 +20,9 @@ struct RenderedAudio
 
 // Renders the song (song mode), or the current pattern once if the Playlist is empty, followed
 // by `tailSeconds` so reverb and delay tails can ring out. The metronome is never included.
-RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds = 2.0);
+// Plugin effects are created with `plugins` (without it they pass audio through unchanged).
+RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds = 2.0,
+                            const engine::EffectPool::PluginFactory& plugins = {});
 
 // Length of what renderProject() plays before the tail, in seconds.
 double renderLengthSeconds(const Project& project);

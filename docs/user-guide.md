@@ -105,6 +105,10 @@ length doesn't change the sound yet: samples always play to their end, like FL's
   - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb, Compressor or Soft Clipper.
   - Click an effect to open its controls; click its light to bypass it.
   - Right-click for edit, bypass, move up/down and remove.
+- **Plugins (VST3 / LV2):** first scan for them in **Options › Plugins…** (Options › Scan). Then
+  **+ Add effect › Plugins** lists them. Clicking a plugin's slot opens its own window. Its
+  settings are saved in the project. If a project uses a plugin that isn't installed, the slot
+  shows "(missing)", passes audio through unchanged and keeps the plugin's settings.
 - **Soft Clipper on the Master:** new projects start with one, so loud mixes saturate gently
   instead of hard-clipping. It changes nothing below its knee; remove or bypass it if you like.
 - **Effect panel:** floating; drag it by its title bar. Knobs drag up/down and double-click

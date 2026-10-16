@@ -230,6 +230,22 @@ EffectId Project::addEffect(int track, const std::string& type)
     return effects.back().id;
 }
 
+EffectId Project::addPluginEffect(int track, const std::string& pluginId, const std::string& name)
+{
+    if (track < 0 || track >= static_cast<int>(mixer.tracks.size()))
+        return 0;
+    auto& effects = mixer.tracks[static_cast<std::size_t>(track)].effects;
+    if (static_cast<int>(effects.size()) >= MixerTrack::maxEffects)
+        return 0;
+    EffectSlot slot;
+    slot.id = nextEffectId++;
+    slot.type = engine::pluginEffectType;
+    slot.pluginId = pluginId;
+    slot.pluginName = name;
+    effects.push_back(std::move(slot));
+    return effects.back().id;
+}
+
 EffectSlot* Project::findEffect(EffectId id, int* trackOut)
 {
     for (std::size_t t = 0; t < mixer.tracks.size(); ++t)
@@ -346,7 +362,8 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
         ts.gainRight = gain * std::min(1.0f, 1.0f + pan);
         if (effects != nullptr)
             for (const auto& slot : track.effects)
-                if (auto processor = effects->get(slot.id, slot.type))
+                if (auto processor =
+                        effects->get(slot.id, slot.type, slot.pluginId, slot.pluginState))
                     ts.effects.push_back({std::move(processor), slot.params, slot.enabled});
         state->tracks.push_back(std::move(ts));
     }

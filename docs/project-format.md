@@ -48,6 +48,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `playlist.clips[]` | `start` and `length` in steps; a clip longer than its pattern repeats it |
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
 | `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
+| `effects[].plugin` | For `"type": "plugin"`: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
 | `view` | Selections and PAT/SONG mode, restored on open |
 | `nextIds` | Id counters for new channels, patterns and effects |
 

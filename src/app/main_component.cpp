@@ -35,6 +35,7 @@ enum MenuItem
     pianoRollItem,
     channelRackItem,
     mixerItem,
+    pluginsItem,
     themeItem,
     audioSettingsItem,
     aboutItem,
@@ -54,9 +55,9 @@ void noFocus(juce::Component& c)
 } // namespace
 
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
-    : themes(themeManager), document(model::makeDefaultProject()),
-      playlist(document, engine.transport()), pianoRoll(document, engine.transport()),
-      mixer(document), effectPanel(document),
+    : themes(themeManager), pluginHost(themeManager.themesFolder().getParentDirectory()),
+      document(model::makeDefaultProject()), playlist(document, engine.transport()),
+      pianoRoll(document, engine.transport()), mixer(document), effectPanel(document),
       projectFolder(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)),
       channelRack(document, engine.transport(), sampleLoader)
 {
@@ -123,15 +124,19 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     addChildComponent(mixer);
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
     addChildComponent(effectPanel);
-    mixer.onOpenEffect = [this](model::EffectId id)
+    mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
+    mixer.listPlugins = [this]
     {
-        effectPanel.show(id);
-        if (!effectPanelPlaced)
-        {
-            effectPanel.setCentrePosition(getLocalBounds().getCentre());
-            effectPanelPlaced = true;
-        }
+        std::vector<std::pair<std::string, std::string>> list;
+        for (const auto& entry : pluginHost.effects())
+            list.emplace_back(entry.id, entry.name);
+        return list;
     };
+    mixer.onManagePlugins = [this] { pluginHost.showManager(); };
+    mixer.isEffectAvailable = [this](model::EffectId id) { return effectPool.find(id) != nullptr; };
+    effectPool.setPluginFactory(
+        [this](const std::string& id, const std::string& state, double rate, int block)
+        { return pluginHost.createEffect(id, state, rate, block); });
     channelRack.onOpenPianoRoll = [this](model::ChannelId) { showPianoRoll(); };
 
 #if JUCE_MAC
@@ -157,6 +162,7 @@ MainComponent::~MainComponent()
     juce::MenuBarModel::setMacMainMenu(nullptr);
 #endif
     document.onChange = nullptr;
+    pluginWindows.clear(); // editors before their plugins
     shutdownAudio();
 }
 
@@ -173,8 +179,83 @@ void MainComponent::documentChanged()
     mixer.refresh();
     if (effectPanel.isVisible())
         effectPanel.refresh();
+    // Close plugin windows whose effect was removed (or replaced by undo).
+    for (auto it = pluginWindows.begin(); it != pluginWindows.end();)
+    {
+        const auto* slot = project.findEffect(it->first);
+        if (slot == nullptr || effectPool.find(it->first) == nullptr)
+            it = pluginWindows.erase(it);
+        else
+            ++it;
+    }
     refreshTransportBar();
     menuItemsChanged();
+}
+
+void MainComponent::openEffectEditor(model::EffectId id)
+{
+    int track = 0;
+    const auto* slot = document.project().findEffect(id, &track);
+    if (slot == nullptr)
+        return;
+
+    if (!slot->isPlugin())
+    {
+        effectPanel.show(id);
+        if (!effectPanelPlaced)
+        {
+            effectPanel.setCentrePosition(getLocalBounds().getCentre());
+            effectPanelPlaced = true;
+        }
+        return;
+    }
+
+    if (auto it = pluginWindows.find(id); it != pluginWindows.end())
+    {
+        it->second->toFront(true);
+        return;
+    }
+    auto processor = effectPool.find(id);
+    if (processor == nullptr)
+    {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(
+                juce::MessageBoxIconType::WarningIcon, "Plugin not available",
+                juce::String::fromUTF8(slot->pluginName.c_str()) +
+                    " isn't installed or couldn't be loaded. Scan for plugins in Options > "
+                    "Plugins. The effect is kept in the project and passes audio through."),
+            nullptr);
+        return;
+    }
+    const auto title =
+        juce::String::fromUTF8(slot->pluginName.c_str()) + juce::String::fromUTF8(" \xc2\xb7 ") +
+        juce::String::fromUTF8(
+            document.project().mixer.tracks[static_cast<std::size_t>(track)].name.c_str());
+    auto window = std::make_unique<plugins::PluginWindow>(processor, title);
+    window->onClose = [this, id]
+    { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); };
+    pluginWindows[id] = std::move(window);
+}
+
+void MainComponent::syncPluginStates()
+{
+    std::vector<std::pair<model::EffectId, std::string>> states;
+    for (const auto& track : document.project().mixer.tracks)
+        for (const auto& slot : track.effects)
+            if (slot.isPlugin())
+                if (auto processor = effectPool.find(slot.id))
+                    if (auto state = processor->saveState(); state != slot.pluginState)
+                        states.emplace_back(slot.id, std::move(state));
+    if (states.empty())
+        return;
+    // Plugin settings live inside the plugin; copying them in isn't an undoable edit.
+    document.setViewState(
+        [&states](model::Project& p)
+        {
+            for (auto& [id, state] : states)
+                if (auto* slot = p.findEffect(id))
+                    slot->pluginState = std::move(state);
+        });
 }
 
 void MainComponent::publishState()
@@ -479,6 +560,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     }
     case 4:
         menu.addItem(Item("Theme...").setID(themeItem));
+        menu.addItem(Item("Plugins...").setID(pluginsItem));
         menu.addItem(Item("Audio settings...").setID(audioSettingsItem));
         break;
     case 5:
@@ -566,6 +648,9 @@ void MainComponent::menuItemSelected(int itemId, int)
         break;
     case themeItem:
         ui::ThemeDialog::show(themes);
+        break;
+    case pluginsItem:
+        pluginHost.showManager();
         break;
     case audioSettingsItem:
         showAudioSettings();
@@ -696,6 +781,7 @@ void MainComponent::openFile(const juce::File& file)
 
 bool MainComponent::writeProject(const juce::File& file)
 {
+    syncPluginStates();
     const auto text = model::saveProject(document.project(), file.getFullPathName().toStdString());
     // replaceWithText writes a temporary file first, so a failed save can't corrupt the old one.
     if (!file.replaceWithText(juce::String::fromUTF8(text.c_str())))
@@ -762,7 +848,11 @@ void MainComponent::exportWav()
 
             // Rendering runs much faster than real time, but blocks the UI while it does.
             juce::MouseCursor::showWaitCursor();
-            const auto audio = model::renderProject(document.project(), rate);
+            syncPluginStates();
+            const auto audio = model::renderProject(
+                document.project(), rate, 2.0,
+                [this](const std::string& id, const std::string& state, double r, int block)
+                { return pluginHost.createEffect(id, state, r, block); });
             const auto result = io::writeWav(file, audio);
             juce::MouseCursor::hideWaitCursor();
 
@@ -842,6 +932,9 @@ void MainComponent::showAudioSettings()
     selector->setSize(500, 450);
 
     juce::DialogWindow::LaunchOptions options;
+    // JUCE dialogs default to light grey; follow the theme instead.
+    options.dialogBackgroundColour = juce::LookAndFeel::getDefaultLookAndFeel().findColour(
+        juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(selector.release());
     options.dialogTitle = "Audio settings";
     options.useNativeTitleBar = true;

@@ -234,9 +234,16 @@ class MixerView::Slots final : public juce::Component
                 const auto led = row.withWidth(row.getHeight()).withSizeKeepingCentre(8.0f, 8.0f);
                 g.setColour(colour(slot.enabled ? t.colours.led : t.colours.ledOff));
                 g.fillEllipse(led);
-                g.setColour(colour(slot.enabled ? t.colours.text : t.colours.textDim));
-                g.drawText(info != nullptr ? info->name : slot.type.c_str(),
-                           row.withTrimmedLeft(row.getHeight()), juce::Justification::centredLeft);
+                juce::String name =
+                    slot.isPlugin()
+                        ? juce::String::fromUTF8(slot.pluginName.c_str())
+                        : juce::String(info != nullptr ? info->name : slot.type.c_str());
+                const bool missing = view.isEffectAvailable && !view.isEffectAvailable(slot.id);
+                if (missing)
+                    name << " (missing)";
+                g.setColour(colour(slot.enabled && !missing ? t.colours.text : t.colours.textDim));
+                g.drawText(name, row.withTrimmedLeft(row.getHeight()).withTrimmedRight(4.0f),
+                           juce::Justification::centredLeft, true);
             }
             else
             {
@@ -281,23 +288,56 @@ class MixerView::Slots final : public juce::Component
 
     void showAddMenu(int track)
     {
+        constexpr int manageId = 999;
+        constexpr int firstPluginId = 1000;
         juce::PopupMenu menu;
         int itemId = 1;
         for (const auto& type : engine::effectTypes())
             menu.addItem(itemId++, type.name);
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-                           [this, track](int result)
-                           {
-                               if (result <= 0)
-                                   return;
-                               const std::string type =
-                                   engine::effectTypes()[static_cast<std::size_t>(result - 1)].id;
-                               model::EffectId added = 0;
-                               view.doc.apply([&added, track, type](model::Project& p)
-                                              { added = p.addEffect(track, type); });
-                               if (added != 0 && view.onOpenEffect)
-                                   view.onOpenEffect(added);
-                           });
+
+        // Hosted plugins (VST3 / LV2), found by scanning in Options > Plugins.
+        const auto plugins = view.listPlugins ? view.listPlugins()
+                                              : std::vector<std::pair<std::string, std::string>>{};
+        juce::PopupMenu pluginMenu;
+        for (std::size_t i = 0; i < plugins.size(); ++i)
+            pluginMenu.addItem(firstPluginId + static_cast<int>(i),
+                               juce::String::fromUTF8(plugins[i].second.c_str()));
+        if (plugins.empty())
+            pluginMenu.addItem(-1, "No plugins found yet: scan in Manage plugins", false);
+        menu.addSeparator();
+        menu.addSubMenu("Plugins", pluginMenu);
+        menu.addItem(manageId, "Manage plugins...");
+
+        menu.showMenuAsync(
+            juce::PopupMenu::Options().withTargetComponent(this),
+            [this, track, plugins](int result)
+            {
+                if (result <= 0)
+                    return;
+                if (result == manageId)
+                {
+                    if (view.onManagePlugins)
+                        view.onManagePlugins();
+                    return;
+                }
+                model::EffectId added = 0;
+                if (result >= firstPluginId)
+                {
+                    const auto& [id, name] =
+                        plugins[static_cast<std::size_t>(result - firstPluginId)];
+                    view.doc.apply([&added, track, id, name](model::Project& p)
+                                   { added = p.addPluginEffect(track, id, name); });
+                }
+                else
+                {
+                    const std::string type =
+                        engine::effectTypes()[static_cast<std::size_t>(result - 1)].id;
+                    view.doc.apply([&added, track, type](model::Project& p)
+                                   { added = p.addEffect(track, type); });
+                }
+                if (added != 0 && view.onOpenEffect)
+                    view.onOpenEffect(added);
+            });
     }
 
     void toggle(model::EffectId id)

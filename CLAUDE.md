@@ -134,7 +134,8 @@ and run it before milestones or after platform-specific changes.
 4. [x] Pattern system + Playlist (PAT/SONG modes)
 5. [x] Piano Roll
 6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
-7. [ ] Plugin hosting
+7. [~] Plugin hosting: phase 1 done (VST3/LV2 **effects**); phase 2 = plugin **instruments**
+       (needs note-offs from the sequencer; watch for stuck notes)
 8. [x] Project save/load (.jls JSON), WAV export
 
 ## Decision log
@@ -237,6 +238,14 @@ and run it before milestones or after platform-specific changes.
   Clipper** effect (user's choice over a limiter), on the Master in new projects
   (`makeDefaultProject`). Linear below the knee, tanh shoulder up to the ceiling (default
   -0.3 dB); no oversampling yet.
+- 2026-10-17: Plugin hosting phase 1 (effects). `src/plugins/plugin_host` (JUCE,
+  `JUCE_PLUGINHOST_VST3/LV2=1`; CLAP isn't in JUCE). `EffectSlot` type `"plugin"` + pluginId /
+  pluginName / pluginState (base64). `EffectPool::setPluginFactory` creates them;
+  `EffectProcessor::saveState()` lets plugins report state; failures are cached in the pool.
+  `PluginWindow` shows the editor (it holds the processor; the editor is deleted first).
+  Plugin states are synced into the project before save/export. Known list in
+  `<settings>/plugins.xml`, crash file `plugin-scan-crash.txt`. In-process hosting only. All
+  JUCE dialogs set `dialogBackgroundColour` from the theme (the default is light grey).
 
 ## Dev environment notes
 

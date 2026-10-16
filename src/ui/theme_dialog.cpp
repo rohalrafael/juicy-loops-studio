@@ -244,6 +244,9 @@ void ThemeDialog::exportTheme()
 void ThemeDialog::show(ThemeManager& manager)
 {
     juce::DialogWindow::LaunchOptions options;
+    // JUCE dialogs default to light grey; follow the theme instead.
+    options.dialogBackgroundColour = juce::LookAndFeel::getDefaultLookAndFeel().findColour(
+        juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(new ThemeDialog(manager));
     options.dialogTitle = "Theme";
     options.useNativeTitleBar = true;

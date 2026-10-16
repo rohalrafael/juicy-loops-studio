@@ -40,13 +40,20 @@ struct Channel
     int mixerTrack = 0; // 0 = Master, 1.. = inserts
 };
 
-// An effect in a mixer track's slot. `type` is an engine::EffectType id.
+// An effect in a mixer track's slot. `type` is an engine::EffectType id, or
+// engine::pluginEffectType for a hosted plugin (then the plugin fields are used, not params).
 struct EffectSlot
 {
     EffectId id = 0;
     std::string type;
     std::vector<float> params; // one per engine::ParamInfo, in real units
     bool enabled = true;
+
+    std::string pluginId;    // which plugin (the host's identifier string)
+    std::string pluginName;  // shown in the UI, also when the plugin isn't installed
+    std::string pluginState; // base64 of the plugin's own state, as of the last save
+
+    bool isPlugin() const { return type == engine::pluginEffectType; }
 
     bool operator==(const EffectSlot&) const = default;
 };
@@ -184,6 +191,8 @@ struct Project
     // Adds an effect with default settings to a mixer track's chain. Returns 0 if the track
     // is full or the type unknown.
     EffectId addEffect(int track, const std::string& type);
+    // Adds a hosted plugin effect. Returns 0 if the track is full.
+    EffectId addPluginEffect(int track, const std::string& pluginId, const std::string& name);
     EffectSlot* findEffect(EffectId id, int* trackOut = nullptr);
     const EffectSlot* findEffect(EffectId id, int* trackOut = nullptr) const;
     void removeEffect(EffectId id);

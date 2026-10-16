@@ -58,6 +58,11 @@ void LookAndFeel::applyTheme(const theme::Theme& t, juce::Typeface::Ptr bundledF
     setColour(juce::TooltipWindow::outlineColourId, colour(c.outline));
     setColour(juce::ScrollBar::thumbColourId, colour(c.panelRaised));
     setColour(juce::ListBox::backgroundColourId, colour(c.panel));
+    setColour(juce::ListBox::outlineColourId, colour(c.outline));
+    setColour(juce::TableHeaderComponent::backgroundColourId, colour(c.header));
+    setColour(juce::TableHeaderComponent::textColourId, colour(c.text));
+    setColour(juce::TableHeaderComponent::outlineColourId, colour(c.outline));
+    setColour(juce::TableHeaderComponent::highlightColourId, colour(c.activeBackground));
     setColour(juce::ListBox::textColourId, colour(c.text));
     setColour(juce::GroupComponent::outlineColourId, colour(c.outline));
     setColour(juce::GroupComponent::textColourId, colour(c.text));

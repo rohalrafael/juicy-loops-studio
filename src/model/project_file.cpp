@@ -138,10 +138,14 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
                 for (std::size_t i = 0; i < info->params.size() && i < slot.params.size(); ++i)
                     params[info->params[i].name] =
                         tidy(slot.params[i]); // by name: survives reordering
-            effects.push_back({{"id", slot.id},
-                               {"type", slot.type},
-                               {"enabled", slot.enabled},
-                               {"params", params}});
+            json effect = {{"id", slot.id},
+                           {"type", slot.type},
+                           {"enabled", slot.enabled},
+                           {"params", params}};
+            if (slot.isPlugin())
+                effect["plugin"] = {
+                    {"id", slot.pluginId}, {"name", slot.pluginName}, {"state", slot.pluginState}};
+            effects.push_back(std::move(effect));
         }
         tracks.push_back({{"name", t.name},
                           {"volumeDb", tidy(t.volumeDb)},
@@ -338,6 +342,34 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
             {
                 const auto type = read.get<std::string>(e, "type", "");
                 const auto* info = engine::findEffectType(type);
+                if (type == engine::pluginEffectType)
+                {
+                    // Kept even if the plugin isn't installed here: it stays silent (passes audio
+                    // through) and is saved back unchanged.
+                    if (static_cast<int>(track.effects.size()) >= MixerTrack::maxEffects)
+                        continue;
+                    EffectSlot slot;
+                    slot.id = read.get<EffectId>(e, "id", 0);
+                    slot.type = type;
+                    slot.enabled = read.get<bool>(e, "enabled", true);
+                    const auto plugin = e.find("plugin");
+                    if (plugin != e.end() && plugin->is_object())
+                    {
+                        slot.pluginId = read.get<std::string>(*plugin, "id", "");
+                        slot.pluginName = read.get<std::string>(*plugin, "name", "Plugin");
+                        slot.pluginState = read.get<std::string>(*plugin, "state", "");
+                    }
+                    if (slot.pluginId.empty())
+                    {
+                        read.warn("A plugin effect on " + track.name +
+                                  " has no plugin id; skipped.");
+                        continue;
+                    }
+                    if (slot.id == 0 || project.findEffect(slot.id) != nullptr)
+                        slot.id = 0;
+                    track.effects.push_back(std::move(slot));
+                    continue;
+                }
                 if (info == nullptr)
                 {
                     read.warn("Unknown effect \"" + type + "\" on " + track.name + " was skipped.");

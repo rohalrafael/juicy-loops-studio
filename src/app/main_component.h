@@ -9,6 +9,7 @@
 #include "engine/engine.h"
 #include "io/sample_loader.h"
 #include "model/document.h"
+#include "plugins/plugin_host.h"
 #include "ui/channel_rack.h"
 #include "ui/mixer.h"
 #include "ui/piano_roll.h"
@@ -78,11 +79,14 @@ class MainComponent final : public juce::AudioAppComponent,
     bool writeProject(const juce::File& file);
     void exportWav();
     void updateTitle();
+    void openEffectEditor(model::EffectId id);
+    void syncPluginStates(); // copies live plugin states into the project (before save/export)
 
     ui::ThemeManager& themes;
 
     engine::Engine engine;
     engine::EffectPool effectPool; // effect processors live here between snapshots
+    plugins::PluginHost pluginHost;
     model::Document document;
     io::SampleLoader sampleLoader;
 
@@ -104,6 +108,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::File currentFile;   // where the project was last saved/opened; empty if never
     juce::File projectFolder; // where file choosers start: the last project's folder
     std::unique_ptr<juce::FileChooser> fileChooser;
+    std::map<model::EffectId, std::unique_ptr<plugins::PluginWindow>> pluginWindows;
     double formatRate = 0.0; // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;

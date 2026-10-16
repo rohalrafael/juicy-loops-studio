@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -32,6 +33,10 @@ class EffectProcessor
     // Processes stereo audio in place. `params` holds one value per ParamInfo, in order.
     virtual void process(float* left, float* right, int numSamples,
                          std::span<const float> params) = 0;
+
+    // Opaque state to store in the project (used by plugins, whose settings live inside them).
+    // Built-in effects keep their settings in params and return nothing. UI thread.
+    virtual std::string saveState() const { return {}; }
 };
 
 struct EffectType
@@ -46,6 +51,10 @@ struct EffectType
 
 // The built-in effects, in menu order: Filter, EQ, Delay, Reverb, Compressor, Soft Clipper.
 const std::vector<EffectType>& effectTypes();
+
+// Effect type id of hosted plugins (VST3/LV2). Not in effectTypes(): plugins are created by the
+// EffectPool's plugin factory, identified by a plugin id.
+inline constexpr const char* pluginEffectType = "plugin";
 const EffectType* findEffectType(std::string_view id);
 
 } // namespace jls::engine

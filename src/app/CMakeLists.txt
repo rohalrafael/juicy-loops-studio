@@ -11,6 +11,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../io/sample_loader.cpp
     ../ui/channel_rack.cpp
     ../ui/theme.cpp
+    ../ui/playlist.cpp
     ../ui/theme_dialog.cpp)
 
 target_include_directories(JuicyLoopsStudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

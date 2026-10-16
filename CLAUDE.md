@@ -48,9 +48,10 @@ plugin *hosting* and GUI support are still immature.
 src/app/      JUCE app shell: window, transport bar, MainComponent (owns Document + Engine)
 src/engine/   Real-time, JUCE-free: Engine, Transport, StepSequencer, Sampler, Metronome,
               DrumSynth (built-in sounds), SpscQueue, EngineState snapshot
-src/model/    JUCE-free project data: Project (channels, pattern), Document (undo/redo)
+src/model/    JUCE-free project data: Project (channels, patterns, playlist), Document (undo)
 src/theme/    JUCE-free theme data + JSON theme files (nlohmann/json) + 4 built-in themes
-src/ui/       JUCE components: ChannelRack, ThemeManager + LookAndFeel (ui/theme), ThemeDialog
+src/ui/       JUCE components: ChannelRack (floating), PlaylistView, ThemeManager +
+              LookAndFeel (ui/theme), ThemeDialog
 src/io/       JUCE-based file I/O: SampleLoader (WAV/AIFF/FLAC/Ogg/MP3 -> SampleBuffer)
 src/plugins/  Plugin hosting + built-in instruments/effects                     [planned]
 tests/        Catch2 unit tests (link engine/model only, never JUCE)
@@ -122,7 +123,7 @@ and run it before milestones or after platform-specific changes.
 2. [x] Audio device setup + transport (play/pause/stop, tempo, beats per bar)
        + sample-accurate metronome (Ctrl+M)
 3. [x] Channel Rack with step sequencer + a built-in sampler
-4. [ ] Pattern system + Playlist
+4. [x] Pattern system + Playlist (PAT/SONG modes)
 5. [ ] Piano Roll
 6. [ ] Mixer (inserts, sends, built-in effects)
 7. [ ] Plugin hosting
@@ -167,6 +168,18 @@ and run it before milestones or after platform-specific changes.
   default would be a folder directly in $HOME). Fonts are bundled as **static** Regular
   TTFs: variable fonts loaded at their default axis (Outfit = Thin). Menu bar: File/Edit/
   Options/Help (native on macOS). Format doc: `docs/themes.md`.
+- 2026-10-16: Patterns + Playlist. `Project` has `patterns` (never empty; steps keyed by
+  channel id) and `playlist.clips` {pattern, track, startStep, lengthInSteps}; positions
+  are in steps (16ths). A clip longer than its pattern **repeats** it. Song length = last
+  clip end rounded up to a bar; SONG mode loops it. `currentPattern` and `songMode` are
+  **view state**: `Document::setViewState()` changes them without an undo step, and
+  undo/redo keeps them. Time signature moved into `Project::beatsPerBar` (transport mirrors
+  it for the metronome). Playlist mouse: left-click places + drag moves, right edge resizes,
+  right-click deletes, Ctrl+wheel zooms; snap Bar/Beat/Step. Channel Rack is a floating
+  panel over the Playlist (drag its title bar; F6 toggles). Keys: L = PAT/SONG, F4 = new
+  pattern. Patterns menu: new/clone/rename/delete.
+- Known gaps: no seeking (clicking the ruler), no pattern length UI, no track names/mute,
+  no clip selection or multi-select, the playlist has a fixed 16 tracks.
 
 ## Dev environment notes
 

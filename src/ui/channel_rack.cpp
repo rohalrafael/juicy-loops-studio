@@ -20,6 +20,7 @@ void noFocus(juce::Component& c)
 
 constexpr int padding = 8;
 constexpr int hardShadowOffset = 5; // themes with a hard shadow draw it in this margin
+constexpr int headerHeight = 30;    // title bar; drag it to move the rack
 
 // Soft glow around a shape, for themes that have one.
 void drawGlow(juce::Graphics& g, const juce::Path& shape, std::optional<theme::Argb> glow,
@@ -225,7 +226,7 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
 
     steps.newGestureId = [this] { return rack.document().newGestureId(); };
     steps.onStepPainted = [this](int step, bool on, int gesture)
-    { rack.edit([this, step, on](model::Project& p) { p.pattern.set(id, step, on); }, gesture); };
+    { rack.edit([this, step, on](model::Project& p) { p.current().set(id, step, on); }, gesture); };
 
     addAndMakeVisible(mute);
     addAndMakeVisible(name);
@@ -284,6 +285,13 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
                          io::SampleLoader& sampleLoader)
     : doc(document), transport(transportToShow), loader(sampleLoader)
 {
+    closeButton.setTooltip("Hide (F6)");
+    closeButton.onClick = [this] { setVisible(false); };
+    noFocus(closeButton);
+    addAndMakeVisible(closeButton);
+
+    dragBounds.setMinimumOnscreenAmounts(headerHeight, 80, 40, 80);
+
     addButton.setTooltip("Add channel from audio file");
     addButton.onClick = [this] { chooseSampleFor(0); };
     noFocus(addButton);
@@ -321,7 +329,7 @@ void ChannelRack::refresh()
     }
 
     for (std::size_t i = 0; i < rows.size(); ++i)
-        rows[i]->update(project.channels[i], project.pattern);
+        rows[i]->update(project.channels[i], project.current());
 
     if (auto* parent = getParentComponent())
         parent->resized();
@@ -330,14 +338,14 @@ void ChannelRack::refresh()
 int ChannelRack::preferredWidth() const
 {
     return hardShadowOffset + padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
-           4 + metrics::nameWidth + 8 + StepGrid::widthFor(doc.project().pattern.lengthInSteps);
+           4 + metrics::nameWidth + 8 + StepGrid::widthFor(doc.project().current().lengthInSteps);
 }
 
 int ChannelRack::preferredHeight() const
 {
     const int n = static_cast<int>(doc.project().channels.size());
-    return hardShadowOffset + padding * 2 + n * (metrics::rowHeight + metrics::rowGap) +
-           metrics::rowHeight;
+    return hardShadowOffset + headerHeight + padding * 2 +
+           n * (metrics::rowHeight + metrics::rowGap) + metrics::rowHeight;
 }
 
 void ChannelRack::paint(juce::Graphics& g)
@@ -357,6 +365,30 @@ void ChannelRack::paint(juce::Graphics& g)
 
     g.setColour(colour(t.colours.panel));
     g.fillRoundedRectangle(panel, radius);
+
+    // Title bar: "Channel rack" and the pattern being edited.
+    auto header = panel.removeFromTop(static_cast<float>(headerHeight));
+    {
+        juce::Path top;
+        top.addRoundedRectangle(header.getX(), header.getY(), header.getWidth(), header.getHeight(),
+                                radius, radius, true, true, false, false);
+        g.setColour(colour(t.colours.header));
+        g.fillPath(top);
+        g.setColour(colour(t.colours.outline));
+        g.fillRect(header.removeFromBottom(std::max(1.0f, t.shape.borderWidth)));
+    }
+    auto text = header.reduced(12.0f, 0.0f);
+    g.setColour(colour(t.colours.text));
+    g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+    g.drawText("Channel rack", text.removeFromLeft(110.0f), juce::Justification::centredLeft);
+    g.setColour(colour(t.colours.textDim));
+    g.setFont(juce::FontOptions(13.0f));
+    g.drawText(juce::String::fromUTF8(doc.project().current().name.c_str()),
+               text.withTrimmedRight(30.0f), juce::Justification::centredLeft, true);
+
+    panel = getLocalBounds().toFloat();
+    if (t.effects.hardShadow)
+        panel = panel.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
     if (t.shape.borderWidth > 0.0f)
     {
         g.setColour(colour(t.colours.outline));
@@ -378,7 +410,12 @@ void ChannelRack::paintOverChildren(juce::Graphics& g)
 
 void ChannelRack::resized()
 {
-    auto area = getLocalBounds().reduced(padding);
+    auto bounds = getLocalBounds();
+    auto header = bounds.removeFromTop(headerHeight);
+    closeButton.setBounds(header.removeFromRight(headerHeight + hardShadowOffset)
+                              .withTrimmedRight(hardShadowOffset)
+                              .reduced(5));
+    auto area = bounds.reduced(padding);
     for (auto& row : rows)
     {
         row->setBounds(area.removeFromTop(metrics::rowHeight));
@@ -390,9 +427,11 @@ void ChannelRack::resized()
 
 void ChannelRack::timerCallback()
 {
+    // Only in pattern mode: in song mode the playhead belongs to the Playlist.
     int step = -1;
-    const int length = doc.project().pattern.lengthInSteps;
-    if (transport.isPlaying() && length > 0)
+    const auto& project = doc.project();
+    const int length = project.current().lengthInSteps;
+    if (transport.isPlaying() && !project.songMode && length > 0)
         step = static_cast<int>(std::floor(transport.positionInBeats() * engine::stepsPerBeat)) %
                length;
 
@@ -544,6 +583,23 @@ void ChannelRack::filesDropped(const juce::StringArray& paths, int, int y)
         return;
     }
     addChannelsFromFiles(files);
+}
+
+} // namespace jls::ui
+
+namespace jls::ui
+{
+
+void ChannelRack::mouseDown(const juce::MouseEvent& e)
+{
+    if (e.y < headerHeight)
+        dragger.startDraggingComponent(this, e);
+}
+
+void ChannelRack::mouseDrag(const juce::MouseEvent& e)
+{
+    if (e.mouseDownPosition.y < headerHeight)
+        dragger.dragComponent(this, e, &dragBounds);
 }
 
 } // namespace jls::ui

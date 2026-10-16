@@ -5,12 +5,34 @@
 
 namespace jls::engine
 {
+namespace
+{
+
+// Adds a trigger for every unmuted channel whose step `patternStep` is on.
+// Returns false once `out` is full.
+bool emitPatternStep(const EngineState& state, const PatternState& pattern, int patternStep,
+                     int offset, std::span<Trigger> out, int& count)
+{
+    const auto numChannels = std::min(state.channels.size(), pattern.steps.size());
+    for (std::size_t ch = 0; ch < numChannels; ++ch)
+    {
+        const auto& row = pattern.steps[ch];
+        if (state.channels[ch].muted || patternStep >= static_cast<int>(row.size()) ||
+            row[static_cast<std::size_t>(patternStep)] == 0)
+            continue;
+        if (count == static_cast<int>(out.size()))
+            return false;
+        out[static_cast<std::size_t>(count++)] = {static_cast<int>(ch), offset};
+    }
+    return true;
+}
+
+} // namespace
 
 int collectTriggers(const EngineState& state, const BlockPosition& block, int numSamples,
                     std::span<Trigger> out)
 {
-    if (!block.playing || numSamples <= 0 || block.endBeat <= block.startBeat ||
-        state.patternLengthInSteps <= 0)
+    if (!block.playing || numSamples <= 0 || block.endBeat <= block.startBeat)
         return 0;
 
     const double startStep = block.startBeat * stepsPerBeat;
@@ -22,20 +44,41 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
     for (auto step = static_cast<long long>(std::ceil(startStep));
          static_cast<double>(step) < endStep; ++step)
     {
-        const auto patternStep = static_cast<std::size_t>(step % state.patternLengthInSteps);
         const double fraction = (static_cast<double>(step) - startStep) / span;
         const int offset =
             std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
 
-        for (std::size_t ch = 0; ch < state.channels.size(); ++ch)
+        if (!state.songMode)
         {
-            const auto& channel = state.channels[ch];
-            if (channel.muted || patternStep >= channel.steps.size() ||
-                channel.steps[patternStep] == 0)
-                continue;
-            if (count == static_cast<int>(out.size()))
+            if (state.currentPattern < 0 ||
+                state.currentPattern >= static_cast<int>(state.patterns.size()))
                 return count;
-            out[static_cast<std::size_t>(count++)] = {static_cast<int>(ch), offset};
+            const auto& pattern = state.patterns[static_cast<std::size_t>(state.currentPattern)];
+            if (pattern.lengthInSteps <= 0)
+                return count;
+            const auto patternStep = static_cast<int>(step % pattern.lengthInSteps);
+            if (!emitPatternStep(state, pattern, patternStep, offset, out, count))
+                return count;
+            continue;
+        }
+
+        // Song mode: the arrangement loops; every clip under the playhead plays its pattern
+        // (looping the pattern if the clip is longer than it).
+        if (state.songLengthInSteps <= 0)
+            return count;
+        const auto songStep = static_cast<int>(step % state.songLengthInSteps);
+        for (const auto& clip : state.clips)
+        {
+            if (songStep < clip.startStep || songStep >= clip.startStep + clip.lengthInSteps ||
+                clip.patternIndex < 0 ||
+                clip.patternIndex >= static_cast<int>(state.patterns.size()))
+                continue;
+            const auto& pattern = state.patterns[static_cast<std::size_t>(clip.patternIndex)];
+            if (pattern.lengthInSteps <= 0)
+                continue;
+            const int patternStep = (songStep - clip.startStep) % pattern.lengthInSteps;
+            if (!emitPatternStep(state, pattern, patternStep, offset, out, count))
+                return count;
         }
     }
     return count;

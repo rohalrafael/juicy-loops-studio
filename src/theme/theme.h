@@ -37,6 +37,10 @@ struct Colours
     Argb activeBackground = 0xff3e2d4a;
     Argb activeText = 0xffff7a45;
     Argb shadow = 0x8c000000;
+    Argb lane = 0xff1f1726; // Playlist track background
+    Argb grid = 0xff2c2236; // Playlist bar lines
+    Argb clip = 0xff7a3a5e; // pattern clips
+    Argb clipText = 0xfffff4ee;
 
     bool operator==(const Colours&) const = default;
 };

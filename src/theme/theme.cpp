@@ -53,6 +53,10 @@ constexpr std::array colourFields{
     ColourField{"activeBackground", &Colours::activeBackground},
     ColourField{"activeText", &Colours::activeText},
     ColourField{"shadow", &Colours::shadow},
+    ColourField{"lane", &Colours::lane},
+    ColourField{"grid", &Colours::grid},
+    ColourField{"clip", &Colours::clip},
+    ColourField{"clipText", &Colours::clipText},
 };
 
 struct ShapeField
@@ -252,12 +256,14 @@ ParseResult parseTheme(std::string_view json, const Theme& fallback)
                         "colours.stepOff: expected two colours, like [\"#392d44\", \"#4b2f3c\"]");
             }
 
-            read.unknownKeys(
-                *c, "colours.",
-                {"background",  "panel",      "panelRaised",      "header",     "outline",
-                 "text",        "textDim",    "accent",           "accentAlt",  "display",
-                 "displayText", "displayDim", "stepOff",          "stepOn",     "playhead",
-                 "led",         "ledOff",     "activeBackground", "activeText", "shadow"});
+            read.unknownKeys(*c, "colours.", {"background", "panel",       "panelRaised",
+                                              "header",     "outline",     "text",
+                                              "textDim",    "accent",      "accentAlt",
+                                              "display",    "displayText", "displayDim",
+                                              "stepOff",    "stepOn",      "playhead",
+                                              "led",        "ledOff",      "activeBackground",
+                                              "activeText", "shadow",      "lane",
+                                              "grid",       "clip",        "clipText"});
         }
     }
 

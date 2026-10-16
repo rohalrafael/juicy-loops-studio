@@ -36,7 +36,11 @@ constexpr const char* juicyJson = R"({
     "ledOff": "#3a2f44",
     "activeBackground": "#3e2d4a",
     "activeText": "#ff7a45",
-    "shadow": "#0000008c"
+    "shadow": "#0000008c",
+    "lane": "#1f1726",
+    "grid": "#2c2236",
+    "clip": "#7a3a5e",
+    "clipText": "#fff4ee"
   },
   "shape": { "cornerRadius": 6, "windowRadius": 8, "stepRadius": 4, "borderWidth": 1, "stepOutline": 0 },
   "effects": { "stepGlow": false, "ledGlow": false, "hardShadow": false }
@@ -68,7 +72,11 @@ constexpr const char* citrusJson = R"({
     "ledOff": "#e8dcc0",
     "activeBackground": "#ffd43b",
     "activeText": "#2b1d0e",
-    "shadow": "#2b1d0e"
+    "shadow": "#2b1d0e",
+    "lane": "#fff8e6",
+    "grid": "#f0dfb5",
+    "clip": "#ffd43b",
+    "clipText": "#2b1d0e"
   },
   "shape": { "cornerRadius": 10, "windowRadius": 14, "stepRadius": 7, "borderWidth": 2, "stepOutline": 2 },
   "effects": { "stepGlow": false, "ledGlow": false, "hardShadow": true }
@@ -100,7 +108,11 @@ constexpr const char* watermelonJson = R"({
     "ledOff": "#1d332d",
     "activeBackground": "#16342c",
     "activeText": "#3dffb0",
-    "shadow": "#00000099"
+    "shadow": "#00000099",
+    "lane": "#0e1815",
+    "grid": "#173029",
+    "clip": "#ff3d6e",
+    "clipText": "#0b1210"
   },
   "shape": { "cornerRadius": 4, "windowRadius": 6, "stepRadius": 2, "borderWidth": 1, "stepOutline": 0 },
   "effects": { "stepGlow": "#ff3d6ecc", "ledGlow": "#3dffb0e6", "hardShadow": false }
@@ -132,7 +144,11 @@ constexpr const char* blueberryJson = R"({
     "ledOff": "#2a3266",
     "activeBackground": "#2c3577",
     "activeText": "#ffb8dc",
-    "shadow": "#03051499"
+    "shadow": "#03051499",
+    "lane": "#131939",
+    "grid": "#1f2756",
+    "clip": "#5b6cff",
+    "clipText": "#ffffff"
   },
   "shape": { "cornerRadius": 14, "windowRadius": 20, "stepRadius": 10, "borderWidth": 1, "stepOutline": 0 },
   "effects": { "stepGlow": "#ff4fa366", "ledGlow": false, "hardShadow": false }

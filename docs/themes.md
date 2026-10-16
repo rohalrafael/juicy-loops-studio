@@ -60,7 +60,11 @@ A full file:
     "ledOff": "#3a2f44",
     "activeBackground": "#3e2d4a",
     "activeText": "#ff7a45",
-    "shadow": "#0000008c"
+    "shadow": "#0000008c",
+    "lane": "#1f1726",
+    "grid": "#2c2236",
+    "clip": "#7a3a5e",
+    "clipText": "#fff4ee"
   },
   "shape": { "cornerRadius": 6, "windowRadius": 8, "stepRadius": 4, "borderWidth": 1, "stepOutline": 0 },
   "effects": { "stepGlow": false, "ledGlow": false, "hardShadow": false }
@@ -90,6 +94,8 @@ solid).
 | `led`, `ledOff`    | Channel mute lights                                          |
 | `activeBackground`, `activeText` | Pressed / toggled-on buttons, highlighted menu items |
 | `shadow`           | Shadow colour (also the hard shadow, if enabled)             |
+| `lane`, `grid`     | Playlist track background and bar lines                      |
+| `clip`, `clipText` | Pattern clips in the Playlist and their labels               |
 
 ### Font
 

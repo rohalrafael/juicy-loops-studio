@@ -3,7 +3,27 @@
 namespace jls::model
 {
 
+namespace
+{
+
+// Selection and PAT/SONG mode are view state: undo/redo restores the project's content but
+// leaves these as the user has them (as long as the selected pattern still exists).
+void keepViewState(const Project& from, Project& to)
+{
+    to.songMode = from.songMode;
+    if (to.findPattern(from.currentPattern) != nullptr)
+        to.currentPattern = from.currentPattern;
+}
+
+} // namespace
+
 Document::Document(Project initial) : current(std::move(initial)) {}
+
+void Document::setViewState(const std::function<void(Project&)>& change)
+{
+    change(current);
+    notify();
+}
 
 void Document::apply(const std::function<void(Project&)>& edit, int gestureId)
 {
@@ -25,9 +45,11 @@ bool Document::undo()
 {
     if (undoStack.empty())
         return false;
-    redoStack.push_back(std::move(current));
-    current = std::move(undoStack.back());
+    auto restored = std::move(undoStack.back());
     undoStack.pop_back();
+    keepViewState(current, restored);
+    redoStack.push_back(std::move(current));
+    current = std::move(restored);
     lastGestureId = 0;
     notify();
     return true;
@@ -37,9 +59,11 @@ bool Document::redo()
 {
     if (redoStack.empty())
         return false;
-    undoStack.push_back(std::move(current));
-    current = std::move(redoStack.back());
+    auto restored = std::move(redoStack.back());
     redoStack.pop_back();
+    keepViewState(current, restored);
+    undoStack.push_back(std::move(current));
+    current = std::move(restored);
     lastGestureId = 0;
     notify();
     return true;

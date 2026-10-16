@@ -4,6 +4,7 @@
 #include "io/sample_loader.h"
 #include "model/document.h"
 #include "ui/channel_rack.h"
+#include "ui/playlist.h"
 #include "ui/theme.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -11,8 +12,8 @@
 namespace jls
 {
 
-// Top-level component: menu bar, transport bar and Channel Rack. Owns the document and the
-// audio engine.
+// Top-level component: menu bar, transport bar, the Playlist and the floating Channel Rack.
+// Owns the document and the audio engine.
 class MainComponent final : public juce::AudioAppComponent,
                             public juce::MenuBarModel,
                             private juce::Timer
@@ -36,6 +37,14 @@ class MainComponent final : public juce::AudioAppComponent,
   private:
     void timerCallback() override;
     void documentChanged();
+    void refreshTransportBar();
+    void setSongMode(bool song);
+    void selectPattern(model::PatternId id);
+    void newPattern();
+    void clonePattern();
+    void renamePattern();
+    void deletePattern();
+    void toggleChannelRack();
     void showAudioSettings();
     void showAbout();
 
@@ -45,14 +54,19 @@ class MainComponent final : public juce::AudioAppComponent,
     model::Document document;
     io::SampleLoader sampleLoader;
 
+    juce::TextButton patButton{"PAT"};
+    juce::TextButton songButton{"SONG"};
+    juce::ComboBox patternBox;
+    juce::TextButton newPatternButton{"+"};
     juce::TextButton playButton{"Play"};
     juce::TextButton stopButton{"Stop"};
     juce::Slider tempoSlider;
     juce::ComboBox timeSignatureBox;
     juce::TextButton metronomeButton{"Metronome"};
     juce::Label positionLabel;
-    juce::TextButton audioSettingsButton{"Audio settings"};
+    ui::PlaylistView playlist;
     ui::ChannelRack channelRack;
+    bool channelRackPlaced = false;
     juce::TooltipWindow tooltips{this, 600};
     std::unique_ptr<juce::MenuBarComponent> menuBar; // not used on macOS (native menu bar)
 

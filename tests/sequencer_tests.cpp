@@ -26,17 +26,25 @@ std::shared_ptr<const SampleBuffer> constantSample(int frames, double rate = sam
     return buffer;
 }
 
+PatternState patternWithSteps(std::vector<int> onSteps, int length = 16)
+{
+    PatternState pattern;
+    pattern.lengthInSteps = length;
+    pattern.steps.assign(1, std::vector<std::uint8_t>(static_cast<std::size_t>(length), 0));
+    for (int s : onSteps)
+        pattern.steps[0][static_cast<std::size_t>(s)] = 1;
+    return pattern;
+}
+
+// One channel, one pattern, pattern mode.
 EngineState stateWithSteps(std::vector<int> onSteps, int length = 16)
 {
     EngineState state;
-    state.patternLengthInSteps = length;
     ChannelState channel;
     channel.id = 1;
     channel.sample = constantSample(100);
-    channel.steps.assign(static_cast<std::size_t>(length), 0);
-    for (int s : onSteps)
-        channel.steps[static_cast<std::size_t>(s)] = 1;
     state.channels.push_back(channel);
+    state.patterns.push_back(patternWithSteps(std::move(onSteps), length));
     return state;
 }
 
@@ -109,6 +117,64 @@ TEST_CASE("Pattern loops after its length")
     REQUIRE(positions.size() == 3);
     CHECK(positions[1] == (8 + 1) * samplesPerStep);
     CHECK(positions[2] == (16 + 1) * samplesPerStep);
+}
+
+TEST_CASE("Pattern mode plays the current pattern only")
+{
+    auto state = stateWithSteps({0});
+    state.patterns.push_back(patternWithSteps({8}));
+    state.currentPattern = 1;
+    const auto positions = triggerPositions(state, 16 * samplesPerStep, 512);
+    REQUIRE(positions.size() == 1);
+    CHECK(positions[0] == 8 * samplesPerStep);
+}
+
+TEST_CASE("Song mode plays clips at their positions and loops the song")
+{
+    EngineState state = stateWithSteps({0});         // pattern 0: hit on step 0
+    state.patterns.push_back(patternWithSteps({4})); // pattern 1: hit on step 4
+    state.songMode = true;
+    state.clips = {{0, 0, 16}, {1, 16, 16}, {0, 48, 16}}; // bar 1, bar 2, bar 4 (bar 3 empty)
+    state.songLengthInSteps = 64;
+
+    const auto positions = triggerPositions(state, 2 * 64 * samplesPerStep, 512);
+    const std::vector<int> oneLoop{0, (16 + 4) * samplesPerStep, 48 * samplesPerStep};
+    REQUIRE(positions.size() == 6);
+    for (std::size_t i = 0; i < 3; ++i)
+    {
+        CHECK(positions[i] == oneLoop[i]);
+        CHECK(positions[i + 3] == oneLoop[i] + 64 * samplesPerStep);
+    }
+}
+
+TEST_CASE("A clip longer than its pattern repeats it; a shorter one cuts it")
+{
+    EngineState state = stateWithSteps({0, 6}, 8);
+    state.songMode = true;
+    state.clips = {{0, 0, 20}}; // 2.5 repeats of the 8-step pattern
+    state.songLengthInSteps = 32;
+    const auto positions = triggerPositions(state, 32 * samplesPerStep, 512);
+    const std::vector<int> expected{0, 6, 8, 14, 16}; // the hit at 22 is past the clip end
+    REQUIRE(positions.size() == expected.size());
+    for (std::size_t i = 0; i < expected.size(); ++i)
+        CHECK(positions[i] == expected[i] * samplesPerStep);
+}
+
+TEST_CASE("Overlapping clips on different tracks both play")
+{
+    EngineState state = stateWithSteps({0});
+    state.songMode = true;
+    state.clips = {{0, 0, 16}, {0, 0, 16}};
+    state.songLengthInSteps = 16;
+    CHECK(triggerPositions(state, 16 * samplesPerStep, 512).size() == 2);
+}
+
+TEST_CASE("Song mode with an empty playlist is silent")
+{
+    EngineState state = stateWithSteps({0, 4, 8, 12});
+    state.songMode = true;
+    state.songLengthInSteps = 0;
+    CHECK(triggerPositions(state, 16 * samplesPerStep, 512).empty());
 }
 
 TEST_CASE("Muted channels don't trigger")

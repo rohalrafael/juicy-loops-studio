@@ -83,8 +83,9 @@ class ChannelRow final : public juce::Component
     int knobGesture = 0;
 };
 
-// FL-style Channel Rack: one row per channel with mute, pan, volume, name and step buttons.
-// Audio files can be dropped on a row (replace its sample) or anywhere else (new channel).
+// FL-style Channel Rack, a floating panel (drag its title bar): one row per channel with mute, pan,
+// volume, name and step buttons. Audio files can be dropped on a row (replace its sample) or
+// anywhere else (new channel).
 class ChannelRack final : public juce::Component,
                           public juce::FileDragAndDropTarget,
                           private juce::Timer
@@ -107,6 +108,8 @@ class ChannelRack final : public juce::Component,
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
     void fileDragMove(const juce::StringArray& files, int x, int y) override;
@@ -124,6 +127,9 @@ class ChannelRack final : public juce::Component,
 
     std::vector<std::unique_ptr<ChannelRow>> rows;
     juce::TextButton addButton{"+"};
+    juce::TextButton closeButton{juce::String::fromUTF8("\xc3\x97")}; // multiplication sign
+    juce::ComponentDragger dragger;
+    juce::ComponentBoundsConstrainer dragBounds;
     std::unique_ptr<juce::FileChooser> chooser;
     int dropRow = -1; // row under a file drag, or -1 for "new channel"
     bool dragging = false;

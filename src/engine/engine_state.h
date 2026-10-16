@@ -18,13 +18,31 @@ struct ChannelState
     float gainLeft = 1.0f;
     float gainRight = 1.0f;
     bool muted = false;
-    std::vector<std::uint8_t> steps; // one entry per pattern step, nonzero = on
+};
+
+struct PatternState
+{
+    int lengthInSteps = 16;
+    // steps[channelIndex][step], nonzero = on. Indexed like EngineState::channels.
+    std::vector<std::vector<std::uint8_t>> steps;
+};
+
+struct ClipState
+{
+    int patternIndex = 0; // into EngineState::patterns
+    int startStep = 0;    // position in the song, in steps
+    int lengthInSteps = 16;
 };
 
 struct EngineState
 {
     std::vector<ChannelState> channels;
-    int patternLengthInSteps = 16;
+    std::vector<PatternState> patterns;
+    std::vector<ClipState> clips;
+
+    bool songMode = false;     // false: loop patterns[currentPattern]; true: play clips
+    int currentPattern = 0;    // index into patterns
+    int songLengthInSteps = 0; // song mode loops after this; 0 = nothing to play
 };
 
 } // namespace jls::engine

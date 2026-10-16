@@ -15,20 +15,51 @@ enum MenuItem
     quitItem = 1,
     undoItem,
     redoItem,
+    newPatternItem,
+    clonePatternItem,
+    renamePatternItem,
+    deletePatternItem,
+    channelRackItem,
     themeItem,
     audioSettingsItem,
     aboutItem,
 };
 
 constexpr int menuBarHeight = 24;
+constexpr int transportHeight = 40;
+constexpr int margin = 12;
+
+// Keep keyboard focus on the main component so shortcuts always work.
+void noFocus(juce::Component& c)
+{
+    c.setWantsKeyboardFocus(false);
+    c.setMouseClickGrabsKeyboardFocus(false);
+}
 
 } // namespace
 
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), document(model::makeDefaultProject()),
+      playlist(document, engine.transport()),
       channelRack(document, engine.transport(), sampleLoader)
 {
     auto& transport = engine.transport();
+
+    patButton.setTooltip("Pattern mode: loop the selected pattern (L)");
+    songButton.setTooltip("Song mode: play the Playlist (L)");
+    patButton.onClick = [this] { setSongMode(false); };
+    songButton.onClick = [this] { setSongMode(true); };
+
+    patternBox.setTooltip("Pattern being edited and placed");
+    patternBox.onChange = [this]
+    {
+        const int index = patternBox.getSelectedItemIndex();
+        const auto& patterns = document.project().patterns;
+        if (index >= 0 && index < static_cast<int>(patterns.size()))
+            selectPattern(patterns[static_cast<std::size_t>(index)].id);
+    };
+    newPatternButton.setTooltip("New pattern (F4)");
+    newPatternButton.onClick = [this] { newPattern(); };
 
     playButton.onClick = [&transport] { transport.togglePause(); };
     stopButton.onClick = [&transport] { transport.stop(); };
@@ -43,9 +74,12 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     for (int beats = engine::Transport::minBeatsPerBar; beats <= engine::Transport::maxBeatsPerBar;
          ++beats)
         timeSignatureBox.addItem(juce::String(beats) + "/4", beats);
-    timeSignatureBox.setSelectedId(transport.beatsPerBar(), juce::dontSendNotification);
-    timeSignatureBox.onChange = [this, &transport]
-    { transport.setBeatsPerBar(timeSignatureBox.getSelectedId()); };
+    timeSignatureBox.onChange = [this]
+    {
+        const int beats = timeSignatureBox.getSelectedId();
+        if (beats > 0 && beats != document.project().beatsPerBar)
+            document.apply([beats](model::Project& p) { p.beatsPerBar = beats; });
+    };
 
     metronomeButton.setClickingTogglesState(true);
     metronomeButton.setTooltip("Metronome (Ctrl+M)");
@@ -55,20 +89,16 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     positionLabel.setJustificationType(juce::Justification::centred);
     positionLabel.setFont(juce::FontOptions(20.0f));
 
-    audioSettingsButton.onClick = [this] { showAudioSettings(); };
-
-    // Keep keyboard focus here so shortcuts (Space, Ctrl+M, Ctrl+Z) always work.
-    for (auto* button : {&playButton, &stopButton, &metronomeButton, &audioSettingsButton})
-    {
-        button->setWantsKeyboardFocus(false);
-        button->setMouseClickGrabsKeyboardFocus(false);
-    }
-    timeSignatureBox.setWantsKeyboardFocus(false);
+    for (auto* c : std::initializer_list<juce::Component*>{
+             &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
+             &timeSignatureBox, &metronomeButton})
+        noFocus(*c);
 
     for (auto* c : std::initializer_list<juce::Component*>{
-             &playButton, &stopButton, &tempoSlider, &timeSignatureBox, &metronomeButton,
-             &positionLabel, &audioSettingsButton, &channelRack})
+             &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
+             &tempoSlider, &timeSignatureBox, &metronomeButton, &positionLabel, &playlist})
         addAndMakeVisible(c);
+    addAndMakeVisible(channelRack); // after the Playlist, so it floats on top
 
 #if JUCE_MAC
     juce::MenuBarModel::setMacMainMenu(this);
@@ -78,11 +108,10 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 #endif
 
     document.onChange = [this] { documentChanged(); };
-    engine.setState(model::toEngineState(document.project()));
+    documentChanged();
 
     setWantsKeyboardFocus(true);
-    setSize(std::max(960, channelRack.preferredWidth() + 24),
-            (menuBar ? menuBarHeight : 0) + 12 + 40 + 12 + channelRack.preferredHeight() + 12);
+    setSize(1280, 800);
     setAudioChannels(0, 2);
     startTimerHz(30);
 }
@@ -98,8 +127,99 @@ MainComponent::~MainComponent()
 
 void MainComponent::documentChanged()
 {
+    const auto& project = document.project();
+    engine.transport().setBeatsPerBar(project.beatsPerBar);
+    engine.setState(model::toEngineState(project));
     channelRack.refresh();
-    engine.setState(model::toEngineState(document.project()));
+    playlist.refresh();
+    refreshTransportBar();
+    menuItemsChanged();
+}
+
+void MainComponent::refreshTransportBar()
+{
+    const auto& project = document.project();
+
+    patButton.setToggleState(!project.songMode, juce::dontSendNotification);
+    songButton.setToggleState(project.songMode, juce::dontSendNotification);
+
+    patternBox.clear(juce::dontSendNotification);
+    for (std::size_t i = 0; i < project.patterns.size(); ++i)
+    {
+        patternBox.addItem(juce::String::fromUTF8(project.patterns[i].name.c_str()),
+                           static_cast<int>(i) + 1);
+        if (project.patterns[i].id == project.current().id)
+            patternBox.setSelectedId(static_cast<int>(i) + 1, juce::dontSendNotification);
+    }
+
+    timeSignatureBox.setSelectedId(project.beatsPerBar, juce::dontSendNotification);
+}
+
+void MainComponent::setSongMode(bool song)
+{
+    if (document.project().songMode != song)
+        document.setViewState([song](model::Project& p) { p.songMode = song; });
+}
+
+void MainComponent::selectPattern(model::PatternId id)
+{
+    if (document.project().currentPattern != id)
+        document.setViewState([id](model::Project& p) { p.currentPattern = id; });
+}
+
+void MainComponent::newPattern()
+{
+    model::PatternId added = 0;
+    document.apply([&added](model::Project& p) { added = p.addPattern(); });
+    selectPattern(added);
+}
+
+void MainComponent::clonePattern()
+{
+    model::PatternId copy = 0;
+    const auto source = document.project().current().id;
+    document.apply([&copy, source](model::Project& p) { copy = p.clonePattern(source); });
+    selectPattern(copy);
+}
+
+void MainComponent::deletePattern()
+{
+    if (document.project().patterns.size() <= 1)
+        return;
+    const auto id = document.project().current().id;
+    document.apply([id](model::Project& p) { p.removePattern(id); });
+}
+
+void MainComponent::renamePattern()
+{
+    const auto id = document.project().current().id;
+    auto* window = new juce::AlertWindow("Rename pattern", {}, juce::MessageBoxIconType::NoIcon);
+    window->addTextEditor("name",
+                          juce::String::fromUTF8(document.project().current().name.c_str()));
+    window->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    window->enterModalState(true,
+                            juce::ModalCallbackFunction::create(
+                                [this, id, window](int result)
+                                {
+                                    const auto name = window->getTextEditorContents("name").trim();
+                                    if (result == 1 && name.isNotEmpty())
+                                        document.apply(
+                                            [id, name](model::Project& p)
+                                            {
+                                                if (auto* pattern = p.findPattern(id))
+                                                    pattern->name = name.toStdString();
+                                            });
+                                }),
+                            true);
+}
+
+void MainComponent::toggleChannelRack()
+{
+    channelRack.setVisible(!channelRack.isVisible());
+    if (channelRack.isVisible())
+        channelRack.toFront(false);
+    menuItemsChanged();
 }
 
 void MainComponent::prepareToPlay(int, double sampleRate)
@@ -135,25 +255,51 @@ void MainComponent::resized()
     if (menuBar)
         menuBar->setBounds(bounds.removeFromTop(menuBarHeight));
 
-    auto area = bounds.reduced(12);
-    auto bar = area.removeFromTop(40);
+    auto area = bounds.reduced(margin);
+    auto bar = area.removeFromTop(transportHeight);
 
-    playButton.setBounds(bar.removeFromLeft(80));
+    patButton.setBounds(bar.removeFromLeft(56));
+    songButton.setBounds(bar.removeFromLeft(62));
+    bar.removeFromLeft(8);
+    patternBox.setBounds(bar.removeFromLeft(150).reduced(0, 4));
+    newPatternButton.setBounds(bar.removeFromLeft(34).reduced(2, 4));
+    bar.removeFromLeft(12);
+    playButton.setBounds(bar.removeFromLeft(72));
     bar.removeFromLeft(6);
-    stopButton.setBounds(bar.removeFromLeft(80));
+    stopButton.setBounds(bar.removeFromLeft(72));
     bar.removeFromLeft(12);
     tempoSlider.setBounds(bar.removeFromLeft(180));
     bar.removeFromLeft(12);
-    timeSignatureBox.setBounds(bar.removeFromLeft(70));
+    // Least important last: when the window is narrow these drop out instead of clipping.
+    positionLabel.setBounds(bar.removeFromLeft(110));
+    bar.removeFromLeft(6);
+    const bool roomForRest = bar.getWidth() >= 70 + 6 + 100;
+    timeSignatureBox.setVisible(roomForRest);
+    metronomeButton.setVisible(roomForRest);
+    timeSignatureBox.setBounds(bar.removeFromLeft(70).reduced(0, 4));
     bar.removeFromLeft(6);
     metronomeButton.setBounds(bar.removeFromLeft(100));
-    bar.removeFromLeft(12);
-    audioSettingsButton.setBounds(bar.removeFromRight(130));
-    positionLabel.setBounds(bar);
 
-    area.removeFromTop(12);
-    channelRack.setBounds(area.removeFromTop(channelRack.preferredHeight())
-                              .withWidth(std::min(area.getWidth(), channelRack.preferredWidth())));
+    area.removeFromTop(margin);
+    playlist.setBounds(area);
+
+    // The rack floats: place it once, then keep wherever the user dragged it (sizes follow
+    // the channel count).
+    const int width = channelRack.preferredWidth();
+    const int height = channelRack.preferredHeight();
+    if (!channelRackPlaced && !area.isEmpty())
+    {
+        // Below the first tracks, so the Playlist's "click to place" hint stays visible.
+        channelRack.setBounds(area.getX() + 140,
+                              area.getY() + ui::PlaylistView::headerHeight +
+                                  ui::PlaylistView::rulerHeight + 3 * ui::PlaylistView::trackHeight,
+                              width, height);
+        channelRackPlaced = true;
+    }
+    else
+    {
+        channelRack.setSize(width, height);
+    }
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)
@@ -162,18 +308,17 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
     using juce::ModifierKeys;
     const auto cmd = ModifierKeys::commandModifier;
 
-    // Space toggles play/stop, as in FL Studio.
+    // Shortcuts follow FL Studio where it has one.
     if (key == KeyPress::spaceKey)
-    {
-        engine.transport().togglePlay();
-        return true;
-    }
-    // Ctrl+M (Cmd+M on macOS) toggles the metronome, as in FL Studio.
+        return engine.transport().togglePlay(), true;
     if (key == KeyPress('m', cmd, 0))
-    {
-        engine.metronome().toggleEnabled();
-        return true;
-    }
+        return engine.metronome().toggleEnabled(), true;
+    if (key == KeyPress('l'))
+        return setSongMode(!document.project().songMode), true;
+    if (key == KeyPress(KeyPress::F4Key))
+        return newPattern(), true;
+    if (key == KeyPress(KeyPress::F6Key))
+        return toggleChannelRack(), true;
     if (key == KeyPress('z', cmd, 0))
         return document.undo(), true;
     if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
@@ -183,27 +328,42 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
 
 juce::StringArray MainComponent::getMenuBarNames()
 {
-    return {"File", "Edit", "Options", "Help"};
+    return {"File", "Edit", "Patterns", "View", "Options", "Help"};
 }
 
 juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
 {
+    using Item = juce::PopupMenu::Item;
     juce::PopupMenu menu;
     switch (index)
     {
     case 0:
-        menu.addItem(juce::PopupMenu::Item("Quit").setID(quitItem));
+        menu.addItem(Item("Quit").setID(quitItem));
         break;
     case 1:
-        menu.addItem(juce::PopupMenu::Item("Undo").setID(undoItem).setEnabled(document.canUndo()));
-        menu.addItem(juce::PopupMenu::Item("Redo").setID(redoItem).setEnabled(document.canRedo()));
+        menu.addItem(Item("Undo").setID(undoItem).setEnabled(document.canUndo()));
+        menu.addItem(Item("Redo").setID(redoItem).setEnabled(document.canRedo()));
         break;
     case 2:
-        menu.addItem(juce::PopupMenu::Item("Theme...").setID(themeItem));
-        menu.addItem(juce::PopupMenu::Item("Audio settings...").setID(audioSettingsItem));
+    {
+        menu.addItem(Item("New pattern").setID(newPatternItem));
+        menu.addItem(Item("Clone pattern").setID(clonePatternItem));
+        menu.addItem(Item("Rename pattern...").setID(renamePatternItem));
+        menu.addItem(Item("Delete pattern")
+                         .setID(deletePatternItem)
+                         .setEnabled(document.project().patterns.size() > 1));
         break;
+    }
     case 3:
-        menu.addItem(juce::PopupMenu::Item("About Juicy Loops Studio").setID(aboutItem));
+        menu.addItem(
+            Item("Channel rack").setID(channelRackItem).setTicked(channelRack.isVisible()));
+        break;
+    case 4:
+        menu.addItem(Item("Theme...").setID(themeItem));
+        menu.addItem(Item("Audio settings...").setID(audioSettingsItem));
+        break;
+    case 5:
+        menu.addItem(Item("About Juicy Loops Studio").setID(aboutItem));
         break;
     default:
         break;
@@ -223,6 +383,21 @@ void MainComponent::menuItemSelected(int itemId, int)
         break;
     case redoItem:
         document.redo();
+        break;
+    case newPatternItem:
+        newPattern();
+        break;
+    case clonePatternItem:
+        clonePattern();
+        break;
+    case renamePatternItem:
+        renamePattern();
+        break;
+    case deletePatternItem:
+        deletePattern();
+        break;
+    case channelRackItem:
+        toggleChannelRack();
         break;
     case themeItem:
         ui::ThemeDialog::show(themes);
@@ -254,12 +429,21 @@ void MainComponent::timerCallback()
 {
     engine.collectGarbage();
 
+    // Position within what's looping: the pattern in PAT mode, the song in SONG mode.
+    const auto& project = document.project();
     const auto& transport = engine.transport();
-    const double beats = transport.positionInBeats();
-    const int beatsPerBar = transport.beatsPerBar();
-    const int bar = static_cast<int>(std::floor(beats / beatsPerBar)) + 1;
-    const int beat = static_cast<int>(std::floor(beats)) % beatsPerBar + 1;
-    positionLabel.setText(juce::String(bar) + ":" + juce::String(beat), juce::dontSendNotification);
+    const int loopSteps =
+        project.songMode ? project.songLengthInSteps() : project.current().lengthInSteps;
+    double steps = transport.positionInBeats() * model::stepsPerBeat;
+    if (loopSteps > 0)
+        steps = std::fmod(steps, static_cast<double>(loopSteps));
+    const int stepsPerBar = project.stepsPerBar();
+    const int bar = static_cast<int>(steps) / stepsPerBar + 1;
+    const int beat = static_cast<int>(steps) % stepsPerBar / model::stepsPerBeat + 1;
+    const int step = static_cast<int>(steps) % model::stepsPerBeat + 1;
+    positionLabel.setText(juce::String(bar) + ":" + juce::String(beat) + ":" + juce::String(step),
+                          juce::dontSendNotification);
+
     playButton.setButtonText(transport.isPlaying() ? "Pause" : "Play");
     metronomeButton.setToggleState(engine.metronome().isEnabled(), juce::dontSendNotification);
 }

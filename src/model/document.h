@@ -26,6 +26,9 @@ class Document
     // (e.g. one mouse drag painting steps or turning a knob) merge into a single undo step.
     void apply(const std::function<void(Project&)>& edit, int gestureId = 0);
 
+    // Changes view state (selected pattern, PAT/SONG mode) without creating an undo step.
+    void setViewState(const std::function<void(Project&)>& change);
+
     bool canUndo() const { return !undoStack.empty(); }
     bool canRedo() const { return !redoStack.empty(); }
     bool undo();

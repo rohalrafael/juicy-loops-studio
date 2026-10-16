@@ -135,7 +135,7 @@ and run it before milestones or after platform-specific changes.
 5. [x] Piano Roll
 6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
 7. [ ] Plugin hosting
-8. [ ] Project save/load, audio export
+8. [x] Project save/load (.jls JSON), WAV export
 
 ## Decision log
 
@@ -223,6 +223,18 @@ and run it before milestones or after platform-specific changes.
   bottom (F9), selected track's slots on the right, `EffectPanel` floats.
 - Known gaps (Mixer): no sends/routing between inserts, no renaming tracks, no param
   smoothing (fast knob moves can click), no tempo-synced delay.
+- 2026-10-16: Projects + export. `.jls` = JSON (`model/project_file`, nlohmann now a top-level
+  dependency shared by theme + model). Samples are referenced (absolute + relative path;
+  relative tried first), built-ins by name; effect params saved by name; loading clamps,
+  skips unknown entries with warnings, keeps missing sample references. Floats are saved
+  rounded to 6 decimals. Tempo moved into `Project::tempo` (undoable; transport mirrors it).
+  `Document` has revision-based `isModified()`, `markSaved()`, `reset()`. Export =
+  `model::renderProject()` (private Engine + EffectPool, song once + 2 s tail, current pattern
+  if the Playlist is empty) + `io::writeWav()` (24-bit). File menu: Ctrl+N/O/S/Shift+S/R,
+  title shows name and `*`, Save / Don't save / Cancel prompt on New/Open/Quit.
+- Known gaps (files): export runs on the UI thread (blocks briefly), no recent-files list, no
+  autosave, no "collect samples into project folder". **Summed drums can clip** (hard clip at
+  0 dBFS on export); FL's template puts a limiter on the Master, we have none yet.
 
 ## Dev environment notes
 

@@ -186,10 +186,22 @@ listener on all children) and by a timer while the window is active.
 Only layout sizes are fixed (`ui::metrics`). The theme file format is in
 [themes.md](themes.md).
 
+**Projects and export.**
+- **Files:** `model::saveProject()` / `loadProject()` convert between `Project` and JSON
+  ([project-format.md](project-format.md)). The app does the file I/O and decodes sample files
+  (`io::SampleLoader`); the model resolves sample paths (next to the project first) and re-creates
+  built-in sounds by name. Channels remember where their sample came from (`builtinSample` /
+  `samplePath`) for this.
+- **Unsaved changes:** `Document` tracks them with revision numbers, so undoing back to the
+  saved state counts as clean.
+- **Export:** `model::renderProject()` plays the project through a private `Engine` with its own
+  `EffectPool`, block by block, stops at the end of the song, renders the tail, and
+  `io::writeWav()` writes the result.
+
 **Settings** live in `$XDG_CONFIG_HOME/JuicyLoopsStudio/` on Linux (usually `~/.config`), in
 `~/Library/Application Support/JuicyLoopsStudio/` on macOS, and in `%APPDATA%\JuicyLoopsStudio\`
-on Windows. User themes go in the `themes` folder next to the settings file. Saving and
-loading projects isn't implemented yet.
+on Windows. User themes go in the `themes` folder next to the settings file. Projects are
+saved wherever the user chooses (`.jls`).
 
 ## Testing
 
@@ -228,6 +240,9 @@ loading projects isn't implemented yet.
    `toEngineState()`.
 3. Change it only via `Document::apply()`, or `setViewState()` if it's view state. If it is
    view state, also carry it over in `keepViewState()` (`document.cpp`).
+4. Save and load it in `src/model/project_file.cpp` (load with a default, so older files still
+   open), extend the round-trip test in `tests/project_file_tests.cpp`, and document it in
+   `docs/project-format.md`.
 
 **Add a view or panel**
 1. Create a component in `src/ui`, constructed with the `Document`, with a `refresh()` method.

@@ -85,7 +85,7 @@ Key rules:
   undo as a single step. Serialization is still to do (roadmap 8).
 - UI look: every colour and size lives in `src/ui/theme.h`. Never hard-code colours in
   components. The current look is a **placeholder**; the user wants a say in the final
-  visual design.
+  visual design. Mockups: https://claude.ai/artifact/V8rnfPk2sneMEfNvescNi1 (private canvas).
 
 ## Build & run
 
@@ -147,6 +147,12 @@ and run it before milestones or after platform-specific changes.
   Ctrl+Z toggles last undo/redo, Ctrl+Alt+Z steps back. Revisit.)
 - Known gaps: no channel settings window, no pattern length UI (model supports 1-64),
   samples load synchronously on the UI thread, no channel reordering or selection.
+- 2026-10-16: Look: user picked **Juicy** (plum #17121c/#241b2c, blood orange #ff7a45,
+  lime #b7f04a) as the main direction. Further mockups (Citrus, Watermelon, Blueberry) are
+  deliberately *not* FL-like. Plan: themes become data, selectable in Options › Theme,
+  with import/export of custom theme JSON files. A theme sets colours *and* font, corner
+  radii, border width and glow; anything missing falls back to the default. Format
+  draft is on the mockup canvas's ThemePicker board. Not built yet.
 
 ## Dev environment notes
 

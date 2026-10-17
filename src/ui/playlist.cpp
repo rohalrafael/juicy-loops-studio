@@ -207,7 +207,27 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
     }
 
     dragClip = clipAt(e.position);
-    if (dragClip >= 0 && view.isSelected(dragClip) && !onRightEdge(dragClip, e.position.x))
+    if (dragClip >= 0 && e.mods.isShiftDown())
+    {
+        // Shift+click adds a clip to the selection, or takes it out.
+        if (view.isSelected(dragClip))
+            std::erase(view.selection, dragClip);
+        else
+            view.selection.push_back(dragClip);
+        repaint();
+        drag = Drag::none;
+        dragClip = -1;
+        return;
+    }
+    if (dragClip >= 0 && !view.isSelected(dragClip))
+    {
+        // Clicking a clip selects it (just it), as in the Piano Roll.
+        view.selection = {dragClip};
+        repaint();
+    }
+    const bool onEdge = dragClip >= 0 &&
+                        (onRightEdge(dragClip, e.position.x) || onLeftEdge(dragClip, e.position.x));
+    if (dragClip >= 0 && !onEdge)
     {
         drag = Drag::moveSelection;
         moveOriginals.clear();
@@ -217,9 +237,9 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
         grabTrack = view.trackAtY(e.position.y);
         return;
     }
-    if (!view.selection.empty())
+    if (dragClip < 0 && !view.selection.empty())
     {
-        // A click outside the selection only deselects (FL does the same).
+        // A click on empty space with a selection only deselects (FL does the same).
         view.clearSelection();
         drag = Drag::none;
         dragClip = -1;
@@ -227,6 +247,7 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
     }
     if (dragClip >= 0)
     {
+        // A clip's edges resize or trim just that clip.
         drag = onRightEdge(dragClip, e.position.x)  ? Drag::resize
                : onLeftEdge(dragClip, e.position.x) ? Drag::trimStart
                                                     : Drag::move;

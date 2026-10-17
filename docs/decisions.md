@@ -258,7 +258,8 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
-- 2026-10-18: Playlist: right-click also deselects (like the Piano Roll); double-clicking a
+- 2026-10-18: Playlist: clicking a clip selects it, Shift+click toggles, right-click also
+  deselects (all like the Piano Roll); double-clicking a
   pattern clip (or a pattern in the picker) selects it and brings the Channel Rack to the front
   (FL); double-clicking an audio clip in the picker opens its Sampler. "Split by channel" is in
   the backlog.

@@ -21,8 +21,10 @@ namespace jls::ui
 class PlaylistView;
 
 // The scrollable lanes with pattern clips. Mouse, as in FL:
-//   left-click empty space  place the selected pattern (snapped), then drag to move it
-//   drag a clip             move it (snapped), also to other tracks
+//   left-click empty space  place the selected pattern (snapped), then drag to move it; with
+//                           a selection, the click only deselects
+//   click a clip            select it; dragging then moves it (snapped), also to other tracks
+//   Shift + click a clip    add it to the selection, or take it out
 //   drag a clip's right end resize it (a longer clip repeats its pattern)
 //   double-click a clip     a pattern opens in the Channel Rack, an audio clip in its Sampler
 //   right-click / drag      deselect and delete clips

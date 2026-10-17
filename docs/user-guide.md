@@ -196,7 +196,8 @@ installed, the channel stays silent and keeps them.
 | Do this | To |
 |---|---|
 | Left-click empty space | Place the selected pattern (snapped), and keep dragging to move it |
-| Drag a clip | Move it in time or to another track |
+| Click a clip | Select it (just it); drag to move it in time or to another track |
+| Shift + click a clip | Add it to the selection, or take it out |
 | Drag a clip's right end | Make it longer (the pattern repeats) or shorter |
 | Right-click / drag | Deselect, and delete the clips under the mouse |
 | Double-click a pattern clip | Open that pattern in the Channel Rack (brought to the front) |

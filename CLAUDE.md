@@ -146,6 +146,14 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
+- **Browser panel (file explorer), like FL's:** dockable on the left or the right; add folders
+  to it and drag samples from it onto the Channel Rack (new channel / replace sample), the
+  Playlist, etc. Extras like newer FL versions: click a sample to hear a preview; selecting one
+  shows its waveform, where clicking plays from that point ("click around" the sample).
+- **Audio clips in the Playlist:** dropping a sample on the Playlist places it as a clip that
+  shows its waveform. Note: today the Playlist only holds pattern clips, so this needs a new clip
+  kind (FL makes an "audio clip" channel for it) and engine playback of clips aligned to song time.
+
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log

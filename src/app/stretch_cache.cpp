@@ -55,11 +55,11 @@ std::shared_ptr<const engine::SampleBuffer> StretchCache::get(const model::Proje
                 {
                     if (!*flag)
                         return;
-                    auto it = entries.find(key);
-                    if (it == entries.end())
+                    auto found = entries.find(key);
+                    if (found == entries.end())
                         return; // no longer wanted
                     // A sample too short to stretch plays as it is.
-                    it->second.result = result != nullptr ? result : it->second.source;
+                    found->second.result = result != nullptr ? result : found->second.source;
                     if (onReady)
                         onReady();
                 });

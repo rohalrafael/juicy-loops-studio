@@ -1,3 +1,6 @@
+// The project model: channels, patterns, steps and notes, undo, the engine snapshot, looping
+// channels, scales, slicing, copy/paste and time formatting.
+
 #include "model/clipboard.h"
 #include "model/document.h"
 #include "model/project.h"
@@ -407,7 +410,7 @@ TEST_CASE("Loop switches are saved")
     const auto id = project.addChannel("Drums", nullptr);
     project.findChannel(id)->loop = false;
     project.loopChannels = false;
-    const auto loaded = loadProject(saveProject(project, "/p/x.jls"), "/p/x.jls", {});
+    const auto loaded = loadProject(saveProject(project, "/p/x.jlp"), "/p/x.jlp", {});
     REQUIRE(loaded.project);
     CHECK_FALSE(loaded.project->loopChannels);
     CHECK_FALSE(loaded.project->findChannel(id)->loop);
@@ -442,7 +445,7 @@ TEST_CASE("Scales: major and minor degrees from any root")
         });
     doc.undo();
     CHECK(doc.project().scale == Scale::minor);
-    const auto loaded = loadProject(saveProject(doc.project(), "/p/s.jls"), "/p/s.jls", {});
+    const auto loaded = loadProject(saveProject(doc.project(), "/p/s.jlp"), "/p/s.jlp", {});
     CHECK(loaded.project->scale == Scale::minor);
     CHECK(loaded.project->scaleRoot == 9);
 }

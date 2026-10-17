@@ -21,7 +21,7 @@ const std::vector<Definition>& all()
 {
     static const std::vector<Definition> definitions = {
         {newProject, "New project", "File", "Start a new project", {key('n', ctrl)}},
-        {openProject, "Open project...", "File", "Open a .jls project", {key('o', ctrl)}},
+        {openProject, "Open project...", "File", "Open a project (.jlp)", {key('o', ctrl)}},
         {saveProject, "Save", "File", "Save the project", {key('s', ctrl)}},
         {saveProjectAs,
          "Save as...",

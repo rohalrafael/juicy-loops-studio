@@ -137,9 +137,9 @@ TEST_CASE("Audio clip channels: one per file, removed with their clips, saved an
     CHECK(project.findChannel(a)->audioClip);
     project.playlist.clips.push_back({0, 2, 16, 8, a});
 
-    const auto text = model::saveProject(project, "/s/song.jls");
+    const auto text = model::saveProject(project, "/s/song.jlp");
     const auto loaded =
-        model::loadProject(text, "/s/song.jls", [](const std::string&) { return ramp(); });
+        model::loadProject(text, "/s/song.jlp", [](const std::string&) { return ramp(); });
     REQUIRE(loaded.project);
     // (The only warning: /s/vox.wav doesn't exist on this machine. The clip is kept.)
     CHECK(loaded.warnings.size() == 1);
@@ -171,7 +171,7 @@ TEST_CASE("A trimmed audio clip starts later in its sample")
     CHECK(out[0] == Approx(rampAt(3 * samplesPerStep)).margin(1e-4));
 
     // Saved with the project.
-    const auto loaded = model::loadProject(model::saveProject(mid.project, "/s/t.jls"), "/s/t.jls",
+    const auto loaded = model::loadProject(model::saveProject(mid.project, "/s/t.jlp"), "/s/t.jlp",
                                            [](const std::string&) { return ramp(); });
     CHECK(loaded.project->playlist.clips.at(0).offsetSteps == 2);
 }

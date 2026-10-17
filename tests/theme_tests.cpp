@@ -1,3 +1,5 @@
+// Themes: parsing and writing theme files, defaults, the built-in themes.
+
 #include "theme/theme.h"
 
 #include <catch2/catch_test_macros.hpp>

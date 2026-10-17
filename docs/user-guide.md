@@ -11,6 +11,8 @@ mouse actions follow FL wherever FL has one.
 | Channel Rack | F6 | Channels and their steps; floating, drag it by its title bar |
 | Piano Roll | F7 | Notes of the selected channel in the current pattern |
 | Mixer | F9 | Insert tracks, levels and effects (docked at the bottom) |
+| Browser | Alt+F8 | Your sample folders, with previews (docked at the left or right) |
+| Sampler | (click a sample channel) | A sample's time-stretching and pitch (a separate window) |
 
 The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 
@@ -19,11 +21,11 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 **Focus.** The arrow keys and Enter act on the focused area, which has an orange outline:
 the Browser, the Channel Rack, the Playlist / Piano Roll, or the Mixer. Click an area to focus
 it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** through the areas that are showing. In
-Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack, Playlist, Mixer) or **Last used
-first**, which works like Alt+Tab: one press goes back to the area you came from (twice: back
-again), and keeping Ctrl held while pressing Tab again goes further back. In the Channel Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / →
-select the previous / next track. The selected channel's row is highlighted: that's where the
-Browser loads samples.
+Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack, Playlist, Mixer) or **Last
+used first**, which works like Alt+Tab: one press goes back to the area you came from (twice:
+back again), and keeping Ctrl held while pressing Tab again goes further back. In the Channel
+Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / → select the previous / next
+track. The selected channel's row is highlighted: that's where the Browser loads samples.
 
 Every shortcut can be changed in **Options › Keyboard shortcuts…** (Ctrl+Shift+K): click **+**
 next to a command and press the keys, click a key to change or remove it, or **reset to
@@ -79,7 +81,8 @@ recorded yet.
 
 ## Projects and export
 
-- **File › Save** writes a `.jls` project file. The title bar shows the project name, with `*`
+- **File › Save** writes a `.jlp` project file. Projects saved before the rename (`.jls`) still
+  open; saving one writes a `.jlp` beside it and leaves the old file alone. The title bar shows the project name, with `*`
   when there are unsaved changes. You're asked before unsaved changes would be lost (New, Open,
   Quit).
 - **Samples:** projects reference your sample files instead of copying them. Keep samples in a
@@ -144,8 +147,8 @@ longer than 2 minutes are cut at 2 minutes (for now).
 |---|---|
 | Left-click / drag over steps | Turn steps on (or off, if you started on a lit step) |
 | Right-click / drag over steps | Turn steps off |
-| Click a channel name | Select the channel (the Piano Roll edits it). For a plugin instrument, also shows or hides its window |
-| Right-click a channel name | Piano roll, show plugin, rename, replace sample, use/replace an instrument plugin, delete |
+| Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
+| Right-click a channel name | Piano roll, show plugin / Sampler, rename, replace sample, use/replace an instrument plugin, delete |
 | Green light | Mute / unmute |
 | Pan and volume knobs | Drag up/down; double-click resets |
 | Mixer track box | Drag up/down or scroll to route the channel to an insert ("--" = Master) |
@@ -266,7 +269,7 @@ length doesn't change the sound yet: samples always play to their end, like FL's
   - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb, Compressor or Soft Clipper.
   - Click an effect to open its controls; click its light to bypass it.
   - Right-click for edit, bypass, move up/down and remove.
-- **Plugins (VST3 / LV2):** first scan for them in **Options › Plugins…** (Options › Scan). Then
+- **Plugins (VST3 / LV2):** first scan for them in **Options › Plugins…**. Then
   **+ Add effect › Plugins** lists them. Clicking a plugin's slot opens its own window. Its
   settings are saved in the project. If a project uses a plugin that isn't installed, the slot
   shows "(missing)", passes audio through unchanged and keeps the plugin's settings.
@@ -274,6 +277,19 @@ length doesn't change the sound yet: samples always play to their end, like FL's
   instead of hard-clipping. It changes nothing below its knee; remove or bypass it if you like.
 - **Effect panel:** floating; drag it by its title bar. Knobs drag up/down and double-click
   resets them.
+
+## Settings
+
+**Options › Settings…** (Ctrl+,):
+
+| Setting | Does |
+|---|---|
+| Tempo step / Fine tempo step | How far Tempo up / down (Shift+↑ / ↓) and the fine versions (Ctrl+Shift+↑ / ↓) move the tempo: 5 and 1 BPM by default |
+| Click preview length | How much of a sample a click in the Browser plays (5 s by default) |
+| Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
+
+Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio
+and MIDI devices are in **Options › Audio settings…**.
 
 ## Themes
 

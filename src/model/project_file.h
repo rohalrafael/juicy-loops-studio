@@ -1,8 +1,8 @@
 #pragma once
 
-// Saving and loading projects as JSON (.jls files). Plain C++: the caller does the file I/O and
-// decodes audio files; this code only converts between Project and text. The format is described
-// in docs/project-format.md.
+// Saving and loading projects as JSON (.jlp files; .jls before 2026-10-17, still opened). Plain
+// C++: the caller does the file I/O and decodes audio files; this code only converts between
+// Project and text. The format is described in docs/project-format.md.
 
 #include "model/project.h"
 
@@ -18,7 +18,8 @@ namespace jls::model
 {
 
 inline constexpr int projectFormatVersion = 1;
-inline constexpr const char* projectFileExtension = ".jls";
+inline constexpr const char* projectFileExtension = ".jlp";
+inline constexpr const char* legacyProjectFileExtension = ".jls"; // still opened, never written
 
 // Writes the whole project. Sample paths are stored both absolute and relative to
 // `projectFile`'s folder, so a project folder can be moved or shared.

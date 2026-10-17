@@ -18,16 +18,16 @@ comments with the details. This page covers how the pieces fit together.
 
 ```
             ┌──────────────────────────────────────────────────────────┐
-            │ src/app   JUCE application: main window, MainComponent   │
-            │           (owns Document + Engine + EffectPool), menus,  │
-            │           shortcuts, audio device callback               │
+            │ src/app   JUCE application: MainComponent (owns Document,│
+            │           Engine, EffectPool), commands + shortcuts,     │
+            │           menus, LiveInput (keyboard/MIDI), StretchCache │
             └───────────────┬───────────────────────┬──────────────────┘
                             │                       │
             ┌───────────────▼──────────┐   ┌────────▼─────────────────┐
             │ src/ui    JUCE views:    │   │ src/io  file I/O, src/   │
             │ ChannelRack, Playlist,   │   │ plugins  VST3/LV2 hosting│
             │ PianoRoll, Mixer,        │   │ (JUCE)                   │
-            │ EffectPanel, ThemeDialog,│   └──────────────────────────┘
+            │ Browser, Sampler, dialogs│   └──────────────────────────┘
             │ ThemeManager/LookAndFeel │
             └──┬────────────────────┬──┘
                │                    │
@@ -39,13 +39,14 @@ comments with the details. This page covers how the pieces fit together.
                │
    ┌───────────▼─────────────────────────────────────────────┐
    │ src/engine  (no JUCE): Engine, Transport, StepSequencer, │
-   │ Sampler, Metronome, effects, EffectPool, DrumSynth,      │
-   │ SpscQueue, EngineState snapshot types                    │
+   │ Sampler, Metronome, effects, instruments, EffectPool,    │
+   │ PreviewPlayer, time-stretching, DrumSynth, SpscQueue,    │
+   │ EngineState snapshot types                               │
    └──────────────────────────────────────────────────────────┘
 ```
 
 Dependencies only point downwards. Third-party code comes in through CMake FetchContent (JUCE,
-Catch2, nlohmann/json). Fixes we need in it live in `patches/` and are applied automatically
+Catch2, nlohmann/json, Signalsmith Stretch). Fixes we need in it live in `patches/` and are applied automatically
 at configure time ([patches/README.md](../patches/README.md)). `jls_engine`, `jls_model` and `jls_theme` are static
 libraries without JUCE. The `JuicyLoopsStudio` app target compiles `src/app`, `src/ui` and
 `src/io` together with JUCE. `jls_tests` links only the JUCE-free libraries.
@@ -57,6 +58,7 @@ libraries without JUCE. The `JuicyLoopsStudio` app target compiles `src/app`, `s
 | **UI (message) thread** | All JUCE components, `Document` edits, `toEngineState()`, `EffectPool`, `Engine::setState()` / `collectGarbage()` | Allocate, block, do file I/O |
 | **Audio thread** | `Engine::process()` (from the audio device callback) | Only read its current snapshot, write its own preallocated state and atomics |
 | **MIDI input thread(s)** | `LiveInput::handleIncomingMidiMessage()` | Only call `Engine::sendLive()` and read an atomic |
+| **Background workers** | Browser sample loading, `StretchCache` time-stretching (one thread each) | Work on their own data; results go back to the UI thread with `MessageManager::callAsync` |
 
 They share exactly four things:
 1. **Snapshots** (`EngineState`), passed through lock-free queues (below).
@@ -103,11 +105,12 @@ They share exactly four things:
 
 | Part | Holds |
 |---|---|
-| `channels` | Name, sample, volume, pan, mute, mixer track |
-| `patterns` | Notes per channel id: start, length, pitch, velocity, in ticks |
-| `playlist.clips` | Which pattern sits on which track, from which step, for how long; a clip longer than its pattern repeats it |
+| `channels` | Name, a sample *or* a plugin instrument, volume, pan, mute, mixer track, loop switch, Sampler settings (stretch mode, original tempo, pitch); `audioClip` marks the hidden channels behind audio clips |
+| `patterns` | Notes per channel id (start, length, pitch, velocity, in ticks); `gridSteps` for the Channel Rack |
+| `playlist.clips` | A pattern or an audio clip on a track, from which step, for how long; a pattern clip longer than its pattern repeats it; an audio clip can start part-way into its sample (`offsetSteps`) |
 | `mixer.tracks` | Master + 16 inserts: fader, pan, mute, solo, effect slots |
-| view state | `currentPattern`, `selectedChannel`, `selectedMixerTrack`, `songMode` |
+| settings | tempo, beats per bar, `loopChannels` |
+| view state | `currentPattern`, `selectedChannel`, `selectedMixerTrack`, `songMode`, the Piano Roll scale, `showAudioClips` |
 
 A Channel Rack **step** is just a note at C5 (MIDI 60), one step long, on a step boundary
 (`Note::isStep()`). A channel whose notes are all steps shows editable steps; otherwise it
@@ -143,6 +146,8 @@ tempo or sample-rate change, so it doesn't drift; `advance()` returns the block'
   default sampler).
 - **Instruments:** triggers on plugin-instrument channels become note events instead (see
   below).
+- **Audio clips:** a clip starting in the span becomes one trigger for its channel's sample
+  (see *Audio clips* below).
 - **Metronome:** uses the same beat span.
 
 ### Audio callback
@@ -156,7 +161,8 @@ for each chunk:
 4. For each insert: run its effect chain in place → apply fader and pan (mute/solo already
    folded into the gains) → record the peak → add into the Master bus.
 5. Master: effects → fader/pan → peak → add to the device output.
-6. Metronome clicks go straight to the output, bypassing the mixer.
+6. Metronome clicks and the Browser's sample preview go straight to the output, bypassing the
+   mixer.
 
 ### Effects
 
@@ -170,7 +176,7 @@ for each chunk:
   processor, or in `Engine::prepare()` before audio starts. `process()` never allocates. The
   pool is reset when the audio device format changes.
 
-### Looping channels, seeking, audition
+### Editing: pattern length, looping, seeking, selection, clipboard, slicer, audition
 
 - **Pattern length:** `Project::lengthInSteps()` is what plays: the notes rounded up to whole
   bars, at least one bar. `Pattern::gridSteps` is only how many steps the Channel Rack shows
@@ -367,16 +373,20 @@ which gives:
 
 `MainComponent` arranges:
 - the menu bar (native on macOS) and the transport bar
-- the main area, showing either the **Playlist** (F5) or the **Piano Roll** (F7)
+- the **Browser** docked at the left or right (Alt+F8)
+- the main area, showing either the **Playlist** (F5, with its picker panel) or the
+  **Piano Roll** (F7)
 - the **Mixer** docked below (F9)
 - floating panels inside the window: the **Channel Rack** (F6) and the **effect panel**,
   both dragged by their title bars
+- separate windows: plugin editors (`PluginWindow`), the **Sampler** (`SamplerWindow`), and the
+  Settings / Keyboard shortcuts / Theme / Plugins / Audio settings dialogs
 
 Views are plain JUCE components that read the `Document` in `refresh()` and change it only
 through `Document::apply()` / `setViewState()`.
 
-**Keyboard focus.** Shortcuts are handled in `MainComponent::keyPressed`, and most widgets
-don't take focus. Focus is steered back after menus (`menuBarActivated`), on clicks (a mouse
+**Keyboard focus.** Shortcuts are handled in `MainComponent::keyPressed` (see *Commands and
+shortcuts*), and most widgets don't take focus. Focus is steered back after menus (`menuBarActivated`), on clicks (a mouse
 listener on all children) and by a timer while the window is active.
 
 **Theming.** Colours, radii, border widths, glow and fonts all come from the active theme
@@ -409,22 +419,21 @@ Only layout sizes are fixed (`ui::metrics`). The theme file format is in
 
 **Settings** live in `$XDG_CONFIG_HOME/JuicyLoopsStudio/` on Linux (usually `~/.config`), in
 `~/Library/Application Support/JuicyLoopsStudio/` on macOS, and in `%APPDATA%\JuicyLoopsStudio\`
-on Windows. User themes go in the `themes` folder next to the settings file. Projects are
-saved wherever the user chooses (`.jls`).
+on Windows. Next to the settings file: `themes/` (user themes), `shortcuts.xml` (changed
+shortcuts), `plugins.xml` (scanned plugins). Projects are saved wherever the user chooses
+(`.jlp`; older `.jls` files still open, and saving one writes a `.jlp` beside it).
 
 ## Testing
 
-- **Unit tests** (`tests/`, Catch2, run with `ctest`) cover the JUCE-free code:
-  - timing to the sample, including a long-run drift test
-  - pattern and song sequencing, sampler pitch and velocity
-  - snapshot hand-off and freeing, effect behaviour and stability, mixer routing
-  - model operations, undo
-  - theme parsing
-- **UI tests:** `tools/ui-test.sh` runs the app on an invisible Xvfb display and drives it
-  with xdotool, checking screenshots. It doesn't touch the desktop, so it also works under
-  Wayland.
-- **CI** (`.github/workflows/ci.yml`) builds and tests on Linux for every push. The
-  Windows/macOS matrix is manual only, to save CI minutes.
+- **Unit tests** (`tests/`, Catch2, run with `ctest`) cover the JUCE-free code, one file per
+  area (each file says what it covers at the top):
+  - timing to the sample (transport drift, sequencer, metronome, audio clips)
+  - instruments with a recording fake: note-ons/offs, no stuck notes, live input, play head
+  - the Sampler: speed, Resample / Stretch maths, real time-stretching quality
+  - effects, the EffectPool, mixer routing, previews
+  - the model: notes, looping, scales, slicing, copy/paste, undo; project files; export; themes
+- **UI and sound** are checked by driving the app on Xvfb and by exporting and analysing WAVs;
+  see [development.md](development.md), which also covers CI.
 
 ## How to…
 
@@ -464,7 +473,7 @@ saved wherever the user chooses (`.jls`).
 1. Create a component in `src/ui`, constructed with the `Document`, with a `refresh()` method.
 2. Own it in `MainComponent`, call `refresh()` from `documentChanged()`, and lay it out in
    `resized()`.
-3. Give it a shortcut in `keyPressed()` and an entry in the View menu.
+3. Give it a show/hide command (see *Add a command* below) and put that in the View menu.
 4. Keep its widgets from taking keyboard focus (`setWantsKeyboardFocus(false)`,
    `setMouseClickGrabsKeyboardFocus(false)`).
 

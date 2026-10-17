@@ -1,6 +1,7 @@
-# Project file format (.jls)
+# Project file format (.jlp)
 
-A project is one JSON file, readable and diff-friendly. Samples aren't embedded: a project
+A project is one JSON file (`.jlp`; `.jls` before 2026-10-17, same format), readable and
+diff-friendly. Samples aren't embedded: a project
 references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 
 ## Example (shortened)
@@ -67,7 +68,8 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 - **Rejected:** only files that aren't JSON or don't carry the `format` tag.
 - **Repaired, with a warning shown after opening:**
   - values out of range are clamped
-  - unknown effects, notes for missing channels and clips for missing patterns are skipped
+  - unknown effects, notes for missing channels, and clips for missing patterns or audio-clip
+    channels are skipped
   - duplicate ids are dropped
 - **Samples** are looked up next to the project first (`relativePath`), then at the absolute
   `path`, so a project folder with its samples can be moved or shared. A missing sample leaves

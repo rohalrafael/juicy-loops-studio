@@ -155,7 +155,7 @@ TEST_CASE("Sampler settings are saved")
     model::Project project;
     const auto id = project.addChannel("loop", nullptr);
     project.findChannel(id)->sampler = {model::StretchMode::stretch, 92.5, -3.0};
-    const auto loaded = model::loadProject(model::saveProject(project, "/p/s.jls"), "/p/s.jls", {});
+    const auto loaded = model::loadProject(model::saveProject(project, "/p/s.jlp"), "/p/s.jlp", {});
     REQUIRE(loaded.project);
     const auto& s = loaded.project->findChannel(id)->sampler;
     CHECK(s.mode == model::StretchMode::stretch);

@@ -12,7 +12,7 @@
 7. [x] Plugin hosting: VST3/LV2 **effects** (phase 1) and **instruments** (phase 2), live input
        (typing keyboard + MIDI), play head (tempo/position) for plugins. Still to do: recording
        live input, out-of-process hosting
-8. [x] Project save/load (.jls JSON), WAV export
+8. [x] Project save/load (.jlp JSON), WAV export
 
 ## Backlog
 

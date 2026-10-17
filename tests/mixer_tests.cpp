@@ -1,3 +1,6 @@
+// Mixer and effects: every built-in effect's behaviour and stability, the EffectPool, routing
+// through inserts to the Master, plugin effects through the factory, and sample previews.
+
 #include "engine/effect_pool.h"
 #include "engine/effects.h"
 #include "engine/engine.h"

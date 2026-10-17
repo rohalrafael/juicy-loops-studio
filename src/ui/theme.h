@@ -1,5 +1,8 @@
 #pragma once
 
+// The JUCE side of theming: the active theme, colour helpers, fixed layout sizes (metrics), the
+// LookAndFeel built from the theme, and ThemeManager (choosing, importing, exporting themes).
+
 #include "theme/theme.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>

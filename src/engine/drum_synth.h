@@ -1,5 +1,8 @@
 #pragma once
 
+// Synthesized built-in drum sounds (kick, clap, hat, snare), rendered into SampleBuffers so the
+// app ships no sample files.
+
 #include "engine/sample_buffer.h"
 
 namespace jls::engine

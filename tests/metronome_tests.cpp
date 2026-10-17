@@ -1,3 +1,5 @@
+// Metronome: clicks on the exact sample of each beat, accents on bar downbeats, on/off.
+
 #include "engine/metronome.h"
 #include "engine/transport.h"
 

@@ -1,5 +1,8 @@
 #pragma once
 
+// Built-in mixer effects: how an effect describes its parameters (ParamInfo), the processor
+// interface every effect and effect plugin implements, and the list of effect types.
+
 #include "engine/play_position.h"
 
 #include <memory>

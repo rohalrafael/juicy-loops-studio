@@ -1,5 +1,8 @@
 #pragma once
 
+// Decoding audio files (WAV, AIFF, FLAC, Ogg Vorbis, MP3) into SampleBuffers, with JUCE's audio
+// format readers.
+
 #include "engine/sample_buffer.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>

@@ -1350,7 +1350,7 @@ void MainComponent::openProject()
         [this]
         {
             fileChooser =
-                std::make_unique<juce::FileChooser>("Open project", projectFolder, "*.jls");
+                std::make_unique<juce::FileChooser>("Open project", projectFolder, "*.jlp;*.jls");
             fileChooser->launchAsync(juce::FileBrowserComponent::openMode |
                                          juce::FileBrowserComponent::canSelectFiles,
                                      [this](const juce::FileChooser& fc)
@@ -1379,6 +1379,13 @@ void MainComponent::openFile(const juce::File& file)
 
     engine.transport().stop();
     currentFile = file;
+    if (file.hasFileExtension(model::legacyProjectFileExtension))
+    {
+        // An old .jls project: saving writes a .jlp beside it and leaves the original alone. If
+        // that .jlp already exists, Save asks where to save instead of overwriting it.
+        const auto renamed = file.withFileExtension(model::projectFileExtension);
+        currentFile = renamed.exists() ? juce::File() : renamed;
+    }
     projectFolder = file.getParentDirectory();
     document.reset(*result.project);
 
@@ -1430,8 +1437,10 @@ void MainComponent::saveProject(std::function<void(bool)> done)
 void MainComponent::saveProjectAs(std::function<void(bool)> done)
 {
     const auto suggested =
-        currentFile != juce::File() ? currentFile : projectFolder.getChildFile("Untitled.jls");
-    fileChooser = std::make_unique<juce::FileChooser>("Save project", suggested, "*.jls");
+        currentFile != juce::File()
+            ? currentFile
+            : projectFolder.getChildFile(juce::String("Untitled") + model::projectFileExtension);
+    fileChooser = std::make_unique<juce::FileChooser>("Save project", suggested, "*.jlp");
     fileChooser->launchAsync(
         juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
             juce::FileBrowserComponent::warnAboutOverwriting,

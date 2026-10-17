@@ -7,22 +7,26 @@ pattern-based Playlist, and Mixer.
 Juicy Loops Studio is an independent project. It is not affiliated with or endorsed
 by Image-Line, and it contains no Image-Line code or assets.
 
-**Status:** early but usable for making beats:
+**Status:** early, but you can make whole tracks:
 
-- **Channel Rack** with step sequencer, built-in drum sounds, your own samples (drag and drop)
-- **Patterns** and the **Playlist** for arranging songs (PAT / SONG modes)
-- **Piano Roll** with velocity
-- **Mixer** with 16 inserts, meters and built-in effects (Filter, EQ, Delay, Reverb, Compressor, Soft Clipper)
-- **VST3 / LV2 effect plugins** on mixer inserts
-- **Save / open projects** (`.jls`) and **export to WAV**
+- **Channel Rack** with step sequencer, looping channels, built-in drum sounds and your own samples
+- **Piano Roll** with velocity, scale highlighting, selection, copy/paste and a note slicer
+- **Playlist** for arranging patterns and **audio clips** (with waveforms, trimming, a picker panel)
+- **Sampler** settings per sample: time-stretching (Off / Resample / Stretch) and pitch
+- **Browser** for your sample folders, with previews and keyboard navigation
+- **Mixer** with 16 inserts, meters and built-in effects (Filter, EQ, Delay, Reverb, Compressor,
+  Soft Clipper)
+- **VST3 / LV2 plugins**: effects on mixer inserts, instruments on channels (with tempo sync)
+- **Live playing** from the computer keyboard or a MIDI keyboard
+- **Projects** (`.jlp`) and **export to WAV**
+- **Keyboard shortcuts for everything**, FL Studio's by default, all customizable (with
+  import/export)
 - Four themes (Juicy, Citrus, Watermelon, Blueberry), plus custom theme files
-- FL Studio's shortcuts: Space, L, F4–F9, Ctrl+M, Ctrl+Z, Ctrl+S, Ctrl+R
 
-Not there yet: plugin instruments, recording, automation. See the roadmap in
-[CLAUDE.md](CLAUDE.md).
+Not there yet: recording, automation, mixer sends. See the [roadmap](docs/roadmap.md).
 
-Documentation: [user guide](docs/user-guide.md), [architecture](docs/architecture.md),
-[theme files](docs/themes.md).
+Documentation: [user guide](docs/user-guide.md), [all docs](docs/README.md). Contributing (people
+and AI agents): start with [AGENTS.md](AGENTS.md).
 
 ## Building
 
@@ -37,7 +41,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The app binary ends up under `build/src/app/JuicyLoopsStudio_artefacts/`.
+The app binary ends up under `build/src/app/JuicyLoopsStudio_artefacts/`. To build without
+installing anything, use the Docker sandbox (`tools/sandbox.sh`, see
+[docs/sandbox.md](docs/sandbox.md)); more in [docs/development.md](docs/development.md).
 
 ## License
 

@@ -1,3 +1,6 @@
+// Project files: save/load round trips, damaged and foreign files, finding moved samples,
+// export rendering, and tracking unsaved changes.
+
 #include "model/document.h"
 #include "model/project_file.h"
 #include "model/render.h"
@@ -76,8 +79,8 @@ TEST_CASE("Projects survive a save and load round trip")
 {
     const auto original = richProject();
     FakeLoader loader;
-    const auto text = saveProject(original, "/projects/song.jls");
-    const auto result = loadProject(text, "/projects/song.jls", loader.function());
+    const auto text = saveProject(original, "/projects/song.jlp");
+    const auto result = loadProject(text, "/projects/song.jlp", loader.function());
     REQUIRE(result.project);
     const auto& p = *result.project;
 
@@ -135,11 +138,11 @@ TEST_CASE("Projects survive a save and load round trip")
 TEST_CASE("Files that aren't projects are rejected with a reason")
 {
     FakeLoader loader;
-    CHECK(loadProject("not json", "x.jls", loader.function()).error ==
+    CHECK(loadProject("not json", "x.jlp", loader.function()).error ==
           "This isn't a valid project file.");
-    CHECK(loadProject(R"({"name": "Juicy"})", "x.jls", loader.function()).error ==
+    CHECK(loadProject(R"({"name": "Juicy"})", "x.jlp", loader.function()).error ==
           "This isn't a Juicy Loops Studio project.");
-    CHECK_FALSE(loadProject("[]", "x.jls", loader.function()).project);
+    CHECK_FALSE(loadProject("[]", "x.jlp", loader.function()).project);
 }
 
 TEST_CASE("Damaged projects load as far as possible, with warnings")
@@ -166,7 +169,7 @@ TEST_CASE("Damaged projects load as far as possible, with warnings")
                                           {"id": 5, "type": "delay", "params": {"Time": 99999}}]}]},
         "view": {"currentPattern": 555}
     })",
-                                    "x.jls", loader.function());
+                                    "x.jlp", loader.function());
     REQUIRE(result.project);
     const auto& p = *result.project;
     CHECK(result.warnings.size() >= 7);
@@ -208,12 +211,12 @@ TEST_CASE("Samples are found next to a moved project, else by absolute path")
     auto project = makeDefaultProject();
     project.channels[0].builtinSample.clear();
     project.channels[0].samplePath = (root / "old" / "samples" / "a.wav").string();
-    const auto text = saveProject(project, root / "old" / "song.jls");
+    const auto text = saveProject(project, root / "old" / "song.jlp");
 
     SECTION("moved folder: the copy next to the project wins")
     {
         FakeLoader loader;
-        const auto result = loadProject(text, root / "new" / "song.jls", loader.function());
+        const auto result = loadProject(text, root / "new" / "song.jlp", loader.function());
         REQUIRE(loader.requested.size() == 1);
         CHECK(fs::path(loader.requested[0]) == root / "new" / "samples" / "a.wav");
         CHECK(result.warnings.empty());
@@ -221,7 +224,7 @@ TEST_CASE("Samples are found next to a moved project, else by absolute path")
     SECTION("nothing next to it: the absolute path is used")
     {
         FakeLoader loader;
-        loadProject(text, root / "elsewhere" / "song.jls", loader.function());
+        loadProject(text, root / "elsewhere" / "song.jlp", loader.function());
         REQUIRE(loader.requested.size() == 1);
         CHECK(fs::path(loader.requested[0]) == root / "old" / "samples" / "a.wav");
     }
@@ -229,7 +232,7 @@ TEST_CASE("Samples are found next to a moved project, else by absolute path")
     {
         fs::remove_all(root / "old");
         FakeLoader loader;
-        const auto result = loadProject(text, root / "elsewhere" / "song.jls", loader.function());
+        const auto result = loadProject(text, root / "elsewhere" / "song.jlp", loader.function());
         REQUIRE(result.project);
         CHECK(result.project->channels[0].sample == nullptr);
         CHECK(result.project->channels[0].samplePath == project.channels[0].samplePath);

@@ -1,5 +1,8 @@
 #pragma once
 
+// Decoded audio held in memory, shared (as shared_ptr<const>) by the model, undo history and
+// engine snapshots.
+
 #include <vector>
 
 namespace jls::engine

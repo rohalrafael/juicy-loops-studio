@@ -1,5 +1,8 @@
 #pragma once
 
+// Sample playback for every sample channel and audio clip: preallocated voices, pitch and speed,
+// clip voices that start part-way in and fade out. Audio thread.
+
 #include "engine/engine_state.h"
 
 #include <array>

@@ -1,3 +1,6 @@
+// The step sequencer: notes, pattern loops and Playlist clips turned into triggers on the exact
+// sample, independent of block size.
+
 #include "engine/engine.h"
 #include "engine/sampler.h"
 #include "engine/spsc_queue.h"

@@ -1,5 +1,8 @@
 #pragma once
 
+// The transport: play state, tempo, time signature and the playhead (computed from a sample count,
+// so it never drifts), plus seeking. Reports the beat span each audio block covers.
+
 #include <atomic>
 
 namespace jls::engine

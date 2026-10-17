@@ -1,5 +1,8 @@
 #pragma once
 
+// Theme data (colours, shapes, effects, fonts) and its JSON file format. Plain C++: the JUCE side
+// is in ui/theme.h.
+
 #include <cstdint>
 #include <optional>
 #include <string>

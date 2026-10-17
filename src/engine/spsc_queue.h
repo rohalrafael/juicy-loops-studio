@@ -1,5 +1,8 @@
 #pragma once
 
+// A fixed-size, lock-free single-producer / single-consumer queue: how the UI thread and the
+// audio thread hand things to each other without locks or allocation.
+
 #include <array>
 #include <atomic>
 #include <cstddef>

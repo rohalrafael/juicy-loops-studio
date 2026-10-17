@@ -1,5 +1,8 @@
 #pragma once
 
+// The open project: the current Project value, undo/redo (whole-project snapshots, merged per
+// gesture), view state that undo leaves alone, and whether there are unsaved changes.
+
 #include "model/project.h"
 
 #include <cstddef>

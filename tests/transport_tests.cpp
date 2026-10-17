@@ -1,3 +1,5 @@
+// The transport: play / pause / stop, tempo, a long-run drift check, and seeking.
+
 #include "engine/transport.h"
 
 #include <catch2/catch_approx.hpp>

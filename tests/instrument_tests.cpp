@@ -286,8 +286,8 @@ TEST_CASE("Instrument channels are saved and loaded; a sample turns them back in
     model::Project project;
     const auto id = project.addInstrumentChannel("VST3-Synth-1234", "Synth");
     project.findChannel(id)->pluginState = "c3RhdGU=";
-    const auto text = model::saveProject(project, "/p/song.jls");
-    const auto result = model::loadProject(text, "/p/song.jls", {});
+    const auto text = model::saveProject(project, "/p/song.jlp");
+    const auto result = model::loadProject(text, "/p/song.jlp", {});
     REQUIRE(result.project);
     CHECK(result.warnings.empty());
     const auto* loaded = result.project->findChannel(id);

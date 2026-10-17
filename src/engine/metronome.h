@@ -1,5 +1,8 @@
 #pragma once
 
+// The metronome: sample-accurate clicks (accented on each bar's first beat), found in the beat
+// span the transport reports for every block.
+
 #include "engine/transport.h"
 
 #include <atomic>

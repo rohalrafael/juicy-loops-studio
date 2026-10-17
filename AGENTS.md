@@ -14,7 +14,7 @@ and macOS. Read this file first, then `docs/`.
 | `docs/development.md` | Build, test, run, the sandbox, testing the UI, CI |
 | `docs/sandbox.md` | The Docker development sandbox (all tools and test plugins, no local installs) |
 | `docs/user-guide.md` | What users can do: every window, mouse action and shortcut |
-| `docs/project-format.md`, `docs/themes.md` | The `.jls` project format; the theme format |
+| `docs/project-format.md`, `docs/themes.md` | The `.jlp` project format; the theme format |
 | `docs/roadmap.md` | Milestones and the backlog of agreed features |
 | `docs/decisions.md` | Why things are the way they are (read before changing a behaviour) |
 
@@ -23,7 +23,7 @@ and macOS. Read this file first, then `docs/`.
 ```text
 src/engine/   real-time core, plain C++ (no JUCE): Engine, Transport, sequencer, Sampler,
               effects, instruments, previews, time-stretching (Signalsmith)
-src/model/    project data, plain C++: Project, Document (undo), .jls files, export rendering
+src/model/    project data, plain C++: Project, Document (undo), .jlp files, export rendering
 src/theme/    theme data and JSON theme files, plain C++
 src/ui/       JUCE components: Channel Rack, Playlist, Piano Roll, Mixer, Browser, Sampler, dialogs
 src/app/      the app shell: MainComponent, commands (shortcuts), live input, stretch cache
@@ -63,8 +63,9 @@ folders (`jls::engine`, `jls::model`, ...).
 6. **Tests are the gate.** Engine and model changes come with Catch2 tests; timing is tested to
    the sample. UI changes are checked visually on Xvfb (see `docs/development.md`); sound by
    exporting and analysing, or listening.
-7. **Documentation is part of every change.** Each source file starts with a comment on its role;
-   classes and non-obvious functions are documented where declared. Update
+7. **Documentation is part of every change.** Every header and test file starts with a comment on
+   its role (a `.cpp` too when it has more to say, like an algorithm overview); classes and
+   non-obvious functions are documented where declared. Update
    `docs/architecture.md`, `docs/user-guide.md` and the format docs in the same commit, and add a
    `docs/decisions.md` entry for decisions worth explaining.
 8. **Dependencies:** fetched by CMake (`FetchContent`) at a pinned version, licence compatible

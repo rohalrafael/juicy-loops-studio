@@ -27,6 +27,8 @@ namespace jls
 // Owns the document and the audio engine.
 class MainComponent final : public juce::AudioAppComponent,
                             public juce::MenuBarModel,
+                            public juce::ApplicationCommandTarget,
+                            private juce::ChangeListener,
                             private juce::Timer
 {
   public:
@@ -52,6 +54,12 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::PopupMenu getMenuForIndex(int index, const juce::String& name) override;
     void menuItemSelected(int itemId, int menuIndex) override;
     void menuBarActivated(bool isActive) override;
+
+    // Commands (app/commands): every shortcut-able action goes through these.
+    juce::ApplicationCommandTarget* getNextCommandTarget() override { return nullptr; }
+    void getAllCommands(juce::Array<juce::CommandID>& ids) override;
+    void getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& info) override;
+    bool perform(const InvocationInfo& info) override;
 
   private:
     void timerCallback() override;
@@ -85,13 +93,19 @@ class MainComponent final : public juce::AudioAppComponent,
     void openEffectEditor(model::EffectId id);
     void showInstrumentEditor(model::ChannelId id, bool toggle);
     void setTypingKeyboard(bool enabled);
+    void changeTempo(double delta);
+    void selectPatternOffset(int offset); // next (+1) / previous (-1) pattern
+    bool editInMainView(ui::EditAction action);
+    juce::File shortcutsFile() const;
+    void changeListenerCallback(juce::ChangeBroadcaster*) override; // shortcuts changed: save
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
 
     ui::ThemeManager& themes;
 
     engine::Engine engine;
     engine::EffectPool effectPool; // effect processors and instruments live here between snapshots
-    LiveInput liveInput{engine, deviceManager}; // computer keyboard + MIDI input
+    LiveInput liveInput{engine, deviceManager};     // computer keyboard + MIDI input
+    juce::ApplicationCommandManager commandManager; // shortcuts, menus (app/commands)
     plugins::PluginHost pluginHost;
     model::Document document;
     io::SampleLoader sampleLoader;

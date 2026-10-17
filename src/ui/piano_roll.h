@@ -6,6 +6,7 @@
 #include "engine/transport.h"
 #include "model/clipboard.h"
 #include "model/document.h"
+#include "ui/edit_action.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -115,10 +116,14 @@ class PianoRollView final : public juce::Component, private juce::Timer
     std::vector<int> selection;
     bool isSelected(int note) const;
     void clearSelection();
-    // Delete / Ctrl+A / Esc for the selection, Ctrl+C / X / V, Alt+U to slice; returns true if the
-    // key was used.
-    bool keyCommand(const juce::KeyPress& key);
+    // Performs an editing action on the selection (or all notes / clips); returns false if
+    // there was nothing to do.
+    bool edit(EditAction action);
 
+    // Snap one notch finer (+1) or coarser (-1), for keyboard shortcuts.
+    void stepSnap(int finer);
+    // Slice size one notch smaller (+1) or larger (-1).
+    void stepSliceSize(int smaller);
     // The slicer: cuts the selected notes (all of the channel's notes when none are selected)
     // into pieces of the chosen size (slice box), keeping the pieces selected.
     void sliceNotes();

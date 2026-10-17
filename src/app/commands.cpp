@@ -1,0 +1,203 @@
+#include "app/commands.h"
+
+namespace jls::commands
+{
+namespace
+{
+
+using juce::KeyPress;
+constexpr int ctrl = juce::ModifierKeys::commandModifier; // Cmd on macOS
+constexpr int shift = juce::ModifierKeys::shiftModifier;
+constexpr int alt = juce::ModifierKeys::altModifier;
+
+KeyPress key(int code, int modifiers = 0)
+{
+    return KeyPress(code, modifiers, 0);
+}
+
+} // namespace
+
+const std::vector<Definition>& all()
+{
+    static const std::vector<Definition> definitions = {
+        {newProject, "New project", "File", "Start a new project", {key('n', ctrl)}},
+        {openProject, "Open project...", "File", "Open a .jls project", {key('o', ctrl)}},
+        {saveProject, "Save", "File", "Save the project", {key('s', ctrl)}},
+        {saveProjectAs,
+         "Save as...",
+         "File",
+         "Save the project under a new name",
+         {key('s', ctrl | shift)}},
+        {exportWav, "Export WAV...", "File", "Render the song to a WAV file", {key('r', ctrl)}},
+        {quit, "Quit", "File", "Close Juicy Loops Studio", {key('q', ctrl)}},
+
+        {undo, "Undo", "Edit", "Undo the last change", {key('z', ctrl)}},
+        {redo, "Redo", "Edit", "Redo what was undone", {key('y', ctrl), key('z', ctrl | shift)}},
+        {copy, "Copy", "Edit", "Copy the selected notes or clips", {key('c', ctrl)}},
+        {cut, "Cut", "Edit", "Cut the selected notes or clips", {key('x', ctrl)}},
+        {paste,
+         "Paste",
+         "Edit",
+         "Paste after the copied block (again: after the last paste)",
+         {key('v', ctrl)}},
+        {deleteSelection,
+         "Delete selection",
+         "Edit",
+         "Delete the selected notes or clips",
+         {key(KeyPress::deleteKey), key(KeyPress::backspaceKey)}},
+        {selectAll, "Select all", "Edit", "Select all notes or clips", {key('a', ctrl)}},
+        {deselect, "Deselect", "Edit", "Clear the selection", {key(KeyPress::escapeKey)}},
+
+        {playStop,
+         "Play / stop",
+         "Transport",
+         "Play, or stop and go back to the start",
+         {key(KeyPress::spaceKey)}},
+        {playPause,
+         "Play / pause",
+         "Transport",
+         "Play, or pause where you are",
+         {key(KeyPress::spaceKey, shift)}},
+        {toggleSongMode,
+         "Pattern / song mode",
+         "Transport",
+         "Switch between PAT and SONG",
+         {key('l')}},
+        {toggleMetronome, "Metronome", "Transport", "Metronome on/off", {key('m', ctrl)}},
+        {tempoUp,
+         "Tempo up",
+         "Transport",
+         "Raise the tempo by the tempo step (Settings)",
+         {key(KeyPress::upKey, ctrl)}},
+        {tempoDown,
+         "Tempo down",
+         "Transport",
+         "Lower the tempo by the tempo step (Settings)",
+         {key(KeyPress::downKey, ctrl)}},
+        {tempoUpFine,
+         "Tempo up (fine)",
+         "Transport",
+         "Raise the tempo by the fine tempo step (Settings)",
+         {key(KeyPress::upKey, ctrl | shift)}},
+        {tempoDownFine,
+         "Tempo down (fine)",
+         "Transport",
+         "Lower the tempo by the fine tempo step (Settings)",
+         {key(KeyPress::downKey, ctrl | shift)}},
+
+        {newPattern,
+         "New pattern",
+         "Patterns",
+         "Add an empty pattern and select it",
+         {key(KeyPress::F4Key)}},
+        {clonePattern,
+         "Clone pattern",
+         "Patterns",
+         "Copy the selected pattern",
+         {key('c', ctrl | shift)}},
+        {renamePattern,
+         "Rename pattern...",
+         "Patterns",
+         "Rename the selected pattern",
+         {key(KeyPress::F2Key)}},
+        {deletePattern, "Delete pattern", "Patterns", "Delete the selected pattern", {}},
+        {nextPattern,
+         "Next pattern",
+         "Patterns",
+         "Select the next pattern",
+         {key(KeyPress::numberPadAdd)}},
+        {previousPattern,
+         "Previous pattern",
+         "Patterns",
+         "Select the previous pattern",
+         {key(KeyPress::numberPadSubtract)}},
+
+        {showPlaylist, "Playlist", "View", "Show the Playlist", {key(KeyPress::F5Key)}},
+        {toggleChannelRack,
+         "Channel rack",
+         "View",
+         "Show or hide the Channel Rack",
+         {key(KeyPress::F6Key)}},
+        {showPianoRoll, "Piano roll", "View", "Show the Piano Roll", {key(KeyPress::F7Key)}},
+        {toggleMixer, "Mixer", "View", "Show or hide the Mixer", {key(KeyPress::F9Key)}},
+
+        {sliceNotes,
+         "Slice notes",
+         "Piano roll",
+         "Cut the selected notes (or all) into pieces of the slice size",
+         {key('u', alt)}},
+        {sliceFiner,
+         "Slice size: smaller",
+         "Piano roll",
+         "Smaller pieces for the slicer",
+         {key(KeyPress::upKey, alt)}},
+        {sliceCoarser,
+         "Slice size: larger",
+         "Piano roll",
+         "Larger pieces for the slicer",
+         {key(KeyPress::downKey, alt)}},
+        {snapFiner,
+         "Snap: finer",
+         "Piano roll",
+         "Finer snap (Piano Roll or Playlist)",
+         {key(KeyPress::rightKey, alt)}},
+        {snapCoarser,
+         "Snap: coarser",
+         "Piano roll",
+         "Coarser snap (Piano Roll or Playlist)",
+         {key(KeyPress::leftKey, alt)}},
+
+        {toggleRackLoop,
+         "Loop",
+         "Channel rack",
+         "Loop on/off for the Channel Rack",
+         {key('l', alt)}},
+        {rackShow16,
+         "Show 16 steps",
+         "Channel rack",
+         "Show 16 steps in the Channel Rack",
+         {key('1', alt)}},
+        {rackShow32,
+         "Show 32 steps",
+         "Channel rack",
+         "Show 32 steps in the Channel Rack",
+         {key('2', alt)}},
+        {rackShow64,
+         "Show 64 steps",
+         "Channel rack",
+         "Show 64 steps in the Channel Rack",
+         {key('3', alt)}},
+
+        {toggleTypingKeyboard,
+         "Typing keyboard to piano",
+         "Input",
+         "Letter keys play the selected channel",
+         {key('t', ctrl)}},
+
+        {showSettings,
+         "Settings...",
+         "Options",
+         "Tempo steps and other settings",
+         {key(',', ctrl)}},
+        {showShortcuts,
+         "Keyboard shortcuts...",
+         "Options",
+         "Change keyboard shortcuts",
+         {key('k', ctrl | shift)}},
+        {showThemes, "Theme...", "Options", "Choose or import a theme", {}},
+        {showPlugins, "Plugins...", "Options", "Scan and manage plugins", {}},
+        {showAudioSettings, "Audio settings...", "Options", "Audio and MIDI devices", {}},
+        {showAbout, "About Juicy Loops Studio", "Help", "Version and licences", {}},
+    };
+    return definitions;
+}
+
+const Definition* find(juce::CommandID id)
+{
+    for (const auto& definition : all())
+        if (definition.id == id)
+            return &definition;
+    return nullptr;
+}
+
+} // namespace jls::commands

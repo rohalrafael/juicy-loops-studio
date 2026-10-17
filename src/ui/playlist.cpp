@@ -567,9 +567,9 @@ void PlaylistView::clearSelection()
     }
 }
 
-bool PlaylistView::keyCommand(const juce::KeyPress& key)
+bool PlaylistView::edit(EditAction action)
 {
-    if (key == juce::KeyPress('a', juce::ModifierKeys::commandModifier, 0))
+    if (action == EditAction::selectAll)
     {
         selection.clear();
         for (int i = 0; i < static_cast<int>(doc.project().playlist.clips.size()); ++i)
@@ -577,8 +577,7 @@ bool PlaylistView::keyCommand(const juce::KeyPress& key)
         grid.repaint();
         return true;
     }
-    const auto cmd = juce::ModifierKeys::commandModifier;
-    if (key == juce::KeyPress('v', cmd, 0))
+    if (action == EditAction::paste)
     {
         if (clipboard.empty())
             return true;
@@ -598,20 +597,20 @@ bool PlaylistView::keyCommand(const juce::KeyPress& key)
     }
     if (selection.empty())
         return false;
-    if (key == juce::KeyPress('c', cmd, 0) || key == juce::KeyPress('x', cmd, 0))
+    if (action == EditAction::copy || action == EditAction::cut)
     {
         clipboard =
             model::copyClips(doc.project().playlist.clips, selection, doc.project().stepsPerBar());
-        if (key.getKeyCode() == 'c' || key.getKeyCode() == 'C')
+        if (action == EditAction::copy)
             return true;
-        return keyCommand(juce::KeyPress(juce::KeyPress::deleteKey)); // cut = copy + delete
+        return edit(EditAction::deleteSelection); // cut = copy + delete
     }
-    if (key == juce::KeyPress::escapeKey)
+    if (action == EditAction::deselect)
     {
         clearSelection();
         return true;
     }
-    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    if (action == EditAction::deleteSelection)
     {
         auto doomed = selection;
         std::sort(doomed.begin(), doomed.end(), std::greater<>());
@@ -626,6 +625,21 @@ bool PlaylistView::keyCommand(const juce::KeyPress& key)
         return true;
     }
     return false;
+}
+
+namespace
+{
+// Moves a combo box's selection by `delta` items (clamped), notifying its onChange.
+void stepComboBox(juce::ComboBox& box, int delta)
+{
+    const int index = std::clamp(box.getSelectedItemIndex() + delta, 0, box.getNumItems() - 1);
+    box.setSelectedItemIndex(index, juce::sendNotificationSync);
+}
+} // namespace
+
+void PlaylistView::stepSnap(int finer)
+{
+    stepComboBox(snapBox, finer); // items go from coarse to fine
 }
 
 void PlaylistView::refresh()

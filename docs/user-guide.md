@@ -16,21 +16,40 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 
 ## Keyboard
 
+Every shortcut can be changed in **Options › Keyboard shortcuts…** (Ctrl+Shift+K): click **+**
+next to a command and press the keys, click a key to change or remove it, or **reset to
+defaults**. A command can have several keys; if a key is already taken you're asked whether to
+move it. Your changes are saved (only what differs from the defaults) in `shortcuts.xml` in the
+settings folder. The menus always show the current keys. The defaults, FL's where FL has one:
+
 | Key | Action |
 |---|---|
-| Space | Play / stop (stop rewinds) |
+| Space / Shift+Space | Play-stop (stop rewinds) / play-pause |
 | L | Switch between pattern (PAT) and song (SONG) mode |
-| F4 | New pattern |
-| F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
 | Ctrl+M | Metronome on/off |
+| Ctrl+↑ / Ctrl+↓ | Tempo up / down by the tempo step (5 BPM) |
+| Ctrl+Shift+↑ / ↓ | Tempo up / down by the fine step (1 BPM) |
+| F4 / Ctrl+Shift+C / F2 | New / clone / rename pattern |
+| Numpad + / − | Next / previous pattern |
+| F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
+| Ctrl+C / X / V | Copy / cut / paste (Piano Roll or Playlist) |
+| Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
+| Alt+U | Slice notes (Piano Roll) |
+| Alt+↑ / Alt+↓ | Slice size smaller / larger |
+| Alt+→ / Alt+← | Snap finer / coarser (Piano Roll or Playlist) |
+| Alt+L / Alt+1 / 2 / 3 | Channel Rack loop on/off / show 16 / 32 / 64 steps |
 | Ctrl+T | Typing keyboard to piano on/off (the **Keys** button) |
 | Z S X D C V G B H N J M | Play C5 to B5 on the selected channel (when Keys is on) |
 | Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P | Play C6 to E7 |
-| Ctrl+N / Ctrl+O | New project / open project |
+| Ctrl+N / Ctrl+O / Ctrl+Q | New project / open project / quit |
 | Ctrl+S / Ctrl+Shift+S | Save / save as |
 | Ctrl+R | Export the song as a WAV file |
-| Ctrl+Z | Undo |
-| Ctrl+Y or Ctrl+Shift+Z | Redo |
+| Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z | Undo / redo |
+| Ctrl+, | Settings (tempo steps) |
+
+While **Keys** is on, the typing keyboard's letter keys play notes even if you give one of them
+to a command; use them with Ctrl or Alt for shortcuts. The tempo steps are set in
+**Options › Settings…**.
 
 On macOS use Cmd instead of Ctrl.
 

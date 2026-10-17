@@ -191,8 +191,8 @@ for each chunk:
   indices (`PianoRollView::selection`, `PlaylistView::selection`), never in the model or undo.
   It's pruned in `refresh()` when items disappear, and the Piano Roll's is dropped when the
   channel or pattern changes. Moving a selection applies one offset to all, clamped so every
-  item stays on the grid. Selection keys reach the views through `keyCommand()`, called from
-  `MainComponent::keyPressed()` for whichever view fills the main area.
+  item stays on the grid. Edit commands reach the views as `ui::EditAction`s through `edit()`,
+  sent by `MainComponent::editInMainView()` to whichever view fills the main area.
 - **Copy/paste:** `model/clipboard` (tested): a copy keeps its items and a block from the first
   start (rounded down) to the last end (rounded up) in whole beats (notes) or bars (clips);
   each `nextPaste()` lands one block further. The clipboards live in the views (in memory, not
@@ -282,6 +282,22 @@ Hosted plugins (VST3 and LV2, through JUCE) are effects and instruments like any
   matching the position display. It's a copy per processor, so the export's private engine
   gives the same plugins their own positions without interfering.
 - **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
+
+## Commands and shortcuts
+
+Every action with a shortcut is a command in `src/app/commands` (id, name, category,
+description, default keys). `MainComponent` is the `juce::ApplicationCommandTarget`
+(`getAllCommands` / `getCommandInfo` / `perform`) behind a `juce::ApplicationCommandManager`,
+which gives:
+- **Key handling:** `MainComponent::keyPressed()` lets the typing keyboard take its note keys
+  first, then hands the key to the manager's `KeyPressMappingSet`.
+- **Menus:** built with `addCommandItem`, so they show the current keys and the tick/disabled
+  state from `getCommandInfo()`.
+- **Editing:** Options › Keyboard shortcuts is JUCE's `KeyMappingEditorComponent` (themed
+  colours). Changes are saved as differences from the defaults to `<settings>/shortcuts.xml`
+  and restored at startup, so new default keys still reach existing users.
+- **Settings** used by commands (tempo steps) live in the settings file; Options › Settings
+  (`ui/settings_dialog`) edits them.
 
 ## UI
 
@@ -388,6 +404,11 @@ saved wherever the user chooses (`.jls`).
 4. Keep its widgets from taking keyboard focus (`setWantsKeyboardFocus(false)`,
    `setMouseClickGrabsKeyboardFocus(false)`).
 
-**Add a keyboard shortcut**
-1. Handle it in `MainComponent::keyPressed()`, using FL's key where FL has one.
-2. List it in [user-guide.md](user-guide.md).
+**Add a command (and its keyboard shortcut)**
+1. Add an id to `commands::ID` in `src/app/commands.h`, at the end of its group. Ids are saved in
+   users' `shortcuts.xml`: never renumber or reuse one.
+2. Add its name, category, description and default keys (FL's where FL has one) to
+   `commands::all()` in `commands.cpp`.
+3. Perform it in `MainComponent::perform()`; set active/ticked state in `getCommandInfo()` if
+   it has any. Put it in a menu with `addCommandItem` in `getMenuForIndex()` if it belongs there.
+4. List its default key in [user-guide.md](user-guide.md).

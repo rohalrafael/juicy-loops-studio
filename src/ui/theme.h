@@ -74,6 +74,8 @@ class ThemeManager final : public juce::ChangeBroadcaster
     juce::Result exportCurrent(const juce::File& destination) const;
 
     juce::LookAndFeel& lookAndFeel() { return laf; }
+    // The app's settings file (theme, tempo steps, ...).
+    juce::PropertiesFile& settingsFile() { return *settings; }
 
   private:
     void apply();

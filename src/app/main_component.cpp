@@ -4,6 +4,9 @@
 
 #include "main_component.h"
 
+#include "app/commands.h"
+#include "ui/settings_dialog.h"
+
 #include "io/audio_export.h"
 #include "model/project_file.h"
 #include "model/render.h"
@@ -16,31 +19,6 @@ namespace jls
 {
 namespace
 {
-
-enum MenuItem
-{
-    newItem = 1,
-    openItem,
-    saveItem,
-    saveAsItem,
-    exportItem,
-    quitItem,
-    undoItem,
-    redoItem,
-    newPatternItem,
-    clonePatternItem,
-    renamePatternItem,
-    deletePatternItem,
-    playlistItem,
-    pianoRollItem,
-    channelRackItem,
-    mixerItem,
-    pluginsItem,
-    themeItem,
-    audioSettingsItem,
-    typingKeyboardItem,
-    aboutItem,
-};
 
 constexpr int menuBarHeight = 24;
 constexpr int transportHeight = 40;
@@ -189,6 +167,14 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     addAndMakeVisible(*menuBar);
 #endif
 
+    // Shortcuts: defaults from app/commands, then the user's changes on top.
+    commandManager.registerAllCommandsForTarget(this);
+    commandManager.setFirstCommandTarget(this);
+    if (auto xml = juce::parseXML(shortcutsFile()))
+        commandManager.getKeyMappings()->restoreFromXml(*xml);
+    commandManager.getKeyMappings()->addChangeListener(this);
+    setApplicationCommandManagerToWatch(&commandManager);
+
     document.onChange = [this] { documentChanged(); };
     documentChanged();
 
@@ -205,7 +191,9 @@ MainComponent::~MainComponent()
     juce::MenuBarModel::setMacMainMenu(nullptr);
 #endif
     document.onChange = nullptr;
-    pluginWindows.clear(); // editors before their plugins
+    commandManager.getKeyMappings()->removeChangeListener(this);
+    setApplicationCommandManagerToWatch(nullptr); // the manager goes before the MenuBarModel base
+    pluginWindows.clear();                        // editors before their plugins
     instrumentWindows.clear();
     shutdownAudio();
 }
@@ -587,119 +575,72 @@ void MainComponent::resized()
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)
 {
-    using juce::KeyPress;
-    using juce::ModifierKeys;
-    const auto cmd = ModifierKeys::commandModifier;
-
-    // Shortcuts follow FL Studio where it has one.
-    if (key == KeyPress::spaceKey)
-        return engine.transport().togglePlay(), true;
-    if (key == KeyPress('m', cmd, 0))
-        return engine.metronome().toggleEnabled(), true;
-    if (key == KeyPress('t', cmd, 0))
-    {
-        setTypingKeyboard(!liveInput.isTypingEnabled());
-        return true;
-    }
+    // The typing keyboard owns its note keys while it's on; everything else is a command, with
+    // the keys from app/commands (or the user's own, from Keyboard shortcuts).
     if (liveInput.isNoteKey(key))
         return true; // played in keyStateChanged()
-    // Selection keys (Delete, Ctrl+A, Esc) go to the view in the main area.
-    if (pianoRoll.isVisible() ? pianoRoll.keyCommand(key) : playlist.keyCommand(key))
-        return true;
-    if (key == KeyPress('l'))
-        return setSongMode(!document.project().songMode), true;
-    if (key == KeyPress(KeyPress::F4Key))
-        return newPattern(), true;
-    if (key == KeyPress(KeyPress::F5Key))
-        return showPlaylist(), true;
-    if (key == KeyPress(KeyPress::F6Key))
-        return toggleChannelRack(), true;
-    if (key == KeyPress(KeyPress::F7Key))
-        return showPianoRoll(), true;
-    if (key == KeyPress(KeyPress::F9Key))
-        return toggleMixer(), true;
-    if (key == KeyPress('n', cmd, 0))
-        return newProject(), true;
-    if (key == KeyPress('o', cmd, 0))
-        return openProject(), true;
-    if (key == KeyPress('s', cmd, 0))
-        return saveProject(), true;
-    if (key == KeyPress('s', cmd | ModifierKeys::shiftModifier, 0))
-        return saveProjectAs(), true;
-    if (key == KeyPress('r', cmd, 0))
-        return exportWav(), true;
-    if (key == KeyPress('z', cmd, 0))
-        return document.undo(), true;
-    if (key == KeyPress('y', cmd, 0) || key == KeyPress('z', cmd | ModifierKeys::shiftModifier, 0))
-        return document.redo(), true;
-    return false;
+    return commandManager.getKeyMappings()->keyPressed(key, this);
 }
 
 juce::StringArray MainComponent::getMenuBarNames()
 {
-    return {"File", "Edit", "Patterns", "View", "Options", "Help"};
+    return {"File", "Edit", "Patterns", "View", "Transport", "Options", "Help"};
 }
 
 juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
 {
-    using Item = juce::PopupMenu::Item;
-    const auto withKey = [](Item item, const char* key)
-    {
-        item.shortcutKeyDescription = key;
-        return item;
-    };
+    // Command items show their current shortcut and tick/disabled state (getCommandInfo).
     juce::PopupMenu menu;
+    const auto add = [this, &menu](std::initializer_list<int> ids)
+    {
+        for (int id : ids)
+        {
+            if (id == 0)
+                menu.addSeparator();
+            else
+                menu.addCommandItem(&commandManager, id);
+        }
+    };
     switch (index)
     {
     case 0:
-    {
-        menu.addItem(withKey(Item("New").setID(newItem), "Ctrl+N"));
-        menu.addItem(withKey(Item("Open...").setID(openItem), "Ctrl+O"));
-        menu.addItem(withKey(Item("Save").setID(saveItem), "Ctrl+S"));
-        menu.addItem(withKey(Item("Save as...").setID(saveAsItem), "Ctrl+Shift+S"));
-        menu.addSeparator();
-        menu.addItem(withKey(Item("Export WAV...").setID(exportItem), "Ctrl+R"));
-        menu.addSeparator();
-        menu.addItem(Item("Quit").setID(quitItem));
+        add({jls::commands::newProject, jls::commands::openProject, jls::commands::saveProject,
+             jls::commands::saveProjectAs, 0, jls::commands::exportWav, 0, jls::commands::quit});
         break;
-    }
     case 1:
-        menu.addItem(Item("Undo").setID(undoItem).setEnabled(document.canUndo()));
-        menu.addItem(Item("Redo").setID(redoItem).setEnabled(document.canRedo()));
+        add({jls::commands::undo, jls::commands::redo, 0, jls::commands::cut, jls::commands::copy,
+             jls::commands::paste, jls::commands::deleteSelection, 0, jls::commands::selectAll,
+             jls::commands::deselect, 0, jls::commands::sliceNotes, jls::commands::sliceFiner,
+             jls::commands::sliceCoarser, 0, jls::commands::snapFiner, jls::commands::snapCoarser});
         break;
     case 2:
-    {
-        menu.addItem(Item("New pattern").setID(newPatternItem));
-        menu.addItem(Item("Clone pattern").setID(clonePatternItem));
-        menu.addItem(Item("Rename pattern...").setID(renamePatternItem));
-        menu.addItem(Item("Delete pattern")
-                         .setID(deletePatternItem)
-                         .setEnabled(document.project().patterns.size() > 1));
+        add({jls::commands::newPattern, jls::commands::clonePattern, jls::commands::renamePattern,
+             jls::commands::deletePattern, 0, jls::commands::nextPattern,
+             jls::commands::previousPattern});
         break;
-    }
     case 3:
     {
-        menu.addItem(
-            withKey(Item("Playlist").setID(playlistItem).setTicked(playlist.isVisible()), "F5"));
-        menu.addItem(withKey(
-            Item("Channel rack").setID(channelRackItem).setTicked(channelRack.isVisible()), "F6"));
-        menu.addItem(withKey(
-            Item("Piano roll").setID(pianoRollItem).setTicked(pianoRoll.isVisible()), "F7"));
-        menu.addItem(withKey(Item("Mixer").setID(mixerItem).setTicked(mixer.isVisible()), "F9"));
+        add({jls::commands::showPlaylist, jls::commands::toggleChannelRack,
+             jls::commands::showPianoRoll, jls::commands::toggleMixer, 0});
+        juce::PopupMenu rack;
+        for (int id : {jls::commands::toggleRackLoop, jls::commands::rackShow16,
+                       jls::commands::rackShow32, jls::commands::rackShow64})
+            rack.addCommandItem(&commandManager, id);
+        menu.addSubMenu("Channel rack options", rack);
         break;
     }
     case 4:
-        menu.addItem(Item("Theme...").setID(themeItem));
-        menu.addItem(Item("Plugins...").setID(pluginsItem));
-        menu.addItem(Item("Audio settings...").setID(audioSettingsItem));
-        menu.addSeparator();
-        menu.addItem(withKey(Item("Typing keyboard to piano")
-                                 .setID(typingKeyboardItem)
-                                 .setTicked(liveInput.isTypingEnabled()),
-                             "Ctrl+T"));
+        add({jls::commands::playStop, jls::commands::playPause, jls::commands::toggleSongMode,
+             jls::commands::toggleMetronome, 0, jls::commands::tempoUp, jls::commands::tempoDown,
+             jls::commands::tempoUpFine, jls::commands::tempoDownFine});
         break;
     case 5:
-        menu.addItem(Item("About Juicy Loops Studio").setID(aboutItem));
+        add({jls::commands::showSettings, jls::commands::showShortcuts, 0,
+             jls::commands::showThemes, jls::commands::showPlugins,
+             jls::commands::showAudioSettings, 0, jls::commands::toggleTypingKeyboard});
+        break;
+    case 6:
+        add({jls::commands::showAbout});
         break;
     default:
         break;
@@ -729,76 +670,283 @@ void MainComponent::menuBarActivated(bool isActive)
         });
 }
 
-void MainComponent::menuItemSelected(int itemId, int)
+void MainComponent::menuItemSelected(int, int)
 {
-    switch (itemId)
+    // All menu items are commands (see perform()).
+}
+
+// ------------------------------------------------------------------------------------ Commands
+
+void MainComponent::getAllCommands(juce::Array<juce::CommandID>& ids)
+{
+    for (const auto& definition : jls::commands::all())
+        ids.add(definition.id);
+}
+
+void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandInfo& info)
+{
+    const auto* definition = jls::commands::find(id);
+    if (definition == nullptr)
+        return;
+    info.setInfo(definition->name, definition->description, definition->category, 0);
+    for (const auto& key : definition->defaultKeys)
+        info.addDefaultKeypress(key.getKeyCode(), key.getModifiers());
+
+    // State shown in menus; inactive commands do nothing when their key is pressed.
+    const auto& project = document.project();
+    using namespace jls::commands;
+    switch (id)
     {
-    case newItem:
-        newProject();
+    case undo:
+        info.setActive(document.canUndo());
         break;
-    case openItem:
-        openProject();
+    case redo:
+        info.setActive(document.canRedo());
         break;
-    case saveItem:
-        saveProject();
+    case sliceNotes:
+    case sliceFiner:
+    case sliceCoarser:
+        info.setActive(pianoRoll.isVisible());
         break;
-    case saveAsItem:
-        saveProjectAs();
+    case jls::commands::deletePattern:
+        info.setActive(project.patterns.size() > 1);
         break;
-    case exportItem:
-        exportWav();
+    case toggleSongMode:
+        info.setTicked(project.songMode);
         break;
-    case quitItem:
-        requestQuit();
+    case toggleMetronome:
+        info.setTicked(engine.metronome().isEnabled());
         break;
-    case undoItem:
-        document.undo();
+    case jls::commands::showPlaylist:
+        info.setTicked(playlist.isVisible());
         break;
-    case redoItem:
-        document.redo();
+    case jls::commands::toggleChannelRack:
+        info.setTicked(channelRack.isVisible());
         break;
-    case newPatternItem:
-        newPattern();
+    case jls::commands::showPianoRoll:
+        info.setTicked(pianoRoll.isVisible());
         break;
-    case clonePatternItem:
-        clonePattern();
+    case jls::commands::toggleMixer:
+        info.setTicked(mixer.isVisible());
         break;
-    case renamePatternItem:
-        renamePattern();
+    case toggleRackLoop:
+        info.setTicked(project.loopChannels);
         break;
-    case deletePatternItem:
-        deletePattern();
+    case rackShow16:
+    case rackShow32:
+    case rackShow64:
+        info.setTicked(project.current().gridSteps == 16 << (id - rackShow16));
         break;
-    case playlistItem:
-        showPlaylist();
-        break;
-    case pianoRollItem:
-        showPianoRoll();
-        break;
-    case channelRackItem:
-        toggleChannelRack();
-        break;
-    case mixerItem:
-        toggleMixer();
-        break;
-    case themeItem:
-        ui::ThemeDialog::show(themes);
-        break;
-    case typingKeyboardItem:
-        setTypingKeyboard(!liveInput.isTypingEnabled());
-        break;
-    case pluginsItem:
-        pluginHost.showManager();
-        break;
-    case audioSettingsItem:
-        showAudioSettings();
-        break;
-    case aboutItem:
-        showAbout();
+    case toggleTypingKeyboard:
+        info.setTicked(liveInput.isTypingEnabled());
         break;
     default:
         break;
     }
+}
+
+bool MainComponent::perform(const InvocationInfo& info)
+{
+    auto& transport = engine.transport();
+    auto& settingsFile = themes.settingsFile();
+    using namespace jls::commands;
+    switch (info.commandID)
+    {
+    case jls::commands::newProject:
+        newProject();
+        break;
+    case jls::commands::openProject:
+        openProject();
+        break;
+    case jls::commands::saveProject:
+        saveProject();
+        break;
+    case jls::commands::saveProjectAs:
+        saveProjectAs();
+        break;
+    case jls::commands::exportWav:
+        exportWav();
+        break;
+    case quit:
+        requestQuit();
+        break;
+
+    case undo:
+        document.undo();
+        break;
+    case redo:
+        document.redo();
+        break;
+    case jls::commands::copy:
+        editInMainView(ui::EditAction::copy);
+        break;
+    case cut:
+        editInMainView(ui::EditAction::cut);
+        break;
+    case paste:
+        editInMainView(ui::EditAction::paste);
+        break;
+    case deleteSelection:
+        editInMainView(ui::EditAction::deleteSelection);
+        break;
+    case selectAll:
+        editInMainView(ui::EditAction::selectAll);
+        break;
+    case deselect:
+        editInMainView(ui::EditAction::deselect);
+        break;
+
+    case playStop:
+        transport.togglePlay();
+        break;
+    case playPause:
+        transport.togglePause();
+        break;
+    case toggleSongMode:
+        setSongMode(!document.project().songMode);
+        break;
+    case toggleMetronome:
+        engine.metronome().toggleEnabled();
+        break;
+    case tempoUp:
+        changeTempo(ui::settings::tempoStep(settingsFile));
+        break;
+    case tempoDown:
+        changeTempo(-ui::settings::tempoStep(settingsFile));
+        break;
+    case tempoUpFine:
+        changeTempo(ui::settings::tempoStepFine(settingsFile));
+        break;
+    case tempoDownFine:
+        changeTempo(-ui::settings::tempoStepFine(settingsFile));
+        break;
+
+    case jls::commands::newPattern:
+        newPattern();
+        break;
+    case jls::commands::clonePattern:
+        clonePattern();
+        break;
+    case jls::commands::renamePattern:
+        renamePattern();
+        break;
+    case jls::commands::deletePattern:
+        deletePattern();
+        break;
+    case nextPattern:
+        selectPatternOffset(1);
+        break;
+    case previousPattern:
+        selectPatternOffset(-1);
+        break;
+
+    case jls::commands::showPlaylist:
+        showPlaylist();
+        break;
+    case jls::commands::toggleChannelRack:
+        toggleChannelRack();
+        break;
+    case jls::commands::showPianoRoll:
+        showPianoRoll();
+        break;
+    case jls::commands::toggleMixer:
+        toggleMixer();
+        break;
+
+    case sliceNotes:
+        pianoRoll.edit(ui::EditAction::slice);
+        break;
+    case sliceFiner:
+        pianoRoll.stepSliceSize(1);
+        break;
+    case sliceCoarser:
+        pianoRoll.stepSliceSize(-1);
+        break;
+    case snapFiner:
+    case snapCoarser:
+    {
+        const int finer = info.commandID == snapFiner ? 1 : -1;
+        if (pianoRoll.isVisible())
+            pianoRoll.stepSnap(finer);
+        else
+            playlist.stepSnap(finer);
+        break;
+    }
+
+    case toggleRackLoop:
+        document.apply([](model::Project& p) { p.loopChannels = !p.loopChannels; });
+        break;
+    case rackShow16:
+    case rackShow32:
+    case rackShow64:
+    {
+        const int steps = 16 << (info.commandID - rackShow16);
+        document.apply([steps](model::Project& p) { p.current().gridSteps = steps; });
+        break;
+    }
+
+    case toggleTypingKeyboard:
+        setTypingKeyboard(!liveInput.isTypingEnabled());
+        break;
+
+    case showSettings:
+        ui::showSettingsDialog(settingsFile);
+        break;
+    case showShortcuts:
+        ui::showShortcutsDialog(*commandManager.getKeyMappings());
+        break;
+    case showThemes:
+        ui::ThemeDialog::show(themes);
+        break;
+    case showPlugins:
+        pluginHost.showManager();
+        break;
+    case jls::commands::showAudioSettings:
+        MainComponent::showAudioSettings();
+        break;
+    case jls::commands::showAbout:
+        MainComponent::showAbout();
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+bool MainComponent::editInMainView(ui::EditAction action)
+{
+    // The Piano Roll and the Playlist share the main area; edit whichever is showing.
+    return pianoRoll.isVisible() ? pianoRoll.edit(action) : playlist.edit(action);
+}
+
+void MainComponent::changeTempo(double delta)
+{
+    const double bpm = std::clamp(document.project().tempo + delta, engine::Transport::minTempo,
+                                  engine::Transport::maxTempo);
+    if (std::abs(bpm - document.project().tempo) > 1.0e-9)
+        document.apply([bpm](model::Project& p) { p.tempo = bpm; });
+}
+
+void MainComponent::selectPatternOffset(int offset)
+{
+    const auto& patterns = document.project().patterns;
+    const auto it = std::find_if(patterns.begin(), patterns.end(), [this](const model::Pattern& p)
+                                 { return p.id == document.project().currentPattern; });
+    const int index = static_cast<int>(it - patterns.begin()) + offset;
+    if (index >= 0 && index < static_cast<int>(patterns.size()))
+        selectPattern(patterns[static_cast<std::size_t>(index)].id);
+}
+
+juce::File MainComponent::shortcutsFile() const
+{
+    return themes.themesFolder().getParentDirectory().getChildFile("shortcuts.xml");
+}
+
+void MainComponent::changeListenerCallback(juce::ChangeBroadcaster*)
+{
+    // Only the differences from the defaults, so later default changes still reach the user.
+    if (auto xml = commandManager.getKeyMappings()->createXml(true))
+        xml->writeTo(shortcutsFile());
 }
 
 // ----------------------------------------------------------------------------- File handling

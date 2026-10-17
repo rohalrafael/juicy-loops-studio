@@ -339,6 +339,16 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   1/16, 1/16 T, 1/32, 1/64), shortcut Alt+U (FL's chop key); selected notes, or all if none;
   pieces stay selected. `model::sliceNote()`.
 
+- 2026-10-17: **Customizable shortcuts** (user's request: "for borderline everything"). Commands in
+  `src/app/commands` (stable ids, saved in `shortcuts.xml`; never renumber) on JUCE's
+  ApplicationCommandManager; MainComponent = command target; menus via `addCommandItem`; editor =
+  JUCE KeyMappingEditorComponent (Options > Keyboard shortcuts, Ctrl+Shift+K). Tempo up/down
+  (Ctrl+Up/Down) by a step and a fine step (Ctrl+Shift+Up/Down), **defaults 5 and 1 BPM** (user's
+  choice), changeable in Options > Settings (Ctrl+,). New defaults: Alt+Up/Down slice size,
+  Alt+Right/Left snap, Alt+L / Alt+1/2/3 rack loop / 16/32/64, Numpad +/- pattern, F2 rename,
+  Ctrl+Shift+C clone, Shift+Space play/pause, Ctrl+Q quit. Views take `ui::EditAction`s.
+  Not yet: import/export of shortcut sets.
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools

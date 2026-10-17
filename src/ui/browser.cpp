@@ -144,7 +144,7 @@ class BrowserPanel::Waveform final : public juce::Component, public juce::Settab
 
     void setPosition(double frame)
     {
-        if (frame != position)
+        if (std::abs(frame - position) >= 1.0) // repaint only when it moved a frame or more
         {
             position = frame;
             repaint();

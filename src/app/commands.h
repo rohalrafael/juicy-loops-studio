@@ -32,6 +32,11 @@ enum ID : juce::CommandID
     deleteSelection,
     selectAll,
     deselect,
+    duplicate,
+    moveSelectionUp,
+    moveSelectionDown,
+    moveSelectionLeft,
+    moveSelectionRight,
 
     // Transport
     playStop = 0x1201,
@@ -60,6 +65,7 @@ enum ID : juce::CommandID
     browserSwitchSide,
     browserAddFolder,
     previewPlayPause,
+    browserUseSample,
 
     // Piano Roll / Playlist editing
     sliceNotes = 0x1501,
@@ -67,6 +73,7 @@ enum ID : juce::CommandID
     sliceCoarser,
     snapFiner,
     snapCoarser,
+    notesToStepLength,
 
     // Channel Rack
     toggleRackLoop = 0x1601,

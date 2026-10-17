@@ -429,6 +429,31 @@ std::vector<Note> sliceNote(const Note& note, int pieceTicks)
     return pieces;
 }
 
+bool moveNotes(std::vector<Note>& notes, const std::vector<int>& indices, int ticks, int semitones)
+{
+    int dt = ticks;
+    int dp = semitones;
+    bool any = false;
+    for (int i : indices)
+    {
+        if (i < 0 || i >= static_cast<int>(notes.size()))
+            continue;
+        const auto& n = notes[static_cast<std::size_t>(i)];
+        dt = std::max(dt, -n.startTick);
+        dp = std::clamp(dp, -n.pitch, 127 - n.pitch);
+        any = true;
+    }
+    if (!any || (dt == 0 && dp == 0))
+        return false;
+    for (int i : indices)
+        if (i >= 0 && i < static_cast<int>(notes.size()))
+        {
+            notes[static_cast<std::size_t>(i)].startTick += dt;
+            notes[static_cast<std::size_t>(i)].pitch += dp;
+        }
+    return true;
+}
+
 bool isInScale(int pitch, int root, Scale scale)
 {
     // Semitones above the root that are in the scale, as bit masks.

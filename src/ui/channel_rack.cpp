@@ -666,8 +666,6 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
     noFocus(closeButton);
     addAndMakeVisible(closeButton);
 
-    dragBounds.setMinimumOnscreenAmounts(headerHeight, 80, 40, 80);
-
     addButton.setTooltip("Add a channel: sample or instrument plugin");
     addButton.onClick = [this] { showAddMenu(); };
     noFocus(addButton);
@@ -1193,14 +1191,41 @@ namespace jls::ui
 
 void ChannelRack::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.y < headerHeight)
+    // Remembered here: e.mouseDownPosition is relative to where the rack is *now*, so after
+    // moving the rack up it no longer lies in the title bar (dragging up used to get stuck).
+    movingRack = e.y < headerHeight;
+    if (movingRack)
         dragger.startDraggingComponent(this, e);
 }
 
 void ChannelRack::mouseDrag(const juce::MouseEvent& e)
 {
-    if (e.mouseDownPosition.y < headerHeight)
-        dragger.dragComponent(this, e, &dragBounds);
+    if (movingRack)
+    {
+        dragger.dragComponent(this, e, nullptr);
+        keepReachable();
+    }
+}
+
+void ChannelRack::setMovableArea(juce::Rectangle<int> area)
+{
+    movableArea = area;
+    keepReachable();
+}
+
+void ChannelRack::keepReachable()
+{
+    // JUCE's constrainer only keeps a few pixels on screen and lets the title bar leave the top
+    // (under the transport bar), where it can't be grabbed again: the drag got "stuck".
+    if (movableArea.isEmpty())
+        return;
+    constexpr int keepVisible = 80; // of the width, at the left or right edge
+    const int x = std::clamp(getX(), movableArea.getX() - getWidth() + keepVisible,
+                             std::max(movableArea.getX(), movableArea.getRight() - keepVisible));
+    const int y = std::clamp(getY(), movableArea.getY(),
+                             std::max(movableArea.getY(), movableArea.getBottom() - headerHeight));
+    if (x != getX() || y != getY())
+        setTopLeftPosition(x, y);
 }
 
 } // namespace jls::ui

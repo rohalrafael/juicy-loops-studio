@@ -318,6 +318,8 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
 
     if (e.mods.isPopupMenu())
     {
+        // Right-click deselects (and deletes the note under the mouse, as always).
+        view.clearSelection();
         drag = Drag::erase;
         eraseAt(e.position);
         return;
@@ -331,7 +333,25 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
     }
 
     dragNote = noteAt(e.position);
-    if (dragNote >= 0 && view.isSelected(dragNote))
+    if (dragNote >= 0 && e.mods.isShiftDown())
+    {
+        // Shift+click adds a note to the selection, or takes it out.
+        if (view.isSelected(dragNote))
+            std::erase(view.selection, dragNote);
+        else
+            view.selection.push_back(dragNote);
+        repaint();
+        drag = Drag::none;
+        dragNote = -1;
+        return;
+    }
+    if (dragNote >= 0 && !view.isSelected(dragNote))
+    {
+        // Clicking a note selects it (just it), then dragging moves or resizes it.
+        view.selection = {dragNote};
+        repaint();
+    }
+    if (dragNote >= 0)
     {
         const auto& note = view.notes()[static_cast<std::size_t>(dragNote)];
         drag = onRightEdge(dragNote, e.position.x) ? Drag::resizeSelection : Drag::moveSelection;
@@ -346,19 +366,10 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
     }
     if (!view.selection.empty())
     {
-        // A click outside the selection only deselects (FL does the same).
+        // A click on empty space with a selection only deselects (FL does the same).
         view.clearSelection();
         drag = Drag::none;
         dragNote = -1;
-        return;
-    }
-    if (dragNote >= 0)
-    {
-        const auto& note = view.notes()[static_cast<std::size_t>(dragNote)];
-        drag = onRightEdge(dragNote, e.position.x) ? Drag::resize : Drag::move;
-        grabOffsetTicks = view.tickAtX(e.position.x) - note.startTick;
-        grabPitch = note.pitch;
-        view.audition(note.pitch, note.velocity);
         return;
     }
 
@@ -417,6 +428,8 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
         {
             for (auto& n : moved)
                 n.lengthTicks = std::max(snapTicks, n.lengthTicks + ticks);
+            if (moved.size() == 1)
+                view.newNoteLength = moved.front().lengthTicks; // new notes use it, as in FL
         }
         const auto selected = view.selection;
         view.editNotes(
@@ -802,6 +815,57 @@ bool PianoRollView::edit(EditAction action)
     if (action == EditAction::slice)
     {
         sliceNotes();
+        return true;
+    }
+    if (action == EditAction::duplicate || action == EditAction::lengthToStep)
+    {
+        // These work on the selection, or on all notes when none are selected.
+        if (selection.empty())
+            for (int i = 0; i < static_cast<int>(notes().size()); ++i)
+                selection.push_back(i);
+        if (selection.empty())
+            return true;
+        if (action == EditAction::lengthToStep)
+        {
+            const auto selected = selection;
+            editNotes(
+                [selected](std::vector<model::Note>& list)
+                {
+                    for (int i : selected)
+                        if (i < static_cast<int>(list.size()))
+                            list[static_cast<std::size_t>(i)].lengthTicks = model::ticksPerStep;
+                },
+                0);
+            grid.repaint();
+            return true;
+        }
+        // Duplicate: the copies land right after the selection's block (whole beats) and
+        // become the selection, so pressing it again keeps going. The clipboard is untouched.
+        auto block = model::copyNotes(notes(), selection, model::ticksPerBeat);
+        const auto copies = model::nextPaste(block);
+        const int first = static_cast<int>(notes().size());
+        editNotes([copies](std::vector<model::Note>& list)
+                  { list.insert(list.end(), copies.begin(), copies.end()); }, 0);
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(copies.size()); ++i)
+            selection.push_back(first + i);
+        grid.repaint();
+        return true;
+    }
+    if (action == EditAction::moveUp || action == EditAction::moveDown ||
+        action == EditAction::moveLeft || action == EditAction::moveRight)
+    {
+        if (selection.empty())
+            return false;
+        const int ticks = action == EditAction::moveLeft    ? -snapTicks()
+                          : action == EditAction::moveRight ? snapTicks()
+                                                            : 0;
+        const int semitones = action == EditAction::moveUp     ? 1
+                              : action == EditAction::moveDown ? -1
+                                                               : 0;
+        auto moved = notes();
+        if (model::moveNotes(moved, selection, ticks, semitones))
+            editNotes([moved](std::vector<model::Note>& list) { list = moved; }, 0);
         return true;
     }
     if (action == EditAction::paste)

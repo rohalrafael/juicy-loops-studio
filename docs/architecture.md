@@ -364,8 +364,13 @@ which gives:
   outlines the focused one, and `navigate()` dispatches. With Settings › Ctrl+Tab order = "Last
   used first", `recentAreas` keeps the areas most-recent-first; while the modifier is held the
   order is frozen and `cycleStep` walks it, and `modifierKeysChanged` commits on release.
+  `raiseFocusedArea()` also sets the floating Channel Rack's stacking: in front while it has the
+  focus, behind the Playlist / Piano Roll while they do.
 - **Note keys vs commands:** the typing keyboard only claims plain character keys (codes below
-  128); special keys' codes can end in a letter's byte (Down = ...'T').
+  128) without modifiers; special keys' codes can end in a letter's byte (Down = ...'T').
+- **Editing commands** (copy, duplicate, move, slice...) become a `ui::EditAction` for the
+  Piano Roll or the Playlist (`editInMainView`); each view's `edit()` handles the ones it
+  understands.
 - **Settings** used by commands (tempo steps) live in the settings file; Options › Settings
   (`ui/settings_dialog`) edits them.
 
@@ -378,7 +383,8 @@ which gives:
   **Piano Roll** (F7)
 - the **Mixer** docked below (F9)
 - floating panels inside the window: the **Channel Rack** (F6) and the **effect panel**,
-  both dragged by their title bars
+  both dragged by their title bars (the rack is kept inside the area below the transport bar,
+  `ChannelRack::setMovableArea`)
 - separate windows: plugin editors (`PluginWindow`), the **Sampler** (`SamplerWindow`), and the
   Settings / Keyboard shortcuts / Theme / Plugins / Audio settings dialogs
 

@@ -94,6 +94,7 @@ class MainComponent final : public juce::AudioAppComponent,
     };
     juce::Component* areaComponent(Area area);
     void setFocusArea(Area area);
+    void raiseFocusedArea(); // stacking of the floating Channel Rack follows the focus
     void cycleFocus(int direction);
     void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
     void navigate(juce::CommandID command);

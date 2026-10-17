@@ -998,6 +998,23 @@ bool PlaylistView::edit(EditAction action)
             return true;
         return edit(EditAction::deleteSelection); // cut = copy + delete
     }
+    if (action == EditAction::duplicate)
+    {
+        // The copies land right after the selection's bars and become the selection; the
+        // clipboard is untouched.
+        auto block =
+            model::copyClips(doc.project().playlist.clips, selection, doc.project().stepsPerBar());
+        const auto copies = model::nextPaste(block);
+        const int first = static_cast<int>(doc.project().playlist.clips.size());
+        doc.apply(
+            [copies](model::Project& p)
+            { p.playlist.clips.insert(p.playlist.clips.end(), copies.begin(), copies.end()); });
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(copies.size()); ++i)
+            selection.push_back(first + i);
+        grid.repaint();
+        return true;
+    }
     if (action == EditAction::deselect)
     {
         clearSelection();

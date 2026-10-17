@@ -40,6 +40,7 @@ class BrowserPanel final : public juce::Component, private juce::Timer
     void moveSelection(int delta, bool load = false);
     void openSelected(bool open); // folders: open (true) or close (false)
     void confirmSelected();       // Enter: toggle a folder, or use the sample (onUseSample)
+    void useSelectedSample();     // Ctrl+Enter: use the selected sample; folders are ignored
 
     std::function<double()> previewSeconds;             // length of a click preview
     std::function<void(const juce::File&)> onUseSample; // load into the selected channel

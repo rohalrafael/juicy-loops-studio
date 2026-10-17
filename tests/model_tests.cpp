@@ -472,6 +472,26 @@ TEST_CASE("Slicing a note into rolls keeps pitch, velocity and the overall span"
     CHECK(sliceNote(note, 0).size() == 1);
 }
 
+TEST_CASE("Moving notes keeps the group together at the edges")
+{
+    std::vector<Note> notes = {{ticksPerStep, ticksPerStep, 60, 0.8f},
+                               {4 * ticksPerStep, ticksPerStep, 126, 0.8f},
+                               {0, ticksPerStep, 50, 0.8f}};
+    // Only the selected ones move.
+    CHECK(moveNotes(notes, {0, 1}, ticksPerStep, 1));
+    CHECK(notes[0].startTick == 2 * ticksPerStep);
+    CHECK(notes[0].pitch == 61);
+    CHECK(notes[1].pitch == 127);
+    CHECK(notes[2].startTick == 0);
+    // At the top pitch the group can't go higher; at the start it can't go earlier.
+    CHECK_FALSE(moveNotes(notes, {0, 1}, 0, 1));
+    CHECK(notes[0].pitch == 61);
+    CHECK(moveNotes(notes, {0, 1}, -10 * ticksPerStep, 0));
+    CHECK(notes[0].startTick == 0);
+    CHECK(notes[1].startTick == 3 * ticksPerStep); // 5 steps, moved 2 earlier
+    CHECK_FALSE(moveNotes(notes, {}, ticksPerStep, 0));
+}
+
 TEST_CASE("Copied notes paste right after their block, again and again")
 {
     // A 1-bar beat whose last hit ends at step 14: the block is the whole bar (rounded to beats).

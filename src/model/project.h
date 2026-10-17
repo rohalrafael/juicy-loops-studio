@@ -202,6 +202,11 @@ struct Playlist
 // divide evenly), with the same pitch and velocity: the Piano Roll's slicer, for rolls.
 std::vector<Note> sliceNote(const Note& note, int pieceTicks);
 
+// Moves `notes[indices]` by `ticks` and `semitones` together, limited so none goes before the
+// pattern start or off the 128 pitches (the whole group stops at the edge). Returns false if
+// nothing moved.
+bool moveNotes(std::vector<Note>& notes, const std::vector<int>& indices, int ticks, int semitones);
+
 // Scales the Piano Roll can highlight.
 enum class Scale
 {

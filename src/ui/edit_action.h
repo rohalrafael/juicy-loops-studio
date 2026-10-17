@@ -14,7 +14,13 @@ enum class EditAction
     deleteSelection,
     selectAll,
     deselect,
-    slice, // Piano Roll only
+    duplicate, // copy + paste right after (Ctrl+B)
+    slice,     // Piano Roll only, as are the ones below
+    moveUp,    // a semitone
+    moveDown,
+    moveLeft, // by the snap
+    moveRight,
+    lengthToStep, // shorten notes to one step
 };
 
 } // namespace jls::ui

@@ -479,9 +479,17 @@ void MainComponent::renamePattern()
 
 void MainComponent::toggleChannelRack()
 {
-    channelRack.setVisible(!channelRack.isVisible());
-    if (channelRack.isVisible())
-        channelRack.toFront(false);
+    // As in FL: a rack hidden behind the Playlist / Piano Roll comes to the front first.
+    const bool behind =
+        getIndexOfChildComponent(&channelRack) <
+        std::max(getIndexOfChildComponent(&playlist), getIndexOfChildComponent(&pianoRoll));
+    if (channelRack.isVisible() && !behind)
+        channelRack.setVisible(false);
+    else
+    {
+        channelRack.setVisible(true);
+        setFocusArea(Area::channelRack);
+    }
     menuItemsChanged();
 }
 
@@ -489,6 +497,7 @@ void MainComponent::showPlaylist()
 {
     pianoRoll.setVisible(false);
     playlist.setVisible(true);
+    setFocusArea(Area::mainView);
     menuItemsChanged();
 }
 
@@ -496,6 +505,7 @@ void MainComponent::showPianoRoll()
 {
     playlist.setVisible(false);
     pianoRoll.setVisible(true);
+    setFocusArea(Area::mainView);
     pianoRoll.refresh();
     menuItemsChanged();
 }
@@ -527,6 +537,20 @@ void MainComponent::setFocusArea(Area area)
         focusArea = area;
         repaint();
     }
+    raiseFocusedArea();
+}
+
+void MainComponent::raiseFocusedArea()
+{
+    // The floating Channel Rack sits in front of the Playlist / Piano Roll only while it has the
+    // focus; focusing the main view puts the rack behind it, like windows in FL.
+    if (focusArea == Area::channelRack)
+        channelRack.toFront(false);
+    else if (focusArea == Area::mainView)
+        channelRack.toBehind(getIndexOfChildComponent(&playlist) <
+                                     getIndexOfChildComponent(&pianoRoll)
+                                 ? static_cast<juce::Component*>(&playlist)
+                                 : &pianoRoll);
 }
 
 void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
@@ -553,6 +577,7 @@ void MainComponent::cycleFocus(int direction)
         const int n = static_cast<int>(showing.size());
         cycleStep = ((cycleStep + direction) % n + n) % n;
         focusArea = showing[static_cast<std::size_t>(cycleStep)];
+        raiseFocusedArea();
         repaint();
         if (!juce::ModifierKeys::currentModifiers.isAnyModifierKeyDown())
             setFocusArea(focusArea); // invoked without a held modifier: commit right away
@@ -721,6 +746,7 @@ void MainComponent::resized()
     typingButton.setBounds(bar.removeFromLeft(60));
 
     area.removeFromTop(margin);
+    const auto panelsArea = area; // everything below the transport bar
     if (browser.isVisible())
     {
         // Full height next to everything below the transport bar.
@@ -758,6 +784,7 @@ void MainComponent::resized()
     {
         channelRack.setSize(width, height);
     }
+    channelRack.setMovableArea(panelsArea);
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)
@@ -795,10 +822,30 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
              jls::commands::saveProjectAs, 0, jls::commands::exportWav, 0, jls::commands::quit});
         break;
     case 1:
-        add({jls::commands::undo, jls::commands::redo, 0, jls::commands::cut, jls::commands::copy,
-             jls::commands::paste, jls::commands::deleteSelection, 0, jls::commands::selectAll,
-             jls::commands::deselect, 0, jls::commands::sliceNotes, jls::commands::sliceFiner,
-             jls::commands::sliceCoarser, 0, jls::commands::snapFiner, jls::commands::snapCoarser});
+        add({jls::commands::undo,
+             jls::commands::redo,
+             0,
+             jls::commands::cut,
+             jls::commands::copy,
+             jls::commands::paste,
+             jls::commands::deleteSelection,
+             0,
+             jls::commands::selectAll,
+             jls::commands::deselect,
+             jls::commands::duplicate,
+             0,
+             jls::commands::moveSelectionUp,
+             jls::commands::moveSelectionDown,
+             jls::commands::moveSelectionLeft,
+             jls::commands::moveSelectionRight,
+             jls::commands::notesToStepLength,
+             0,
+             jls::commands::sliceNotes,
+             jls::commands::sliceFiner,
+             jls::commands::sliceCoarser,
+             0,
+             jls::commands::snapFiner,
+             jls::commands::snapCoarser});
         break;
     case 2:
         add({jls::commands::newPattern, jls::commands::clonePattern, jls::commands::renamePattern,
@@ -809,7 +856,8 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     {
         add({jls::commands::showPlaylist, jls::commands::toggleChannelRack,
              jls::commands::showPianoRoll, jls::commands::toggleMixer, jls::commands::toggleBrowser,
-             jls::commands::browserSwitchSide, jls::commands::browserAddFolder, 0});
+             jls::commands::browserSwitchSide, jls::commands::browserAddFolder,
+             jls::commands::browserUseSample, 0});
         juce::PopupMenu rack;
         for (int id :
              {jls::commands::toggleRackLoop, jls::commands::rackShow16, jls::commands::rackShow32,
@@ -905,6 +953,11 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
     case sliceNotes:
     case sliceFiner:
     case sliceCoarser:
+    case moveSelectionUp:
+    case moveSelectionDown:
+    case moveSelectionLeft:
+    case moveSelectionRight:
+    case notesToStepLength:
         info.setActive(pianoRoll.isVisible());
         break;
     case jls::commands::deletePattern:
@@ -996,6 +1049,24 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case deleteSelection:
         editInMainView(ui::EditAction::deleteSelection);
+        break;
+    case jls::commands::duplicate:
+        editInMainView(ui::EditAction::duplicate);
+        break;
+    case moveSelectionUp:
+        pianoRoll.edit(ui::EditAction::moveUp);
+        break;
+    case moveSelectionDown:
+        pianoRoll.edit(ui::EditAction::moveDown);
+        break;
+    case moveSelectionLeft:
+        pianoRoll.edit(ui::EditAction::moveLeft);
+        break;
+    case moveSelectionRight:
+        pianoRoll.edit(ui::EditAction::moveRight);
+        break;
+    case notesToStepLength:
+        pianoRoll.edit(ui::EditAction::lengthToStep);
         break;
     case selectAll:
         editInMainView(ui::EditAction::selectAll);
@@ -1104,6 +1175,9 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case previewPlayPause:
         browser.playPause();
+        break;
+    case browserUseSample:
+        browser.useSelectedSample();
         break;
 
     case sliceNotes:

@@ -65,8 +65,9 @@ void LiveInput::setTypingEnabled(bool enabled)
 
 bool LiveInput::isNoteKey(const juce::KeyPress& key) const
 {
+    // Keys with a modifier are shortcuts (Ctrl+Z, Shift+D...), never notes.
     if (!typing || key.getModifiers().isCommandDown() || key.getModifiers().isCtrlDown() ||
-        key.getModifiers().isAltDown())
+        key.getModifiers().isAltDown() || key.getModifiers().isShiftDown())
         return false;
     // Only plain character keys: special keys (arrows, F-keys...) have codes whose low byte
     // can look like a letter (Down ends in 'T'), which made them count as note keys.
@@ -87,7 +88,8 @@ bool LiveInput::updateKeys()
         return false;
     // Shortcuts like Ctrl+Z share keys with notes: don't start notes while a modifier is held.
     const auto mods = juce::ModifierKeys::currentModifiers;
-    const bool canStart = !mods.isCommandDown() && !mods.isCtrlDown() && !mods.isAltDown();
+    const bool canStart =
+        !mods.isCommandDown() && !mods.isCtrlDown() && !mods.isAltDown() && !mods.isShiftDown();
 
     bool changed = false;
     for (std::size_t i = 0; i < keys().size(); ++i)

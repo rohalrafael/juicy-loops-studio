@@ -298,6 +298,13 @@ void BrowserPanel::confirmSelected()
         onUseSample(entry->getFile());
 }
 
+void BrowserPanel::useSelectedSample()
+{
+    auto* entry = dynamic_cast<Item*>(tree.getSelectedItem(0));
+    if (entry != nullptr && !entry->getFile().isDirectory() && onUseSample)
+        onUseSample(entry->getFile());
+}
+
 void BrowserPanel::chooseFolderToAdd()
 {
     chooser = std::make_unique<juce::FileChooser>(

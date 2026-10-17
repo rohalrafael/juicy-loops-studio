@@ -20,14 +20,16 @@ class PianoRollView;
 
 // The note grid. Mouse, as in FL:
 //   left-click empty space  add a note (same length as the last one), then drag to move it
-//                           (the note sounds while the button is held, at its current pitch)
-//   drag a note             move it in time and pitch (snapped)
+//                           (the note sounds while the button is held, at its current pitch);
+//                           with a selection, the click only deselects
+//   click a note            select it; dragging then moves it in time and pitch (snapped)
 //   drag a note's right end resize it (new notes then use that length)
-//   right-click / drag      delete notes
+//   Shift + click a note    add it to the selection, or take it out
+//   right-click / drag      deselect and delete notes
 //   Ctrl + drag             select the notes in a rectangle; drag a selected note to move them
-//                           all (its right end resizes them all); Delete removes them, Ctrl+A
-//                           selects all, Esc deselects; Ctrl+C / X copy / cut them, Ctrl+V
-//                           pastes after the copied block (again: after the last paste)
+//                           all (its right end resizes them all)
+// The keyboard edits the selection through PianoRollView::edit(): Delete, Ctrl+A, Esc,
+// Ctrl+C / X / V, Ctrl+B (duplicate), Shift + arrows (move), Shift+D (shorten to a step).
 //   Ctrl + mouse wheel      zoom horizontally
 class NoteGrid final : public juce::Component
 {

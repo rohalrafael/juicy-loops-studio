@@ -19,4 +19,8 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
+  render to WAV, validate) and later an opt-in localhost control channel in the app (run
+  commands by string id, read project state, load / save, screenshots), possibly wrapped as
+  an MCP server.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.

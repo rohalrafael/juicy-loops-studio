@@ -228,6 +228,10 @@ class ChannelRack final : public juce::Component,
     // Set by the owner: show a sample channel's Sampler window (`toggle` as above).
     std::function<void(model::ChannelId, bool toggle)> onShowSampler;
 
+    // Where the rack may be dragged (the owner's area below the transport bar). The title bar
+    // always stays inside it, so the rack can't end up where it can't be grabbed again.
+    void setMovableArea(juce::Rectangle<int> area);
+
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
@@ -264,7 +268,9 @@ class ChannelRack final : public juce::Component,
     LengthHandle lengthHandle;
     juce::TextButton closeButton{juce::String::fromUTF8("\xc3\x97")}; // multiplication sign
     juce::ComponentDragger dragger;
-    juce::ComponentBoundsConstrainer dragBounds;
+    juce::Rectangle<int> movableArea;
+    bool movingRack = false; // the current mouse press started on the title bar
+    void keepReachable();
     std::unique_ptr<juce::FileChooser> chooser;
     int dropRow = -1; // row under a file drag, or -1 for "new channel"
     bool dragging = false;

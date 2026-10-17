@@ -242,3 +242,18 @@ not). Older entries describe the project as it was then; later entries may super
   toggles its Sampler (FL); double-click an audio clip opens it. Left-edge trim
   (`Clip::offsetSteps`). Verified by export: 2 s 110 Hz clip at 130 -> 160 BPM: Stretch 1.63 s
   at 110 Hz, Resample 1.63 s at 135.4 Hz.
+
+- 2026-10-17: Projects are `.jlp` (like FL's `.flp`); `.jls` still opens, and saving one writes
+  a `.jlp` beside it instead of overwriting the original.
+
+- 2026-10-18: Piano Roll editing keys (FL's): Shift+arrows move the selection (a semitone / the
+  snap), Ctrl+B duplicates (selection or all notes; Playlist: selected clips) right after its
+  block without touching the clipboard, Shift+D shortens to a step. Clicking a note selects it
+  (Shift+click toggles); right-click also deselects. So **tempo moved again, to Alt+Shift+Up/Down**
+  (fine stays Ctrl+Shift+Up/Down), and keys with Shift no longer play typing-keyboard notes.
+  Ctrl+Enter loads the Browser's sample into the selected channel from any focus area.
+  The Channel Rack's stacking follows the focus: focusing (or showing) the Playlist / Piano Roll
+  puts it behind, F6 brings it back. Fixed: dragging the rack up got stuck because JUCE's
+  `mouseDownPosition` is relative to the component's *current* position, so after moving up the
+  press no longer lay in the title bar; the rack also couldn't be dragged under the transport
+  bar where its title bar was out of reach (now kept inside the area below it).

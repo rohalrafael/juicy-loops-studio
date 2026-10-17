@@ -14,7 +14,10 @@ mouse actions follow FL wherever FL has one.
 | Browser | Alt+F8 | Your sample folders, with previews (docked at the left or right) |
 | Sampler | (click a sample channel) | A sample's time-stretching and pitch (a separate window) |
 
-The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
+The Playlist and Piano Roll share the main area; F5 and F7 switch between them. The Channel
+Rack floats in front of them while you work in it; clicking the Playlist or Piano Roll (or
+opening one with F5 / F7) puts the rack behind it, as in FL. F6 or Ctrl+Tab brings it back to
+the front (F6 again hides it).
 
 ## Keyboard
 
@@ -41,7 +44,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Space / Shift+Space | Play-stop (stop rewinds) / play-pause |
 | L | Switch between pattern (PAT) and song (SONG) mode |
 | Ctrl+M | Metronome on/off |
-| Shift+↑ / Shift+↓ | Tempo up / down by the tempo step (5 BPM) |
+| Alt+Shift+↑ / ↓ | Tempo up / down by the tempo step (5 BPM) |
 | Ctrl+Shift+↑ / ↓ | Tempo up / down by the fine step (1 BPM) |
 | F4 / Ctrl+Shift+C / F2 | New / clone / rename pattern |
 | Numpad + / − | Next / previous pattern |
@@ -49,6 +52,10 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Alt+F8 | Browser |
 | Ctrl+C / X / V | Copy / cut / paste (Piano Roll or Playlist) |
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
+| Ctrl+B | Duplicate: copy the selection and paste it right after (Piano Roll or Playlist) |
+| Shift+↑ / ↓ | Move the selected notes up / down a semitone (Piano Roll) |
+| Shift+← / → | Move the selected notes earlier / later by the snap (Piano Roll) |
+| Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Alt+U | Slice notes (Piano Roll) |
 | Alt+↑ / Alt+↓ | Slice size smaller / larger |
 | Alt+→ / Alt+← | Snap finer / coarser (Piano Roll or Playlist) |
@@ -63,9 +70,10 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Ctrl+, | Settings (tempo steps, preview length) |
 | Ctrl+Tab / Ctrl+Shift+Tab | Focus the next / previous area |
 | ↑ ↓ ← → / Enter | Move / open or load in the focused area |
+| Ctrl+Enter | Load the Browser's selected sample into the selected channel, whichever area has the focus |
 
 While **Keys** is on, the typing keyboard's letter keys play notes even if you give one of them
-to a command; use them with Ctrl or Alt for shortcuts. The tempo steps are set in
+to a command; use them with Ctrl, Alt or Shift for shortcuts. The tempo steps are set in
 **Options › Settings…**.
 
 On macOS use Cmd instead of Ctrl.
@@ -133,6 +141,7 @@ are remembered.
 | ↑ / ↓ (Browser focused) | Move through the list; samples preview as you land on them |
 | → / ← | Open / close a folder (← on a file goes to its folder) |
 | Enter | Open or close a folder; on a sample: load it into the selected channel |
+| Ctrl+Enter | Load the selected sample into the selected channel, even while another area has the focus |
 | Ctrl+↑ / Ctrl+↓ | Previous / next sample, loaded into the selected channel right away (and previewed): audition samples in the song as it plays |
 
 Loading a sample into a channel renames the channel after the sample, as in FL.
@@ -201,6 +210,7 @@ installed, the channel stays silent and keeps them.
 | Drag a selected clip | Move all selected clips together |
 | Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
+| Ctrl+B | Duplicate the selected clips right after their bars (the copies get selected: press again to keep going) |
 
 **Audio clips.** Dropping a sample on the Playlist makes an audio clip: the sample plays at that
 point in the song, shown with its waveform. Move, resize (shorter clips cut the sample off),
@@ -235,9 +245,10 @@ in time. Exports always use the finished stretch.
 | Do this | To |
 |---|---|
 | Left-click empty space | Add a note (same length as the last one), then drag to move it |
-| Drag a note | Move it in time and pitch |
+| Click a note | Select it (just it); drag to move it in time and pitch |
+| Shift + click a note | Add it to the selection, or take it out |
 | Drag a note's right end | Change its length (new notes use it too) |
-| Right-click / drag | Delete notes |
+| Right-click / drag | Deselect, and delete the notes under the mouse |
 | Velocity lane (bottom) | Drag a stem up/down to set velocity |
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Beat, step, ½ step, ⅓ step or none |
@@ -246,6 +257,9 @@ in time. Exports always use the finished stretch.
 | Drag a selected note | Move all selected notes together (its right end resizes them all) |
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected notes; paste them right after the copied beats (again: after the last paste), also into another channel or pattern |
+| Shift + arrows | Move the selected notes: ↑ / ↓ a semitone, ← / → by the snap |
+| Ctrl+B | Duplicate the selected notes (all if none are selected) right after their beats; the copies get selected, so pressing again keeps going. The clipboard is left alone |
+| Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
 | Click and hold a key on the left | Play that note (slide to play others) |
 | Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |
@@ -284,7 +298,7 @@ length doesn't change the sound yet: samples always play to their end, like FL's
 
 | Setting | Does |
 |---|---|
-| Tempo step / Fine tempo step | How far Tempo up / down (Shift+↑ / ↓) and the fine versions (Ctrl+Shift+↑ / ↓) move the tempo: 5 and 1 BPM by default |
+| Tempo step / Fine tempo step | How far Tempo up / down (Alt+Shift+↑ / ↓) and the fine versions (Ctrl+Shift+↑ / ↓) move the tempo: 5 and 1 BPM by default |
 | Click preview length | How much of a sample a click in the Browser plays (5 s by default) |
 | Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
 

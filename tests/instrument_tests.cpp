@@ -10,6 +10,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -475,4 +476,80 @@ TEST_CASE("Pressing a held key again releases it first")
                           {NoteEvent::Kind::noteOff, 0, 60},
                           {NoteEvent::Kind::noteOn, 0, 60}};
     CHECK(*rig.log == expected);
+}
+
+// ---------------------------------------------------------------------------- play position
+
+namespace
+{
+
+// Remembers every position it was told about (one per block).
+class PositionRecorder final : public engine::InstrumentProcessor
+{
+  public:
+    explicit PositionRecorder(std::shared_ptr<std::vector<engine::PlayPosition>> l)
+        : log(std::move(l))
+    {
+    }
+    void prepare(double, int) override {}
+    void reset() override {}
+    void setPlayPosition(const engine::PlayPosition& p) override { log->push_back(p); }
+    void process(std::span<const NoteEvent>, float* left, float* right, int n) override
+    {
+        std::fill_n(left, n, 0.0f);
+        std::fill_n(right, n, 0.0f);
+    }
+
+  private:
+    std::shared_ptr<std::vector<engine::PlayPosition>> log;
+};
+
+} // namespace
+
+TEST_CASE("Instruments are told the tempo and the position within the loop")
+{
+    Rig rig;
+    auto positions = std::make_shared<std::vector<engine::PlayPosition>>();
+    rig.pool.setInstrumentFactory([positions](const std::string&, const std::string&, double, int)
+                                  { return std::make_unique<PositionRecorder>(positions); });
+    rig.publish();
+
+    rig.run(block);
+    REQUIRE(positions->size() == 1);
+    CHECK_FALSE(positions->back().playing);
+    CHECK(positions->back().bpm == 120.0);
+    CHECK(positions->back().loopLengthBeats == 4.0); // one 16-step pattern
+
+    rig.engine.transport().play();
+    // 4 beats (one loop) + 1.5 beats, in whole blocks: 5.5 * 24000 = 132000 samples.
+    const int blocks = 132000 / block; // 257 blocks = 131584 samples
+    rig.run(blocks * block);
+    const auto& p = positions->back(); // the start of the last block
+    const double expectedBeat = std::fmod((blocks - 1) * block / 24000.0, 4.0);
+    CHECK(p.playing);
+    CHECK(std::abs(p.beat - expectedBeat) < 1e-9);
+    CHECK(std::abs(p.seconds - expectedBeat * 0.5) < 1e-9); // 120 BPM: half a second per beat
+    CHECK(p.sample == std::llround(expectedBeat * 24000.0));
+    CHECK(p.barStartBeat() == 0.0);
+}
+
+TEST_CASE("In song mode the song is the loop; bars follow the time signature")
+{
+    Rig rig;
+    auto positions = std::make_shared<std::vector<engine::PlayPosition>>();
+    rig.pool.setInstrumentFactory([positions](const std::string&, const std::string&, double, int)
+                                  { return std::make_unique<PositionRecorder>(positions); });
+    rig.project.beatsPerBar = 3;
+    rig.engine.transport().setBeatsPerBar(3);
+    rig.project.playlist.clips.push_back({rig.project.current().id, 0, 0, 24}); // 6 beats
+    rig.project.songMode = true;
+    rig.publish();
+    rig.engine.transport().play();
+    rig.run(4 * 24000 + block); // past beat 4
+
+    const auto& p = positions->back();
+    CHECK(p.loopLengthBeats == 6.0); // 24 steps = 2 bars of 3/4
+    CHECK(p.beatsPerBar == 3);
+    CHECK(p.beat >= 4.0);
+    CHECK(p.barStartBeat() == 3.0);
 }

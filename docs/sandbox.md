@@ -50,9 +50,30 @@ tools/sandbox.sh down                     # stop; `reset` also deletes the home 
   host <=> sandbox pair interfaces: operation not supported" after a kernel update, before
   rebooting), use `JLS_SANDBOX_NETWORK=host tools/sandbox.sh up`.
 
+## A binary for the host
+
+`tools/sandbox.sh run tools/dist.sh` builds an optimized app (RelWithDebInfo, so crash
+backtraces stay readable) into `build-dist/` and copies it to **`dist/juicy-loops-studio`**,
+with `dist/BUILD-INFO.txt` (version, commit, date). Run it on the host:
+
+```sh
+./dist/juicy-loops-studio
+```
+
+It works on the host because the sandbox is the same distribution (check with
+`ldd dist/juicy-loops-studio | grep "not found"`). It uses the host's own settings and plugins.
+If the sandbox image gets much newer libraries than the host (e.g. the host hasn't been updated
+in a while), update the host or rebuild the image from an older snapshot.
+
+## Plugins in the sandbox
+
+The sandbox keeps its own plugin list (`~/.config/JuicyLoopsStudio/plugins.xml` in the home
+volume). Scan once in Options › Plugins, or copy the host's list in (same packages, same paths):
+`docker cp ~/.config/JuicyLoopsStudio/plugins.xml jls-sandbox:/home/$USER/.config/JuicyLoopsStudio/`.
+
 ## Two ways to work with Claude
 
-- **Claude on the host, tools in the sandbox:** Claude runs on the host as usual and runs builds,
+- **Claude on the host, tools in the sandbox** (the setup in use): Claude runs on the host as usual and runs builds,
   tests and installs through `tools/sandbox.sh run ...`. Memory, git pushes (through the host's
   SSH agent) and the conversation stay on the host.
 - **Claude inside the sandbox** (`tools/sandbox.sh claude`): everything it runs stays in the

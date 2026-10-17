@@ -3,6 +3,8 @@
 // Instruments that play a channel's notes and produce audio (hosted plugin synths). The engine
 // sends them note events with exact sample offsets; plain C++ so the engine stays JUCE-free.
 
+#include "engine/play_position.h"
+
 #include <cstdint>
 #include <span>
 #include <string>
@@ -43,6 +45,9 @@ class InstrumentProcessor
 
     // Opaque state to store in the project (a plugin's settings). UI thread.
     virtual std::string saveState() const { return {}; }
+
+    // Audio thread, right before process(): where playback is.
+    virtual void setPlayPosition(const PlayPosition&) {}
 };
 
 } // namespace jls::engine

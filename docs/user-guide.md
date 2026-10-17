@@ -65,8 +65,15 @@ Details of the file format: [project-format.md](project-format.md).
 - **Play:** play/pause (keeps the position). **Stop** rewinds to the start.
 - **Tempo:** click the arrows, or click the number and type a value.
 - **Position:** bar:beat:step within whatever is looping.
+- **Clock** (below the position): current time / total time, as minutes:seconds.milliseconds.
+  In SONG mode that's the song (the Playlist); in PAT mode, the selected pattern.
 - **Time signature:** beats per bar (n/4).
 - **Metronome:** on/off.
+- **Keys:** typing keyboard to piano on/off (Ctrl+T).
+
+Plugins follow the tempo, time signature and position, so arpeggiators, tempo-synced delays
+and LFOs stay in time with the song. In PAT mode they see the pattern as a loop, in SONG mode
+the whole song.
 
 ## Channel Rack
 

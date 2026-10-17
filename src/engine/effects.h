@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/play_position.h"
+
 #include <memory>
 #include <span>
 #include <string>
@@ -37,6 +39,9 @@ class EffectProcessor
     // Opaque state to store in the project (used by plugins, whose settings live inside them).
     // Built-in effects keep their settings in params and return nothing. UI thread.
     virtual std::string saveState() const { return {}; }
+
+    // Audio thread, right before process(): where playback is. Built-in effects ignore it.
+    virtual void setPlayPosition(const PlayPosition&) {}
 };
 
 struct EffectType

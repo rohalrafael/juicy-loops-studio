@@ -107,6 +107,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::TextButton metronomeButton{"Metronome"};
     juce::TextButton typingButton{"Keys"}; // typing keyboard to piano (Ctrl+T)
     juce::Label positionLabel;
+    juce::Label timeLabel; // clock under the position: current / total time of what's looping
     ui::PlaylistView playlist;
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
     ui::MixerView mixer;         // docked below them (F9)

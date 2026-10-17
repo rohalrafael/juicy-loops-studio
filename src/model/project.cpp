@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 
 namespace jls::model
@@ -314,6 +315,14 @@ std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& nam
     else
         return nullptr;
     return std::make_shared<const engine::SampleBuffer>(engine::synthesizeDrum(sound, sampleRate));
+}
+
+std::string formatTime(double seconds)
+{
+    const auto ms = static_cast<long long>(std::floor(std::max(0.0, seconds) * 1000.0 + 1e-6));
+    char text[32];
+    std::snprintf(text, sizeof(text), "%lld:%02lld.%03lld", ms / 60000, ms / 1000 % 60, ms % 1000);
+    return text;
 }
 
 Project makeDefaultProject(double sampleRate)

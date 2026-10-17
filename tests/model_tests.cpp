@@ -312,3 +312,16 @@ TEST_CASE("Removing the selected channel selects another")
     project.removeChannel(kick);
     CHECK(project.selectedChannel == project.channels[0].id);
 }
+
+TEST_CASE("Times are shown as minutes, seconds and milliseconds")
+{
+    CHECK(formatTime(0.0) == "0:00.000");
+    CHECK(formatTime(1.2345) == "0:01.234");
+    CHECK(formatTime(65.5) == "1:05.500");
+    CHECK(formatTime(4503.25) == "75:03.250");
+    CHECK(formatTime(-3.0) == "0:00.000");
+    // 16 steps at 120 BPM = 4 beats = 2 seconds.
+    Project project;
+    project.tempo = 120.0;
+    CHECK(formatTime(16 * project.secondsPerStep()) == "0:02.000");
+}

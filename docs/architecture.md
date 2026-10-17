@@ -239,9 +239,16 @@ Hosted plugins (VST3 and LV2, through JUCE) are effects and instruments like any
 - **Windows:** `PluginWindow` shows the editor of either kind. It holds the plugin's owner,
   and `MainComponent` closes it when the effect/channel is removed or its plugin replaced (the
   window's `owner()` no longer matches the pool's).
+- **Play head:** every chunk, `Engine::updatePlayPosition()` fills a `PlayPosition` (playing,
+  tempo, beats per bar, position in beats within the loop, the loop's length, the position in
+  seconds and samples) and hands it to each effect and instrument through
+  `setPlayPosition()` right before its `process()`. Built-in effects ignore it; the plugin
+  wrappers keep it in a `HostPlayHead`, which answers JUCE's `AudioPlayHead::getPosition()`
+  (and JUCE passes it on as VST3's ProcessContext / LV2's time position). The position is
+  within what's looping (pattern in PAT mode, song in SONG mode) and reported as a loop from 0,
+  matching the position display. It's a copy per processor, so the export's private engine
+  gives the same plugins their own positions without interfering.
 - **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
-  Plugins get no play head (tempo/position), so tempo-synced LFOs and arpeggiators run at their
-  own default tempo.
 
 ## UI
 

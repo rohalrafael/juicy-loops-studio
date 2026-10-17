@@ -138,8 +138,8 @@ and run it before milestones or after platform-specific changes.
 5. [x] Piano Roll
 6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
 7. [x] Plugin hosting: VST3/LV2 **effects** (phase 1) and **instruments** (phase 2), live input
-       (typing keyboard + MIDI). Still to do: play head for plugins, recording live input,
-       out-of-process hosting
+       (typing keyboard + MIDI), play head (tempo/position) for plugins. Still to do: recording
+       live input, out-of-process hosting
 8. [x] Project save/load (.jls JSON), WAV export
 
 ## Decision log
@@ -294,6 +294,15 @@ and run it before milestones or after platform-specific changes.
   (`MidiDeviceListConnection`); notes, CCs, pitch bend. Not saved: device choices. Not yet:
   recording, octave shift for the typing keyboard, highlighting played keys.
 
+- 2026-10-17: Play head + clock. `engine::PlayPosition` (playing, bpm, beats per bar, beat within
+  the loop, loop length, seconds, samples) computed per chunk and passed via
+  `setPlayPosition()` to every effect/instrument before `process()`; `plugins::HostPlayHead`
+  turns it into JUCE's `AudioPlayHead` (owned by each wrapper, declared before the instance).
+  Position is within what loops (pattern/song), reported as a loop from 0. Verified with LSP
+  Artistic Delay's SYNC: showed 130 then 100 BPM (LSP latches the value until SYNC is re-pressed).
+  Clock under bar:beat:step: `model::formatTime` "M:SS.mmm", current / total of what loops.
+  Found: the tempo +/- buttons step by 0.001 BPM (slider interval); to fix.
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools
@@ -302,6 +311,12 @@ and run it before milestones or after platform-specific changes.
   yourself (`sudo pacman -S`) and add lasting ones to `docker/Dockerfile`, instead of asking the
   user to install them on the host. Listening and Hyprland-specific behaviour still need the
   user's desktop. If Docker networking fails after a kernel update, `JLS_SANDBOX_NETWORK=host`.
+- **Working mode (user's choice, 2026-10-17): Claude runs on the host, everything is built,
+  installed and tested in the sandbox.** Don't install packages or build on the host system.
+- **Give the user a binary after each finished feature** (and when they ask):
+  `tools/sandbox.sh run tools/dist.sh` -> `dist/juicy-loops-studio` (+ `dist/BUILD-INFO.txt`),
+  check `ldd ... | grep "not found"` on the host, and tell them to run `./dist/juicy-loops-studio`.
+- The sandbox has its own plugin list; copy the host's `plugins.xml` in (docs/sandbox.md).
 - On the host, the user is happy to install tools on request (ask, don't work around).
 - Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh, ImageMagick.
 - **UI testing: use `tools/ui-test.sh`** (Xvfb display :99 + xdotool + ImageMagick). The

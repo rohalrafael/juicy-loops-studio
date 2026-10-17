@@ -39,6 +39,7 @@ up() {
                 --ulimit memlock=-1:-1 # JACK clients lock their memory
                 -v "$HOME_VOLUME:/home/$USER_NAME"
                 -v "$ROOT:$ROOT" -w "$ROOT"
+                -v /etc/localtime:/etc/localtime:ro # host time zone (build info, logs)
                 # UI-test screenshots land where a Claude on the host can read them too.
                 -v /tmp/jls-ui-test:/tmp/jls-ui-test)
     # ALSA sequencer, for MIDI tests (aconnect, aplaymidi). Needs the device's group.

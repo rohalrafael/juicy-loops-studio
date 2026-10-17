@@ -198,6 +198,7 @@ struct Project
     const Pattern& current() const;
 
     int stepsPerBar() const { return beatsPerBar * stepsPerBeat; }
+    double secondsPerStep() const { return 60.0 / tempo / stepsPerBeat; }
     int lengthInSteps(const Pattern& pattern) const { return pattern.lengthInSteps(stepsPerBar()); }
     // Length of the arrangement: end of the last clip, rounded up to a whole bar (0 if empty).
     int songLengthInSteps() const;
@@ -211,6 +212,9 @@ struct Project
     const EffectSlot* findEffect(EffectId id, int* trackOut = nullptr) const;
     void removeEffect(EffectId id);
 };
+
+// A duration as a clock, "M:SS.mmm" (minutes grow past 59: "75:03.250"). Negative = 0.
+std::string formatTime(double seconds);
 
 // A built-in synthesized sound by name ("kick", "clap", "hat", "snare"); null if unknown.
 std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& name,

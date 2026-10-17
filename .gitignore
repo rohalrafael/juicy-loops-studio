@@ -7,3 +7,5 @@ compile_commands.json
 *.swp
 .DS_Store
 build-docker/
+build-dist/
+dist/

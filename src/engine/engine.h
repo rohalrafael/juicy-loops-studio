@@ -75,6 +75,8 @@ class Engine
     // Notes currently held on instruments (for tests and debugging). Audio thread / offline.
     int heldNoteCount() const { return heldCount; }
     int liveNoteCount() const { return liveCount; }
+    // What effects and instruments were last told about the playback position.
+    const PlayPosition& lastPlayPosition() const { return playPosition; }
 
     // Any thread but the audio thread (UI, MIDI input): queues a live event; the audio thread
     // applies it at the start of its next block. Senders are serialized with a mutex the audio
@@ -87,6 +89,7 @@ class Engine
   private:
     void adoptNewestState();
     void renderChunk(float* const* channels, int numChannels, int offset, int numSamples);
+    void updatePlayPosition(const BlockPosition& block);
     void processTrack(int track, int numSamples);
 
     // Instruments. Every started note is held until its Trigger::endTick, so it always gets a
@@ -143,6 +146,7 @@ class Engine
     int noteEventCount = 0;
     bool wasPlaying = false;
     double lastEndBeat = 0.0;
+    PlayPosition playPosition; // this chunk's, handed to every effect and instrument
 
     // Live input: queue (UI/MIDI threads -> audio) and what is held (audio thread only).
     static constexpr int maxLiveNotes = 128;

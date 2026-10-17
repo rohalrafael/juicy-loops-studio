@@ -16,11 +16,33 @@ std::string saveStateOf(juce::AudioPluginInstance& plugin)
 
 } // namespace
 
+// ----------------------------------------------------------------------------- HostPlayHead
+
+juce::Optional<juce::AudioPlayHead::PositionInfo> HostPlayHead::getPosition() const
+{
+    PositionInfo info;
+    info.setIsPlaying(position.playing);
+    info.setBpm(position.bpm);
+    info.setTimeSignature(TimeSignature{position.beatsPerBar, 4});
+    info.setPpqPosition(position.beat);
+    info.setPpqPositionOfLastBarStart(position.barStartBeat());
+    info.setBarCount(position.beatsPerBar > 0
+                         ? static_cast<juce::int64>(position.beat / position.beatsPerBar)
+                         : 0);
+    info.setTimeInSeconds(position.seconds);
+    info.setTimeInSamples(position.sample);
+    info.setIsLooping(position.loopLengthBeats > 0.0);
+    if (position.loopLengthBeats > 0.0)
+        info.setLoopPoints(LoopPoints{0.0, position.loopLengthBeats});
+    return info;
+}
+
 // ----------------------------------------------------------------------------- PluginEffect
 
 PluginEffect::PluginEffect(std::unique_ptr<juce::AudioPluginInstance> pluginInstance)
     : instance(std::move(pluginInstance))
 {
+    instance->setPlayHead(&playHead);
     // Ask for stereo in/out; plugins that can't do it keep their own layout and we adapt.
     juce::AudioProcessor::BusesLayout stereo;
     stereo.inputBuses.add(juce::AudioChannelSet::stereo());
@@ -83,6 +105,7 @@ std::string PluginEffect::saveState() const
 PluginInstrument::PluginInstrument(std::unique_ptr<juce::AudioPluginInstance> pluginInstance)
     : instance(std::move(pluginInstance))
 {
+    instance->setPlayHead(&playHead);
     // No audio input, stereo out. Plugins that insist on their own layout keep it; we use the
     // first two output channels (or the only one, for mono synths).
     juce::AudioProcessor::BusesLayout layout;

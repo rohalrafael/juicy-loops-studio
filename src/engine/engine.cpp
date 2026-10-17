@@ -352,6 +352,7 @@ void Engine::renderInstruments(int numTracks, int numSamples)
         if (!channel.instrument)
             continue;
         // Instruments run every block, with or without events, so releases and tails continue.
+        channel.instrument->setPlayPosition(playPosition);
         channel.instrument->process({channelEvents.data(), count}, left, right, numSamples);
 
         const float gainLeft = channel.muted ? 0.0f : channel.gainLeft;
@@ -382,6 +383,7 @@ void Engine::process(float* const* channels, int numChannels, int numSamples)
 void Engine::renderChunk(float* const* channels, int numChannels, int offset, int numSamples)
 {
     const auto block = transportState.advance(numSamples, sampleRate);
+    updatePlayPosition(block);
     const int numTracks = current == nullptr ? 1
                                              : std::clamp(static_cast<int>(current->tracks.size()),
                                                           1, maxMixerTracks);
@@ -477,6 +479,31 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
     metronomeState.render(out.data(), std::min(numChannels, 2), numSamples, block);
 }
 
+void Engine::updatePlayPosition(const BlockPosition& block)
+{
+    // Plugins see the position within what's looping (the pattern in PAT mode, the song in
+    // SONG mode), like the position display, plus the loop itself.
+    int loopTicks = 0;
+    if (current != nullptr)
+    {
+        if (current->songMode)
+            loopTicks = current->songLengthTicks;
+        else if (current->currentPattern >= 0 &&
+                 current->currentPattern < static_cast<int>(current->patterns.size()))
+            loopTicks =
+                current->patterns[static_cast<std::size_t>(current->currentPattern)].lengthTicks;
+    }
+    auto& p = playPosition;
+    p.playing = block.playing;
+    p.bpm = transportState.tempo();
+    p.beatsPerBar = block.beatsPerBar;
+    p.loopLengthBeats = static_cast<double>(loopTicks) / ticksPerBeat;
+    p.beat =
+        p.loopLengthBeats > 0.0 ? std::fmod(block.startBeat, p.loopLengthBeats) : block.startBeat;
+    p.seconds = p.bpm > 0.0 ? p.beat * 60.0 / p.bpm : 0.0;
+    p.sample = std::llround(p.seconds * sampleRate);
+}
+
 void Engine::processTrack(int track, int numSamples)
 {
     float* left = buses[static_cast<std::size_t>(2 * track)];
@@ -489,7 +516,10 @@ void Engine::processTrack(int track, int numSamples)
         const auto& state = current->tracks[static_cast<std::size_t>(track)];
         for (const auto& effect : state.effects)
             if (effect.enabled && effect.processor != nullptr)
+            {
+                effect.processor->setPlayPosition(playPosition);
                 effect.processor->process(left, right, numSamples, effect.params);
+            }
         gainLeft = state.gainLeft;
         gainRight = state.gainRight;
     }

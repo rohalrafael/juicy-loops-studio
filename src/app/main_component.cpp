@@ -116,7 +116,12 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     typingButton.onClick = [this] { setTypingKeyboard(typingButton.getToggleState()); };
 
     positionLabel.setJustificationType(juce::Justification::centred);
-    positionLabel.setFont(juce::FontOptions(20.0f));
+    positionLabel.setFont(juce::FontOptions(18.0f));
+    positionLabel.setBorderSize({});
+    timeLabel.setJustificationType(juce::Justification::centred);
+    timeLabel.setFont(juce::FontOptions(12.5f));
+    timeLabel.setBorderSize({});
+    timeLabel.setTooltip("Time: current / total. The song in SONG mode, the pattern in PAT mode.");
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
@@ -126,7 +131,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
              &tempoSlider, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
-             &playlist})
+             &timeLabel, &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
     addChildComponent(mixer);
@@ -517,7 +522,12 @@ void MainComponent::resized()
     bar.removeFromLeft(10);
     tempoSlider.setBounds(bar.removeFromLeft(170));
     bar.removeFromLeft(6);
-    positionLabel.setBounds(bar.removeFromLeft(92));
+    {
+        // Bar:beat:step with the clock below it.
+        auto clock = bar.removeFromLeft(140);
+        positionLabel.setBounds(clock.removeFromTop(clock.getHeight() * 3 / 5));
+        timeLabel.setBounds(clock);
+    }
     bar.removeFromLeft(6);
     const bool roomForRest = bar.getWidth() >= 64 + 4 + 96;
     timeSignatureBox.setVisible(roomForRest);
@@ -1037,6 +1047,10 @@ void MainComponent::timerCallback()
     const int bar = static_cast<int>(steps) / stepsPerBar + 1;
     const int beat = static_cast<int>(steps) % stepsPerBar / model::stepsPerBeat + 1;
     const int step = static_cast<int>(steps) % model::stepsPerBeat + 1;
+    const double secondsPerStep = project.secondsPerStep();
+    timeLabel.setText(juce::String(model::formatTime(steps * secondsPerStep)) + " / " +
+                          juce::String(model::formatTime(loopSteps * secondsPerStep)),
+                      juce::dontSendNotification);
     positionLabel.setText(juce::String(bar) + ":" + juce::String(beat) + ":" + juce::String(step),
                           juce::dontSendNotification);
 

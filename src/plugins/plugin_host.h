@@ -17,6 +17,18 @@
 namespace jls::plugins
 {
 
+// Tells a hosted plugin where playback is (tempo, time signature, position, loop), from the
+// engine's PlayPosition. Set and read on the audio thread, around processBlock().
+class HostPlayHead final : public juce::AudioPlayHead
+{
+  public:
+    void set(const engine::PlayPosition& p) { position = p; }
+    juce::Optional<PositionInfo> getPosition() const override;
+
+  private:
+    engine::PlayPosition position;
+};
+
 // A hosted plugin used as an effect. Preallocates everything in prepare(), so process() only
 // hands buffers to the plugin (whose own real-time behaviour is out of our hands).
 class PluginEffect final : public engine::EffectProcessor
@@ -29,10 +41,12 @@ class PluginEffect final : public engine::EffectProcessor
     void reset() override;
     void process(float* left, float* right, int numSamples, std::span<const float>) override;
     std::string saveState() const override; // base64 of the plugin's state
+    void setPlayPosition(const engine::PlayPosition& p) override { playHead.set(p); }
 
     juce::AudioPluginInstance& plugin() { return *instance; }
 
   private:
+    HostPlayHead playHead; // before `instance`: it must outlive the plugin that points to it
     std::unique_ptr<juce::AudioPluginInstance> instance;
     juce::AudioBuffer<float> scratch; // the plugin may have more than two channels
     juce::MidiBuffer midi;            // effects get no MIDI, but processBlock needs a buffer
@@ -52,10 +66,12 @@ class PluginInstrument final : public engine::InstrumentProcessor
     void process(std::span<const engine::NoteEvent> events, float* left, float* right,
                  int numSamples) override;
     std::string saveState() const override; // base64 of the plugin's state
+    void setPlayPosition(const engine::PlayPosition& p) override { playHead.set(p); }
 
     juce::AudioPluginInstance& plugin() { return *instance; }
 
   private:
+    HostPlayHead playHead; // before `instance`: it must outlive the plugin that points to it
     std::unique_ptr<juce::AudioPluginInstance> instance;
     juce::AudioBuffer<float> scratch;
     juce::MidiBuffer midi;

@@ -347,7 +347,8 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   choice), changeable in Options > Settings (Ctrl+,). New defaults: Alt+Up/Down slice size,
   Alt+Right/Left snap, Alt+L / Alt+1/2/3 rack loop / 16/32/64, Numpad +/- pattern, F2 rename,
   Ctrl+Shift+C clone, Shift+Space play/pause, Ctrl+Q quit. Views take `ui::EditAction`s.
-  Not yet: import/export of shortcut sets.
+  Import/Export of full shortcut sets in the shortcuts window; tooltips of controls with commands
+  show their current keys (`updateShortcutHints()`, refreshed on mapping changes).
 
 ## Dev environment notes
 

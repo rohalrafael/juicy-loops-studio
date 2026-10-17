@@ -84,6 +84,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
     // Geometry shared by the parts.
     float pixelsPerStep() const { return zoom; }
     int snapSteps() const;
+    juce::ComboBox& snapControl() { return snapBox; } // for its shortcut hint
+
     // Snap one notch finer (+1) or coarser (-1), for keyboard shortcuts.
     void stepSnap(int finer);
     // Moves the playhead to ruler position x (snapped) and switches to song mode.

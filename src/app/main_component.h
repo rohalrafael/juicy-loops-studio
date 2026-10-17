@@ -97,6 +97,10 @@ class MainComponent final : public juce::AudioAppComponent,
     void selectPatternOffset(int offset); // next (+1) / previous (-1) pattern
     bool editInMainView(ui::EditAction action);
     juce::File shortcutsFile() const;
+    // Current keys of a command, e.g. "Ctrl+Shift+M" (several: " or "); empty if none.
+    juce::String keysFor(juce::CommandID id) const;
+    // Adds the current shortcuts to the tooltips of controls that have commands.
+    void updateShortcutHints();
     void changeListenerCallback(juce::ChangeBroadcaster*) override; // shortcuts changed: save
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
 

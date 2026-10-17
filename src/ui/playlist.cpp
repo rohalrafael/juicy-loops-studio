@@ -485,6 +485,7 @@ PlaylistView::PlaylistView(model::Document& document, engine::Transport& transpo
     snapBox.addItem("Bar", snapBar);
     snapBox.addItem("Beat", snapBeat);
     snapBox.addItem("Step", snapStep);
+    snapBox.setTooltip("Snap: where clips land and how they move");
     snapBox.setSelectedId(snapBar, juce::dontSendNotification);
     snapBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(snapBox);

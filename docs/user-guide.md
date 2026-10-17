@@ -20,7 +20,10 @@ Every shortcut can be changed in **Options › Keyboard shortcuts…** (Ctrl+Shi
 next to a command and press the keys, click a key to change or remove it, or **reset to
 defaults**. A command can have several keys; if a key is already taken you're asked whether to
 move it. Your changes are saved (only what differs from the defaults) in `shortcuts.xml` in the
-settings folder. The menus always show the current keys. The defaults, FL's where FL has one:
+settings folder. **Export…** saves your whole shortcut set to a file and **Import…** loads one
+(replacing the current keys), to share sets or move them to another computer. The menus show
+the current keys, and so do the tooltips of buttons that have a shortcut (hover, e.g. the
+Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 
 | Key | Action |
 |---|---|

@@ -295,7 +295,13 @@ which gives:
   state from `getCommandInfo()`.
 - **Editing:** Options › Keyboard shortcuts is JUCE's `KeyMappingEditorComponent` (themed
   colours). Changes are saved as differences from the defaults to `<settings>/shortcuts.xml`
-  and restored at startup, so new default keys still reach existing users.
+  and restored at startup, so new default keys still reach existing users. Import/Export (in
+  `ui/settings_dialog`) write and read the *full* set (`basedOnDefaults="0"`), so a file means
+  the same on any version.
+- **Hints:** `MainComponent::updateShortcutHints()` appends each control's current keys to its
+  own tooltip (remembered in the component's `baseTooltip` property), and runs again whenever
+  the mappings change. Views expose the controls that have commands (`loopSwitch()`,
+  `lengthButton()`, `sliceControl()`, `snapControl()`...). Add new ones there.
 - **Settings** used by commands (tempo steps) live in the settings file; Options › Settings
   (`ui/settings_dialog`) edits them.
 

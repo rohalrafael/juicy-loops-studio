@@ -634,7 +634,7 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
                          io::SampleLoader& sampleLoader)
     : doc(document), transport(transportToShow), loader(sampleLoader)
 {
-    closeButton.setTooltip("Hide (F6)");
+    closeButton.setTooltip("Hide");
     closeButton.onClick = [this] { setVisible(false); };
     noFocus(closeButton);
     addAndMakeVisible(closeButton);

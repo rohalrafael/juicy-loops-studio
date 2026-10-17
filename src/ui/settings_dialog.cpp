@@ -106,6 +106,94 @@ class SettingsPanel final : public juce::Component
     juce::Label note;
 };
 
+// JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).
+class ShortcutsPanel final : public juce::Component
+{
+  public:
+    explicit ShortcutsPanel(juce::KeyPressMappingSet& m) : mappings(m), editor(m, true)
+    {
+        const auto& t = currentTheme();
+        editor.setColours(colour(t.colours.panel), colour(t.colours.text));
+        addAndMakeVisible(editor);
+
+        importButton.setTooltip("Load a shortcut set from a file (replaces the current keys)");
+        exportButton.setTooltip("Save all current shortcuts to a file");
+        importButton.onClick = [this] { importSet(); };
+        exportButton.onClick = [this] { exportSet(); };
+        addAndMakeVisible(importButton);
+        addAndMakeVisible(exportButton);
+        setSize(560, 640);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds();
+        auto bar = area.removeFromBottom(40).reduced(10, 6);
+        importButton.setBounds(bar.removeFromLeft(90));
+        bar.removeFromLeft(6);
+        exportButton.setBounds(bar.removeFromLeft(90));
+        editor.setBounds(area);
+    }
+
+  private:
+    static juce::File startFolder()
+    {
+        return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
+    }
+
+    void exportSet()
+    {
+        chooser = std::make_unique<juce::FileChooser>(
+            "Export shortcuts", startFolder().getChildFile("juicy-loops-shortcuts.xml"), "*.xml");
+        chooser->launchAsync(
+            juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+                juce::FileBrowserComponent::warnAboutOverwriting,
+            [this](const juce::FileChooser& fc)
+            {
+                const auto file = fc.getResult();
+                if (file == juce::File())
+                    return;
+                // All keys, not just changes, so the file means the same on any version.
+                if (auto xml = mappings.createXml(false);
+                    xml == nullptr || !xml->writeTo(file.withFileExtension(".xml")))
+                    message("Export failed", "Couldn't write " + file.getFullPathName() + ".");
+            });
+    }
+
+    void importSet()
+    {
+        chooser = std::make_unique<juce::FileChooser>("Import shortcuts", startFolder(), "*.xml");
+        chooser->launchAsync(
+            juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this](const juce::FileChooser& fc)
+            {
+                const auto file = fc.getResult();
+                if (file == juce::File())
+                    return;
+                const auto xml = juce::parseXML(file);
+                if (xml == nullptr || !xml->hasTagName("KEYMAPPINGS") ||
+                    !mappings.restoreFromXml(*xml))
+                    message("Import failed",
+                            file.getFileName() + " isn't a Juicy Loops Studio shortcut file.");
+                // On success the mapping set announces the change: the editor refreshes and
+                // the app saves it as the user's shortcuts.
+            });
+    }
+
+    static void message(const juce::String& title, const juce::String& text)
+    {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(juce::MessageBoxIconType::NoIcon, title, text),
+            nullptr);
+    }
+
+    juce::KeyPressMappingSet& mappings;
+    juce::KeyMappingEditorComponent editor;
+    juce::TextButton importButton{"Import..."};
+    juce::TextButton exportButton{"Export..."};
+    std::unique_ptr<juce::FileChooser> chooser;
+};
+
 } // namespace
 
 void showSettingsDialog(juce::PropertiesFile& file)
@@ -115,11 +203,7 @@ void showSettingsDialog(juce::PropertiesFile& file)
 
 void showShortcutsDialog(juce::KeyPressMappingSet& mappings)
 {
-    auto editor = std::make_unique<juce::KeyMappingEditorComponent>(mappings, true);
-    const auto& t = currentTheme();
-    editor->setColours(colour(t.colours.panel), colour(t.colours.text));
-    editor->setSize(560, 600);
-    launch(std::move(editor), "Keyboard shortcuts", true);
+    launch(std::make_unique<ShortcutsPanel>(mappings), "Keyboard shortcuts", true);
 }
 
 } // namespace jls::ui

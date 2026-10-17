@@ -204,6 +204,11 @@ class ChannelRack final : public juce::Component,
                               const std::vector<PluginItem>& items);
     void showAddMenu();
 
+    // Controls the owner decorates with shortcut hints (tooltips).
+    juce::Button& loopSwitch() { return loopButton; }
+    juce::Button& lengthButton(int index) { return lengthButtons[static_cast<std::size_t>(index)]; }
+    juce::Button& hideButton() { return closeButton; }
+
     // Set by the owner: show the Piano Roll for a channel.
     std::function<void(model::ChannelId)> onOpenPianoRoll;
     // Set by the owner: known instrument plugins, the "Manage plugins" action, and showing a

@@ -613,12 +613,13 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     snapBox.addItem(juce::String::fromUTF8("\xc2\xbd step"), snapHalfStep);
     snapBox.addItem(juce::String::fromUTF8("\xe2\x85\x93 step"), snapThirdStep);
     snapBox.addItem("None", snapNone);
+    snapBox.setTooltip("Snap: where notes land and how they move");
     snapBox.setSelectedId(snapStep, juce::dontSendNotification);
     snapBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(snapBox);
 
     // Slicer: piece sizes as note values (ids are the length in ticks; 96 = a beat).
-    sliceButton.setTooltip("Slice the selected notes (or all) into pieces of this size (Alt+U)");
+    sliceButton.setTooltip("Slice the selected notes (or all) into pieces of this size");
     sliceButton.onClick = [this] { sliceNotes(); };
     sliceButton.setWantsKeyboardFocus(false);
     sliceButton.setMouseClickGrabsKeyboardFocus(false);

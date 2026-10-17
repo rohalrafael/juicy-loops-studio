@@ -42,8 +42,8 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 {
     auto& transport = engine.transport();
 
-    patButton.setTooltip("Pattern mode: loop the selected pattern (L)");
-    songButton.setTooltip("Song mode: play the Playlist (L)");
+    patButton.setTooltip("Pattern mode: loop the selected pattern");
+    songButton.setTooltip("Song mode: play the Playlist");
     patButton.onClick = [this] { setSongMode(false); };
     songButton.onClick = [this] { setSongMode(true); };
 
@@ -55,9 +55,12 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         if (index >= 0 && index < static_cast<int>(patterns.size()))
             selectPattern(patterns[static_cast<std::size_t>(index)].id);
     };
-    newPatternButton.setTooltip("New pattern (F4)");
+    newPatternButton.setTooltip("New pattern");
     newPatternButton.onClick = [this] { newPattern(); };
 
+    playButton.setTooltip("Play / pause");
+    stopButton.setTooltip("Stop and go back to the start");
+    tempoSlider.setTooltip("Tempo: -/+ change it by 1 BPM, click the number to type one");
     playButton.onClick = [&transport] { transport.togglePause(); };
     stopButton.onClick = [&transport] { transport.stop(); };
 
@@ -92,13 +95,13 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     };
 
     metronomeButton.setClickingTogglesState(true);
-    metronomeButton.setTooltip("Metronome (Ctrl+M)");
+    metronomeButton.setTooltip("Metronome");
     metronomeButton.onClick = [this]
     { engine.metronome().setEnabled(metronomeButton.getToggleState()); };
 
     typingButton.setClickingTogglesState(true);
     typingButton.setToggleState(liveInput.isTypingEnabled(), juce::dontSendNotification);
-    typingButton.setTooltip("Typing keyboard to piano (Ctrl+T): Z-M and Q-P play the selected "
+    typingButton.setTooltip("Typing keyboard to piano: Z-M and Q-P play the selected "
                             "channel. MIDI keyboards always play it.");
     typingButton.onClick = [this] { setTypingKeyboard(typingButton.getToggleState()); };
 
@@ -174,6 +177,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         commandManager.getKeyMappings()->restoreFromXml(*xml);
     commandManager.getKeyMappings()->addChangeListener(this);
     setApplicationCommandManagerToWatch(&commandManager);
+    updateShortcutHints();
 
     document.onChange = [this] { documentChanged(); };
     documentChanged();
@@ -942,8 +946,83 @@ juce::File MainComponent::shortcutsFile() const
     return themes.themesFolder().getParentDirectory().getChildFile("shortcuts.xml");
 }
 
+juce::String MainComponent::keysFor(juce::CommandID id) const
+{
+    // JUCE describes keys as "ctrl + shift + cursor up"; show "Ctrl+Shift+Up".
+    juce::StringArray keys;
+    for (const auto& key : commandManager.getKeyMappings()->getKeyPressesAssignedToCommand(id))
+    {
+        auto text = key.getTextDescription();
+        for (const auto& [from, to] :
+             std::initializer_list<std::pair<const char*, const char*>>{{"ctrl + ", "Ctrl+"},
+                                                                        {"command + ", "Cmd+"},
+                                                                        {"shift + ", "Shift+"},
+                                                                        {"alt + ", "Alt+"},
+                                                                        {"option + ", "Option+"},
+                                                                        {"cursor up", "Up"},
+                                                                        {"cursor down", "Down"},
+                                                                        {"cursor left", "Left"},
+                                                                        {"cursor right", "Right"},
+                                                                        {"spacebar", "Space"},
+                                                                        {"escape", "Esc"},
+                                                                        {"delete", "Delete"},
+                                                                        {"backspace", "Backspace"},
+                                                                        {"numpad ", "Numpad "}})
+            text = text.replace(from, to);
+        keys.add(text);
+    }
+    return keys.joinIntoString(" or ");
+}
+
+void MainComponent::updateShortcutHints()
+{
+    using namespace jls::commands;
+    // A control's own tooltip text is remembered the first time, then the keys are appended.
+    const auto hint = [this](juce::Component& component,
+                             std::initializer_list<std::pair<const char*, juce::CommandID>> uses)
+    {
+        auto* client = dynamic_cast<juce::SettableTooltipClient*>(&component);
+        if (client == nullptr)
+            return;
+        auto& properties = component.getProperties();
+        if (!properties.contains("baseTooltip"))
+            properties.set("baseTooltip", client->getTooltip());
+        juce::StringArray parts;
+        for (const auto& [label, id] : uses)
+            if (const auto keys = keysFor(id); keys.isNotEmpty())
+                parts.add(juce::String(label).isEmpty() ? keys : juce::String(label) + ": " + keys);
+        const auto base = properties["baseTooltip"].toString();
+        const auto text = parts.isEmpty() ? base : base + " (" + parts.joinIntoString(", ") + ")";
+        client->setTooltip(text);
+        // Sliders keep a copy in their number box (made when it was created): update it too.
+        for (auto* child : component.getChildren())
+            if (auto* childClient = dynamic_cast<juce::SettableTooltipClient*>(child))
+                childClient->setTooltip(text);
+    };
+    hint(patButton, {{"", toggleSongMode}});
+    hint(songButton, {{"", toggleSongMode}});
+    hint(newPatternButton, {{"", jls::commands::newPattern}});
+    hint(playButton, {{"", playPause}});
+    hint(stopButton, {{"play/stop", playStop}});
+    hint(tempoSlider, {{"up", tempoUp},
+                       {"down", tempoDown},
+                       {"fine up", tempoUpFine},
+                       {"fine down", tempoDownFine}});
+    hint(metronomeButton, {{"", toggleMetronome}});
+    hint(typingButton, {{"", toggleTypingKeyboard}});
+    hint(channelRack.loopSwitch(), {{"", toggleRackLoop}});
+    for (int i = 0; i < 3; ++i)
+        hint(channelRack.lengthButton(i), {{"", rackShow16 + i}});
+    hint(channelRack.hideButton(), {{"", jls::commands::toggleChannelRack}});
+    hint(pianoRoll.sliceControl(), {{"", sliceNotes}});
+    hint(pianoRoll.sliceSizeControl(), {{"smaller", sliceFiner}, {"larger", sliceCoarser}});
+    hint(pianoRoll.snapControl(), {{"finer", snapFiner}, {"coarser", snapCoarser}});
+    hint(playlist.snapControl(), {{"finer", snapFiner}, {"coarser", snapCoarser}});
+}
+
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster*)
 {
+    updateShortcutHints();
     // Only the differences from the defaults, so later default changes still reach the user.
     if (auto xml = commandManager.getKeyMappings()->createXml(true))
         xml->writeTo(shortcutsFile());

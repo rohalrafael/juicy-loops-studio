@@ -120,6 +120,11 @@ class PianoRollView final : public juce::Component, private juce::Timer
     // there was nothing to do.
     bool edit(EditAction action);
 
+    // Controls the owner decorates with shortcut hints (tooltips).
+    juce::Button& sliceControl() { return sliceButton; }
+    juce::ComboBox& sliceSizeControl() { return sliceBox; }
+    juce::ComboBox& snapControl() { return snapBox; }
+
     // Snap one notch finer (+1) or coarser (-1), for keyboard shortcuts.
     void stepSnap(int finer);
     // Slice size one notch smaller (+1) or larger (-1).

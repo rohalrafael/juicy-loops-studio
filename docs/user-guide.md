@@ -147,9 +147,12 @@ installed, the channel stays silent and keeps them.
 | Ctrl + drag | Select the notes in a rectangle (outlined) |
 | Drag a selected note | Move all selected notes together (its right end resizes them all) |
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
+| Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
 | Click and hold a key on the left | Play that note (slide to play others) |
 | Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |
 
+The slicer is for rolls (hi-hats, snares): draw one long note, slice it, then shape the pieces'
+velocities. The pieces stay selected, so slicing again makes them finer.
 With a selection, a click elsewhere only deselects (it doesn't add a note), as in FL.
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
 while you drag it up or down you hear the new pitch.

@@ -365,6 +365,21 @@ int Project::loopLengthInSteps(const Pattern& pattern, ChannelId channel) const
     return loop < lengthInSteps(pattern) ? loop : 0;
 }
 
+std::vector<Note> sliceNote(const Note& note, int pieceTicks)
+{
+    if (pieceTicks <= 0 || pieceTicks >= note.lengthTicks)
+        return {note};
+    std::vector<Note> pieces;
+    for (int start = note.startTick; start < note.endTick(); start += pieceTicks)
+    {
+        Note piece = note;
+        piece.startTick = start;
+        piece.lengthTicks = std::min(pieceTicks, note.endTick() - start);
+        pieces.push_back(piece);
+    }
+    return pieces;
+}
+
 bool isInScale(int pitch, int root, Scale scale)
 {
     // Semitones above the root that are in the scale, as bit masks.

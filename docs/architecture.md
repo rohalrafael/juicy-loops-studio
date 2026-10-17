@@ -193,6 +193,8 @@ for each chunk:
   channel or pattern changes. Moving a selection applies one offset to all, clamped so every
   item stays on the grid. Selection keys reach the views through `keyCommand()`, called from
   `MainComponent::keyPressed()` for whichever view fills the main area.
+- **Slicer:** `model::sliceNote()` does the cutting (tested); `PianoRollView::sliceNotes()`
+  rebuilds the channel's note list in one undoable edit and selects the pieces.
 - **Audition:** the Piano Roll calls `audition(pitch)` / `stopAudition()`; MainComponent sends
   them as live events (`Engine::sendLive()`) to the selected channel, so they play instruments
   and samples exactly like the typing keyboard.

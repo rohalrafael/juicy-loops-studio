@@ -617,6 +617,26 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     snapBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(snapBox);
 
+    // Slicer: piece sizes as note values (ids are the length in ticks; 96 = a beat).
+    sliceButton.setTooltip("Slice the selected notes (or all) into pieces of this size (Alt+U)");
+    sliceButton.onClick = [this] { sliceNotes(); };
+    sliceButton.setWantsKeyboardFocus(false);
+    sliceButton.setMouseClickGrabsKeyboardFocus(false);
+    addAndMakeVisible(sliceButton);
+    sliceBox.setTooltip("Size of the pieces the slicer cuts notes into");
+    for (const auto& [label, ticks] :
+         std::initializer_list<std::pair<const char*, int>>{{"1/4", 96},
+                                                            {"1/8", 48},
+                                                            {"1/8 T", 32},
+                                                            {"1/16", 24},
+                                                            {"1/16 T", 16},
+                                                            {"1/32", 12},
+                                                            {"1/64", 6}})
+        sliceBox.addItem(label, ticks);
+    sliceBox.setSelectedId(24, juce::dontSendNotification);
+    sliceBox.setWantsKeyboardFocus(false);
+    addAndMakeVisible(sliceBox);
+
     // Scale highlight: Off / Major / Minor, on a root note.
     addAndMakeVisible(scaleLabel);
     scaleBox.addItem("Off", 1);
@@ -778,6 +798,11 @@ bool PianoRollView::keyCommand(const juce::KeyPress& key)
         grid.repaint();
         return true;
     }
+    if (key == juce::KeyPress('u', juce::ModifierKeys::altModifier, 0))
+    {
+        sliceNotes();
+        return true;
+    }
     if (selection.empty())
         return false;
     if (key == juce::KeyPress::escapeKey)
@@ -801,6 +826,41 @@ bool PianoRollView::keyCommand(const juce::KeyPress& key)
         return true;
     }
     return false;
+}
+
+void PianoRollView::sliceNotes()
+{
+    if (channel() == 0 || notes().empty())
+        return;
+    const int pieceTicks = std::max(1, sliceBox.getSelectedId());
+    const auto& list = notes();
+    std::vector<bool> cut(list.size(), selection.empty());
+    for (int i : selection)
+        cut[static_cast<std::size_t>(i)] = true;
+
+    // Rebuild the list in order, remembering where the pieces land so they stay selected.
+    std::vector<model::Note> result;
+    std::vector<int> pieces;
+    for (std::size_t i = 0; i < list.size(); ++i)
+    {
+        if (!cut[i])
+        {
+            result.push_back(list[i]);
+            continue;
+        }
+        for (const auto& piece : model::sliceNote(list[i], pieceTicks))
+        {
+            pieces.push_back(static_cast<int>(result.size()));
+            result.push_back(piece);
+        }
+    }
+    const bool hadSelection = !selection.empty();
+    editNotes([result](std::vector<model::Note>& notesToEdit) { notesToEdit = result; }, 0);
+    if (hadSelection)
+    {
+        selection = pieces;
+        grid.repaint();
+    }
 }
 
 void PianoRollView::refresh()
@@ -897,6 +957,9 @@ void PianoRollView::resized()
     scaleBox.setBounds(header.removeFromRight(84));
     rootBox.setBounds(header.removeFromRight(58));
     scaleLabel.setBounds(header.removeFromRight(46));
+    header.removeFromRight(12);
+    sliceBox.setBounds(header.removeFromRight(78));
+    sliceButton.setBounds(header.removeFromRight(52).reduced(2, 0));
     title.setBounds(header);
 
     auto top = area.removeFromTop(rulerHeight);

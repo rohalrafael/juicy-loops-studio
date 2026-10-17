@@ -113,8 +113,12 @@ class PianoRollView final : public juce::Component, private juce::Timer
     std::vector<int> selection;
     bool isSelected(int note) const;
     void clearSelection();
-    // Delete / Ctrl+A / Esc for the selection; returns true if the key was used.
+    // Delete / Ctrl+A / Esc for the selection, Alt+U to slice; returns true if the key was used.
     bool keyCommand(const juce::KeyPress& key);
+
+    // The slicer: cuts the selected notes (all of the channel's notes when none are selected)
+    // into pieces of the chosen size (slice box), keeping the pieces selected.
+    void sliceNotes();
 
     // Audition: plays `pitch` on the channel until stopAudition() (or another pitch). Clicking
     // notes and keyboard keys uses it; the owner connects it to the engine.
@@ -155,6 +159,8 @@ class PianoRollView final : public juce::Component, private juce::Timer
     juce::Label title{{}, "Piano roll"};
     juce::Label snapLabel{{}, "Snap"};
     juce::ComboBox snapBox;
+    juce::TextButton sliceButton{"Slice"};
+    juce::ComboBox sliceBox; // piece size, as an id in ticks
     juce::Label scaleLabel{{}, "Scale"};
     juce::ComboBox rootBox;  // C .. B
     juce::ComboBox scaleBox; // Off / Major / Minor

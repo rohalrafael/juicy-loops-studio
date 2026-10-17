@@ -146,9 +146,6 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
-- **Note slicer (Piano Roll), like FL's:** with notes selected, a shortcut (and a context-menu
-  entry) splits each into consecutive notes of a chosen granularity (e.g. 1/4, 1/8, 1/16 step
-  values), keeping pitch and velocity. For hi-hat rolls. Depends on selection.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log
@@ -336,6 +333,10 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   (accentAlt outline), drag a selected item = move all (Piano Roll: right end = resize all),
   Delete / Ctrl+A / Esc via `keyCommand()`. Selection = indices kept in the view (not model/undo).
   A click outside a selection only deselects, as in FL. No copy/paste yet.
+
+- 2026-10-17: Note slicer (backlog 3): Piano Roll "Slice" button + piece size (1/4, 1/8, 1/8 T,
+  1/16, 1/16 T, 1/32, 1/64), shortcut Alt+U (FL's chop key); selected notes, or all if none;
+  pieces stay selected. `model::sliceNote()`.
 
 ## Dev environment notes
 

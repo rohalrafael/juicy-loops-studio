@@ -445,3 +445,25 @@ TEST_CASE("Scales: major and minor degrees from any root")
     CHECK(loaded.project->scale == Scale::minor);
     CHECK(loaded.project->scaleRoot == 9);
 }
+
+TEST_CASE("Slicing a note into rolls keeps pitch, velocity and the overall span")
+{
+    const Note note{48, 4 * ticksPerStep, 66, 0.5f};     // a beat long, starting on step 2
+    const auto quarters = sliceNote(note, ticksPerStep); // 1/16 notes
+    REQUIRE(quarters.size() == 4);
+    for (std::size_t i = 0; i < quarters.size(); ++i)
+    {
+        CHECK(quarters[i].startTick == 48 + static_cast<int>(i) * ticksPerStep);
+        CHECK(quarters[i].lengthTicks == ticksPerStep);
+        CHECK(quarters[i].pitch == 66);
+        CHECK(quarters[i].velocity == 0.5f);
+    }
+    // Triplets that don't divide evenly: the last piece is shorter, the end stays put.
+    const auto triplets = sliceNote({0, 100, 60, 0.8f}, 32);
+    REQUIRE(triplets.size() == 4);
+    CHECK(triplets.back().startTick == 96);
+    CHECK(triplets.back().endTick() == 100);
+    // Pieces as long as the note (or longer): unchanged.
+    CHECK(sliceNote(note, 4 * ticksPerStep).size() == 1);
+    CHECK(sliceNote(note, 0).size() == 1);
+}

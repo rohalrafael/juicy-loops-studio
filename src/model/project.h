@@ -169,6 +169,10 @@ struct Playlist
     std::vector<Clip> clips;
 };
 
+// Cuts a note into consecutive notes `pieceTicks` long (the last one shorter if it doesn't
+// divide evenly), with the same pitch and velocity: the Piano Roll's slicer, for rolls.
+std::vector<Note> sliceNote(const Note& note, int pieceTicks);
+
 // Scales the Piano Roll can highlight.
 enum class Scale
 {

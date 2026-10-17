@@ -32,7 +32,8 @@ RenderedAudio renderProject(const Project& project, double sampleRate, double ta
 // were prepared for. All of the project's processors are reset before and after, so no tail or
 // held voice leaks in or out. Nothing else may use them meanwhile (e.g. hold the audio lock).
 RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds,
-                            engine::EffectPool& pool, int blockSize);
+                            engine::EffectPool& pool, int blockSize,
+                            const StretchedSamples& stretched = {});
 
 // Length of what renderProject() plays before the tail, in seconds.
 double renderLengthSeconds(const Project& project);

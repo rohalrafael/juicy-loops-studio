@@ -220,6 +220,22 @@ for each chunk:
   items (`"pattern:<id>"`, `"audio:<id>"`); `PlaylistView::placeAt()` handles all of them. The
   waveform peaks come from `ui/waveform.h`, cached per sample.
 
+### Sampler: speed and time-stretching
+
+- **Settings:** `model::SamplerSettings` on each channel (mode, original tempo, pitch).
+  `Project::playbackSpeed()` / `stretchFactor()` / `playedSeconds()` hold the maths.
+- **Off / Resample:** just a speed (`ChannelState::speed`) that the Sampler multiplies into its
+  increment and into an audio clip's start position. No extra work.
+- **Stretch:** the sample is stretched offline with Signalsmith Stretch
+  (`engine::stretchSample`, MIT, fetched by CMake) to `stretchFactor` and pitch, and that buffer
+  plays at speed 1. `toEngineState()` gets it from a provider; in the app that's
+  `StretchCache` (one background thread; results for old tempos are dropped, and their queued
+  jobs skipped). A finished job calls `publishState()` again. Until then the channel plays
+  resampled. Export asks for every stretch synchronously (`getNow`).
+- **Window:** `ui::SamplerPanel` in a `SamplerWindow`, one at a time, owned by `MainComponent`
+  and refreshed (or closed) on every document change.
+- **Trim:** `Clip::offsetSteps` / `ClipState::offsetTicks` add to an audio clip's start offset.
+
 ### Instruments and note-offs
 
 A channel can be played by a plugin instrument (`Channel::pluginId` set) instead of a sample.

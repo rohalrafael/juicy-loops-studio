@@ -41,6 +41,7 @@ class PlaylistGrid final : public juce::Component,
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseDoubleClick(const juce::MouseEvent& e) override; // audio clip: its Sampler
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override;
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
@@ -134,6 +135,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
     const Peaks& peaksFor(const engine::SampleBuffer& sample);
     // What clicking empty space places: an audio-clip channel, or 0 = the selected pattern.
     model::ChannelId brushAudio = 0;
+    // Set by the owner: open an audio clip's channel (its Sampler window).
+    std::function<void(model::ChannelId)> onOpenAudioChannel;
     void setPickerVisible(bool shouldShow);
     bool isPickerVisible() const;
 

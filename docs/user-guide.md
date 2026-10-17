@@ -201,11 +201,31 @@ installed, the channel stays silent and keeps them.
 
 **Audio clips.** Dropping a sample on the Playlist makes an audio clip: the sample plays at that
 point in the song, shown with its waveform. Move, resize (shorter clips cut the sample off),
-select, copy, paste and delete them like pattern clips. Each sample becomes one audio-clip
+select, copy, paste and delete them like pattern clips. Drag a clip's **left edge** to start
+it later in the sample (trim). **Double-click** a clip to open its Sampler. Each sample becomes one audio-clip
 channel, used by all its clips: its volume, pan, mute and mixer track (a new insert) apply to
 all of them. These channels are hidden from the Channel Rack; **View › Channel rack options ›
 Show audio clips** lists them there. Pressing Play (or jumping with the ruler) inside a clip
 plays it from that point; stopping fades it out. Audio clips play in SONG mode only.
+
+## Sampler
+
+Every sample channel (drums and audio clips alike) has a **Sampler** window: click the channel's
+name in the Channel Rack (again to hide it), use "Sampler..." in its right-click menu, or
+double-click an audio clip. It shows the sample's waveform and its time stretching:
+
+| Setting | Does |
+|---|---|
+| Mode **Off** | Plays at the sample's own speed whatever the tempo |
+| Mode **Resample** | Speed follows the tempo, and the pitch moves with it (like a record) |
+| Mode **Stretch** | Length follows the tempo, the pitch stays (high-quality time-stretching) |
+| Original tempo | The tempo the sample is at; Resample / Stretch fit it to the song's tempo from there. **Use project tempo** sets it to the current tempo |
+| Pitch | Transpose in semitones (in Stretch mode without changing the length) |
+
+Audio clips start in **Stretch** at the tempo they were dropped at, so they stay in time when
+you change the tempo. Drum samples start in Off. Stretching is worked out in the background
+after a tempo change; until it's ready (usually a moment) the sample plays resampled so it stays
+in time. Exports always use the finished stretch.
 
 ## Piano Roll
 

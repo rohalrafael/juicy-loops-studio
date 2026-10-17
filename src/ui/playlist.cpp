@@ -362,6 +362,16 @@ void PlaylistGrid::mouseUp(const juce::MouseEvent&)
     dragClip = -1;
 }
 
+void PlaylistGrid::mouseDoubleClick(const juce::MouseEvent& e)
+{
+    const int index = clipAt(e.position);
+    if (index < 0)
+        return;
+    const auto& clip = view.document().project().playlist.clips[static_cast<std::size_t>(index)];
+    if (clip.isAudio() && view.onOpenAudioChannel)
+        view.onOpenAudioChannel(clip.audio);
+}
+
 void PlaylistGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w)
 {
     if (e.mods.isCommandDown())
@@ -548,7 +558,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         if (channel->sample != nullptr && channel->sample->numFrames() > 0)
         {
             const auto& peaks = const_cast<PlaylistView&>(view).peaksFor(*channel->sample);
-            const double seconds = channel->sample->numFrames() / channel->sample->sampleRate;
+            const double seconds = project.playedSeconds(*channel); // after stretching / speed
             const float width = view.xForStep(seconds / project.secondsPerStep());
             const float mid = body.getCentreY();
             const float half = body.getHeight() / 2.0f - 1.0f;
@@ -864,7 +874,7 @@ int PlaylistView::stepsFor(const model::Channel& channel) const
 {
     if (channel.sample == nullptr || channel.sample->numFrames() == 0)
         return doc.project().stepsPerBar();
-    const double seconds = channel.sample->numFrames() / channel.sample->sampleRate;
+    const double seconds = doc.project().playedSeconds(channel); // after stretching / speed
     return std::max(1,
                     static_cast<int>(std::ceil(seconds / doc.project().secondsPerStep() - 1e-6)));
 }

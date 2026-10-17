@@ -455,8 +455,11 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
         if (juce::ModifierKeys::currentModifiers.isPopupMenu())
             return;
         rack.select(id);
+        // Like FL: clicking a channel shows (or hides) its window, the plugin's or the Sampler.
         if (isInstrument && rack.onShowInstrument)
             rack.onShowInstrument(id, true);
+        else if (!isInstrument && rack.onShowSampler)
+            rack.onShowSampler(id, true);
     };
     name.addMouseListener(this, false);
 
@@ -595,6 +598,7 @@ void ChannelRow::showMenu()
     {
         pianoRollId = 1,
         showPluginId,
+        samplerId,
         renameId,
         replaceSampleId,
         deleteId
@@ -604,6 +608,8 @@ void ChannelRow::showMenu()
     menu.addItem(pianoRollId, "Piano roll");
     if (isInstrument)
         menu.addItem(showPluginId, "Show plugin");
+    else
+        menu.addItem(samplerId, "Sampler...");
     menu.addSeparator();
     menu.addItem(renameId, "Rename...");
     menu.addItem(replaceSampleId, isInstrument ? "Use a sample instead..." : "Replace sample...");
@@ -629,6 +635,10 @@ void ChannelRow::showMenu()
                            case showPluginId:
                                if (r.onShowInstrument)
                                    r.onShowInstrument(channel, false);
+                               return;
+                           case samplerId:
+                               if (r.onShowSampler)
+                                   r.onShowSampler(channel, false);
                                return;
                            case renameId:
                                r.rename(channel);

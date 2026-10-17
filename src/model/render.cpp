@@ -50,7 +50,8 @@ RenderedAudio renderProject(const Project& project, double sampleRate, double ta
 }
 
 RenderedAudio renderProject(const Project& project, double sampleRate, double tailSeconds,
-                            engine::EffectPool& pool, int blockSize)
+                            engine::EffectPool& pool, int blockSize,
+                            const StretchedSamples& stretched)
 {
     RenderedAudio audio;
     audio.sampleRate = sampleRate;
@@ -67,7 +68,7 @@ RenderedAudio renderProject(const Project& project, double sampleRate, double ta
     engine->prepare(sampleRate, blockSize);
     engine->transport().setTempo(copy.tempo);
     engine->transport().setBeatsPerBar(copy.beatsPerBar);
-    auto state = toEngineState(copy, &pool);
+    auto state = toEngineState(copy, &pool, stretched);
     resetProcessors(*state);
     const auto keep = *state; // to reset the processors again at the end
     engine->setState(std::move(state));

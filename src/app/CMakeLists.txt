@@ -8,6 +8,7 @@ juce_add_gui_app(JuicyLoopsStudio
 target_sources(JuicyLoopsStudio PRIVATE
     commands.cpp
     live_input.cpp
+    stretch_cache.cpp
     main.cpp
     main_component.cpp
     ../io/audio_export.cpp
@@ -18,6 +19,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../ui/theme.cpp
     ../ui/mixer.cpp
     ../ui/plugin_menu.cpp
+    ../ui/sampler_panel.cpp
     ../ui/settings_dialog.cpp
     ../ui/piano_roll.cpp
     ../ui/playlist.cpp

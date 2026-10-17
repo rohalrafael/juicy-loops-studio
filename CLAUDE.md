@@ -380,6 +380,14 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   clips; click = brush, drag = place). Song mode only; no time-stretching (tempo changes move the
   clip's grid position, not the sample's speed); no left-edge trim/offset yet.
 
+- 2026-10-17: Sampler window + time-stretching (user agreed: built-in channel window, FL-like, not
+  a plugin). Modes Off / Resample / Stretch (FL's others are proprietary élastique/E3), original
+  tempo, pitch. Stretch = Signalsmith Stretch 1.4.0 (MIT), offline in `StretchCache`, resampled
+  meanwhile. Audio clips default to Stretch at the drop tempo. Clicking a sample channel's name
+  toggles its Sampler (FL); double-click an audio clip opens it. Left-edge trim
+  (`Clip::offsetSteps`). Verified by export: 2 s 110 Hz clip at 130 -> 160 BPM: Stretch 1.63 s
+  at 110 Hz, Resample 1.63 s at 135.4 Hz.
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools

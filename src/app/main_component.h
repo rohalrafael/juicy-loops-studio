@@ -6,6 +6,7 @@
 // publishes a new engine snapshot and refreshes the views (see docs/architecture.md).
 
 #include "app/live_input.h"
+#include "app/stretch_cache.h"
 #include "engine/effect_pool.h"
 #include "engine/engine.h"
 #include "io/sample_loader.h"
@@ -16,6 +17,7 @@
 #include "ui/mixer.h"
 #include "ui/piano_roll.h"
 #include "ui/playlist.h"
+#include "ui/sampler_panel.h"
 #include "ui/theme.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -79,6 +81,7 @@ class MainComponent final : public juce::AudioAppComponent,
     void showPianoRoll();
     void toggleMixer();
     void toggleBrowser();
+    void showSampler(model::ChannelId channel, bool toggle);
 
     // Keyboard focus areas: arrow keys and Enter act on the focused one (outlined). The window
     // itself keeps JUCE's keyboard focus; this is only where navigation keys go.
@@ -161,6 +164,8 @@ class MainComponent final : public juce::AudioAppComponent,
     std::unique_ptr<juce::FileChooser> fileChooser;
     std::map<model::EffectId, std::unique_ptr<plugins::PluginWindow>> pluginWindows;
     std::map<model::ChannelId, std::unique_ptr<plugins::PluginWindow>> instrumentWindows;
+    std::unique_ptr<ui::SamplerWindow> samplerWindow; // one at a time, like FL's channel window
+    StretchCache stretchCache;                        // Stretch-mode samples for the current tempo
     double formatRate = 0.0; // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;

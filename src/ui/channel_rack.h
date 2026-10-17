@@ -225,6 +225,8 @@ class ChannelRack final : public juce::Component,
     std::function<std::vector<PluginItem>()> listInstruments;
     std::function<void()> onManagePlugins;
     std::function<void(model::ChannelId, bool toggle)> onShowInstrument;
+    // Set by the owner: show a sample channel's Sampler window (`toggle` as above).
+    std::function<void(model::ChannelId, bool toggle)> onShowSampler;
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;

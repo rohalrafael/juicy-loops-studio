@@ -50,11 +50,12 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `channels[]` | In Channel Rack order. `id` is referenced by patterns. `mixerTrack` is 0 for Master, otherwise an insert |
 | `channels[].sample` | `{"builtin": "kick"/"clap"/"hat"/"snare"}`, or `{"path": absolute, "relativePath": relative to the project file}`, or `null` |
 | `channels[].audioClip` | `true` for the channel behind audio clips (hidden in the Channel Rack); its `sample` is what the clips play |
+| `channels[].sampler` | Sampler settings when not default: `stretch` (`off` / `resample` / `stretch`), `originalTempo` (BPM, 0 = not set), `pitch` (semitones) |
 | `channels[].loop` | Whether the channel repeats its notes when the pattern is longer (default `true`) |
 | `channels[].instrument` | Instead of `sample`, for a channel played by a plugin: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
 | `patterns[]` | In pattern-selector order. `gridLength`: steps the Channel Rack shows (older files: `minLength`); the pattern plays as far as its notes, in whole bars |
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
-| `playlist.clips[]` | `start` and `length` in steps. Pattern clips have `pattern` (a clip longer than its pattern repeats it); audio clips have `audio`, the audio-clip channel's id |
+| `playlist.clips[]` | `start` and `length` in steps. Pattern clips have `pattern` (a clip longer than its pattern repeats it); audio clips have `audio`, the audio-clip channel's id, and `offset` (steps into the sample, from a left-edge trim) |
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
 | `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
 | `effects[].plugin` | For `"type": "plugin"`: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |

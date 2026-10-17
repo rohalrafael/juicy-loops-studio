@@ -133,6 +133,10 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.onClose = [this] { toggleBrowser(); };
     browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
     playlist.loadSample = [this](const juce::File& file) { return sampleLoader.load(file); };
+    playlist.onOpenAudioChannel = [this](model::ChannelId id) { showSampler(id, false); };
+    channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)
+    { showSampler(id, toggle); };
+    stretchCache.onReady = [this] { publishState(); };
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
     addChildComponent(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
@@ -205,7 +209,8 @@ MainComponent::~MainComponent()
     document.onChange = nullptr;
     commandManager.getKeyMappings()->removeChangeListener(this);
     setApplicationCommandManagerToWatch(nullptr); // the manager goes before the MenuBarModel base
-    pluginWindows.clear();                        // editors before their plugins
+    samplerWindow.reset();
+    pluginWindows.clear(); // editors before their plugins
     instrumentWindows.clear();
     shutdownAudio();
 }
@@ -242,6 +247,14 @@ void MainComponent::documentChanged()
     mixer.refresh();
     if (effectPanel.isVisible())
         effectPanel.refresh();
+    // The Sampler window follows its channel (and closes with it).
+    if (samplerWindow != nullptr)
+    {
+        if (!samplerWindow->panel().refresh())
+            samplerWindow.reset();
+        else if (const auto* c = project.findChannel(samplerWindow->panel().channel()))
+            samplerWindow->setName("Sampler - " + juce::String::fromUTF8(c->name.c_str()));
+    }
     // Close plugin windows whose effect or instrument was removed or replaced (e.g. by undo).
     for (auto it = pluginWindows.begin(); it != pluginWindows.end();)
     {
@@ -377,7 +390,12 @@ void MainComponent::syncPluginStates()
 
 void MainComponent::publishState()
 {
-    engine.setState(model::toEngineState(document.project(), &effectPool));
+    // Stretch-mode samples come from the cache; one finishing triggers another snapshot.
+    stretchCache.beginSnapshot();
+    engine.setState(
+        model::toEngineState(document.project(), &effectPool, [this](const model::Channel& channel)
+                             { return stretchCache.get(document.project(), channel); }));
+    stretchCache.endSnapshot();
 }
 
 void MainComponent::refreshTransportBar()
@@ -600,6 +618,25 @@ void MainComponent::paintOverChildren(juce::Graphics& g)
     // Inside the area's bounds: when it moves (the Channel Rack can be dragged), JUCE repaints
     // exactly its old and new bounds, so an outline drawn outside them would leave a trail.
     g.drawRoundedRectangle(c->getBounds().toFloat().reduced(0.75f), t.shape.windowRadius, 1.5f);
+}
+
+void MainComponent::showSampler(model::ChannelId id, bool toggle)
+{
+    const auto* channel = document.project().findChannel(id);
+    if (channel == nullptr || channel->isInstrument())
+        return;
+    if (samplerWindow != nullptr && samplerWindow->panel().channel() == id)
+    {
+        if (toggle)
+            samplerWindow.reset();
+        else
+            samplerWindow->toFront(true);
+        return;
+    }
+    samplerWindow = std::make_unique<ui::SamplerWindow>(document, id);
+    samplerWindow->setName("Sampler - " + juce::String::fromUTF8(channel->name.c_str()));
+    samplerWindow->onClose = [this]
+    { juce::MessageManager::callAsync([this] { samplerWindow.reset(); }); };
 }
 
 void MainComponent::toggleBrowser()
@@ -1438,7 +1475,10 @@ void MainComponent::exportWav()
                 const int block = engine.preparedBlockSize() > 0 ? engine.preparedBlockSize() : 512;
                 if (std::abs(formatRate - rate) > 0.5 || formatBlock != block)
                     effectPool.setFormat(rate, block); // no device yet: set the pool up for it
-                audio = model::renderProject(document.project(), rate, 2.0, effectPool, block);
+                audio = model::renderProject(
+                    document.project(), rate, 2.0, effectPool, block,
+                    [this](const model::Channel& channel)
+                    { return stretchCache.getNow(document.project(), channel); });
             }
             const auto result = io::writeWav(file, audio);
             juce::MouseCursor::hideWaitCursor();

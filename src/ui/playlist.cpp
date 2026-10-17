@@ -24,10 +24,17 @@ enum SnapId
 
 // ---------------------------------------------------------------------------- Ruler / names
 
-class PlaylistView::Ruler final : public juce::Component
+class PlaylistView::Ruler final : public juce::Component, public juce::SettableTooltipClient
 {
   public:
-    explicit Ruler(PlaylistView& v) : view(v) { setInterceptsMouseClicks(false, false); }
+    explicit Ruler(PlaylistView& v) : view(v)
+    {
+        setTooltip("Click or drag to move the playhead (switches to SONG mode)");
+    }
+
+    // Clicking (or dragging along) the ruler moves the playhead there, snapped.
+    void mouseDown(const juce::MouseEvent& e) override { view.seekToX(e.position.x); }
+    void mouseDrag(const juce::MouseEvent& e) override { view.seekToX(e.position.x); }
 
     void paint(juce::Graphics& g) override
     {
@@ -408,6 +415,17 @@ PlaylistView::PlaylistView(model::Document& document, engine::Transport& transpo
 
 PlaylistView::~PlaylistView() = default;
 
+void PlaylistView::seekToX(float x)
+{
+    const double step = (x + static_cast<float>(viewport.getViewPositionX())) / zoom;
+    const int snap = std::max(1, snapSteps());
+    const int snapped = std::max(0, static_cast<int>(step / snap) * snap);
+    // The Playlist is song time, so jumping in it means song mode.
+    if (!doc.project().songMode)
+        doc.setViewState([](model::Project& p) { p.songMode = true; });
+    transport.seek(static_cast<double>(snapped) / model::stepsPerBeat);
+}
+
 int PlaylistView::snapSteps() const
 {
     switch (snapBox.getSelectedId())
@@ -435,12 +453,13 @@ double PlaylistView::playheadStep() const
 {
     const auto& project = doc.project();
     const int songLength = project.songLengthInSteps();
-    if (!project.songMode || songLength <= 0)
+    if (!project.songMode)
         return -1.0;
     const double position = transport.positionInBeats() * model::stepsPerBeat;
     if (!transport.isPlaying() && position <= 0.0)
         return -1.0;
-    return std::fmod(position, static_cast<double>(songLength));
+    // An empty song doesn't loop: show where the ruler was clicked.
+    return songLength > 0 ? std::fmod(position, static_cast<double>(songLength)) : position;
 }
 
 void PlaylistView::refresh()

@@ -21,6 +21,12 @@ void noFocus(juce::Component& c)
 constexpr int padding = 8;
 constexpr int hardShadowOffset = 5; // themes with a hard shadow draw it in this margin
 constexpr int headerHeight = 30;    // title bar; drag it to move the rack
+constexpr int loopWidth = 20;       // a row's loop switch, between the name and the steps
+constexpr int handleWidth = 12;     // the length handle after the last step column
+constexpr int minStepWidth = 8;     // steps shrink down to this to fit long patterns
+// Everything in a row except the steps.
+constexpr int rowFixedWidth = metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
+                              metrics::insertWidth + 4 + metrics::nameWidth + loopWidth;
 
 // Soft glow around a shape, for themes that have one.
 void drawGlow(juce::Graphics& g, const juce::Path& shape, std::optional<theme::Argb> glow,
@@ -112,42 +118,141 @@ void InsertBox::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDe
         change(value + (w.deltaY > 0.0f ? 1 : -1), 0);
 }
 
-// ----------------------------------------------------------------------------------- StepGrid
+// --------------------------------------------------------------------------------- LoopToggle
 
-int StepGrid::stepX(int step)
+void LoopToggle::setState(bool shouldBeOn, bool isActive)
 {
-    return step * (metrics::stepWidth + metrics::stepGap) + (step / 4) * metrics::beatGap;
+    if (on != shouldBeOn || active != isActive)
+    {
+        on = shouldBeOn;
+        active = isActive;
+        repaint();
+    }
 }
 
-int StepGrid::widthFor(int numSteps)
+void LoopToggle::paint(juce::Graphics& g)
 {
-    return numSteps <= 0 ? 0 : stepX(numSteps - 1) + metrics::stepWidth;
+    const auto& t = currentTheme();
+    auto c = colour(on ? t.colours.accent : t.colours.textDim);
+    if (!active)
+        c = c.withMultipliedAlpha(0.4f);
+
+    // A circular arrow: an open arc with an arrowhead at its end.
+    const auto area = getLocalBounds().toFloat().withSizeKeepingCentre(12.0f, 12.0f);
+    const auto centre = area.getCentre();
+    const float r = area.getWidth() / 2.0f - 1.0f;
+    juce::Path arc;
+    arc.addCentredArc(centre.x, centre.y, r, r, 0.0f, 0.5f,
+                      juce::MathConstants<float>::twoPi - 0.3f, true);
+    g.setColour(c);
+    g.strokePath(arc, juce::PathStrokeType(1.6f));
+    const juce::Point<float> tip(centre.x + r * std::sin(-0.3f), centre.y - r * std::cos(-0.3f));
+    juce::Path head;
+    head.addTriangle(tip.x - 3.5f, tip.y - 3.0f, tip.x - 3.5f, tip.y + 3.0f, tip.x + 1.5f, tip.y);
+    g.fillPath(head);
+}
+
+void LoopToggle::mouseDown(const juce::MouseEvent&)
+{
+    if (onClick)
+        onClick();
+}
+
+// ------------------------------------------------------------------------------- LengthHandle
+
+LengthHandle::LengthHandle()
+{
+    setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+    setTooltip("Drag to change the pattern length (in groups of 4 steps)");
+}
+
+void LengthHandle::paint(juce::Graphics& g)
+{
+    const auto& t = currentTheme();
+    const auto bar = getLocalBounds().toFloat().withSizeKeepingCentre(3.0f, getHeight() - 4.0f);
+    g.setColour(colour(isMouseOverOrDragging() ? t.colours.accent : t.colours.outline));
+    g.fillRoundedRectangle(bar, 1.5f);
+}
+
+void LengthHandle::mouseDown(const juce::MouseEvent&)
+{
+    startLength = currentLength ? currentLength() : 16;
+    startGroupWidth = std::max(1, groupWidth ? groupWidth() : 1);
+    gestureId = newGestureId ? newGestureId() : 0;
+}
+
+void LengthHandle::mouseDrag(const juce::MouseEvent& e)
+{
+    // Measured against the step size at the start of the drag: the rack resizes (and its steps
+    // may shrink) while dragging, which would otherwise make the handle jump.
+    const int groups = static_cast<int>(
+        std::lround(static_cast<float>(e.getDistanceFromDragStartX()) / startGroupWidth));
+    const int length = std::clamp(startLength + 4 * groups, 4, model::Pattern::maxSteps);
+    if (onLengthChanged)
+        onLengthChanged(length, gestureId);
+}
+
+// ----------------------------------------------------------------------------------- StepGrid
+
+namespace
+{
+// Gaps shrink with the steps so long patterns still read as groups of 4.
+int stepGapFor(int stepWidth)
+{
+    return stepWidth >= 14 ? metrics::stepGap : 2;
+}
+int groupGapFor(int stepWidth)
+{
+    return stepWidth >= 14 ? metrics::beatGap : 4;
+}
+} // namespace
+
+int StepGrid::stepX(int step, int width)
+{
+    return step * (width + stepGapFor(width)) + (step / 4) * groupGapFor(width);
+}
+
+int StepGrid::widthFor(int numSteps, int width)
+{
+    return numSteps <= 0 ? 0 : stepX(numSteps - 1, width) + width;
+}
+
+void StepGrid::setStepWidth(int width)
+{
+    if (width != stepWidth)
+    {
+        stepWidth = width;
+        repaint();
+    }
 }
 
 int StepGrid::stepAt(int x) const
 {
     for (int s = 0; s < static_cast<int>(steps.size()); ++s)
-        if (x < stepX(s) + metrics::stepWidth + metrics::stepGap)
+        if (x < stepX(s) + stepWidth + stepGapFor(stepWidth))
             return s;
     return static_cast<int>(steps.size()) - 1;
 }
 
-void StepGrid::setSteps(std::vector<bool> newSteps)
+void StepGrid::setSteps(std::vector<bool> newSteps, int newLoopStart)
 {
-    if (melodic || newSteps != steps)
+    if (melodic || newSteps != steps || newLoopStart != loopStart)
     {
         melodic = false;
         melodicNotes.clear();
         steps = std::move(newSteps);
+        loopStart = newLoopStart;
         repaint();
     }
 }
 
-void StepGrid::setMelodicPreview(std::vector<model::Note> notes, int lengthInSteps)
+void StepGrid::setMelodicPreview(std::vector<model::Note> notes, int lengthInSteps,
+                                 int newLoopStart)
 {
     melodic = true;
     melodicNotes = std::move(notes);
     steps.assign(static_cast<std::size_t>(lengthInSteps), false);
+    loopStart = newLoopStart;
     repaint();
 }
 
@@ -182,15 +287,25 @@ void StepGrid::paint(juce::Graphics& g)
             const float ticksTotal = static_cast<float>(steps.size() * model::ticksPerStep);
             const float rowHeight = (area.getHeight() - 6.0f) / range;
             const float noteHeight = std::max(3.0f, rowHeight);
-            g.setColour(colour(t.colours.stepOn));
-            for (const auto& note : melodicNotes)
+            // A looping channel's notes repeat (greyed) from loopStart on.
+            const int repeatTicks =
+                loopStart > 0 ? loopStart * model::ticksPerStep : static_cast<int>(ticksTotal);
+            for (int offset = 0; offset < static_cast<int>(ticksTotal); offset += repeatTicks)
             {
-                const float x = area.getWidth() * note.startTick / ticksTotal;
-                const float w =
-                    std::max(2.0f, area.getWidth() * note.lengthTicks / ticksTotal - 1.0f);
-                const float y =
-                    area.getBottom() - 3.0f - (note.pitch - low->pitch) * rowHeight - noteHeight;
-                g.fillRect(x, y, w, noteHeight);
+                g.setColour(
+                    colour(t.colours.stepOn).withMultipliedAlpha(offset == 0 ? 1.0f : 0.35f));
+                for (const auto& note : melodicNotes)
+                {
+                    const int start = note.startTick + offset;
+                    if (offset > 0 && start >= static_cast<int>(ticksTotal))
+                        continue;
+                    const float x = area.getWidth() * start / ticksTotal;
+                    const float w =
+                        std::max(2.0f, area.getWidth() * note.lengthTicks / ticksTotal - 1.0f);
+                    const float y = area.getBottom() - 3.0f -
+                                    (note.pitch - low->pitch) * rowHeight - noteHeight;
+                    g.fillRect(x, y, w, noteHeight);
+                }
             }
         }
         if (playingStep >= 0)
@@ -204,10 +319,10 @@ void StepGrid::paint(juce::Graphics& g)
     for (int s = 0; s < static_cast<int>(steps.size()); ++s)
     {
         const bool on = steps[static_cast<std::size_t>(s)];
-        const auto r =
-            juce::Rectangle<int>(stepX(s), 3, metrics::stepWidth, getHeight() - 6).toFloat();
+        const bool repeat = loopStart > 0 && s >= loopStart; // greyed loop repeat
+        const auto r = juce::Rectangle<int>(stepX(s), 3, stepWidth, getHeight() - 6).toFloat();
 
-        if (on)
+        if (on && !repeat)
         {
             juce::Path shape;
             shape.addRoundedRectangle(r, radius);
@@ -215,7 +330,8 @@ void StepGrid::paint(juce::Graphics& g)
         }
 
         const auto offColour = (s / 4) % 2 == 0 ? t.colours.stepOffA : t.colours.stepOffB;
-        g.setColour(colour(on ? t.colours.stepOn : offColour));
+        g.setColour(colour(on ? t.colours.stepOn : offColour)
+                        .withMultipliedAlpha(repeat ? (on ? 0.35f : 0.5f) : 1.0f));
         g.fillRoundedRectangle(r, radius);
 
         if (t.shape.stepOutline > 0.0f)
@@ -361,7 +477,37 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
 
     steps.newGestureId = [this] { return rack.document().newGestureId(); };
     steps.onStepPainted = [this](int step, bool on, int gesture)
-    { rack.edit([this, step, on](model::Project& p) { p.current().set(id, step, on); }, gesture); };
+    {
+        rack.edit(
+            [this, step, on](model::Project& p)
+            {
+                auto& pattern = p.current();
+                // A greyed repeat: make the repeats up to there real first (doubling the
+                // loop as needed), so editing it doesn't change what else plays.
+                if (const int loopLength = p.loopLengthInSteps(pattern, id);
+                    loopLength > 0 && step >= loopLength)
+                {
+                    int target = loopLength;
+                    while (target <= step)
+                        target *= 2;
+                    pattern.fillLoop(id, loopLength, std::min(target, p.lengthInSteps(pattern)));
+                }
+                pattern.set(id, step, on);
+            },
+            gesture);
+    };
+
+    loop.setTooltip("Loop this channel: repeat its notes when the pattern is longer");
+    loop.onClick = [this]
+    {
+        rack.edit(
+            [this](model::Project& p)
+            {
+                if (auto* c = p.findChannel(id))
+                    c->loop = !c->loop;
+            });
+    };
+    addAndMakeVisible(loop);
 
     addAndMakeVisible(mute);
     addAndMakeVisible(name);
@@ -382,17 +528,23 @@ void ChannelRow::update(const model::Channel& channel, const model::Project& pro
     insert.setValue(channel.mixerTrack);
     name.setToggleState(project.selectedChannel == channel.id, juce::dontSendNotification);
 
+    loop.setState(channel.loop, project.loopChannels);
+
     const auto& pattern = project.current();
     const int length = project.lengthInSteps(pattern);
+    const int loopLength = project.loopLengthInSteps(pattern, channel.id); // 0 = no repeats
     if (!pattern.hasOnlySteps(channel.id))
     {
-        steps.setMelodicPreview(pattern.notesFor(channel.id), length);
+        steps.setMelodicPreview(pattern.notesFor(channel.id), length,
+                                loopLength > 0 ? loopLength : -1);
         return;
     }
+    // Repeats show what they play: the step it repeats.
     std::vector<bool> stepValues(static_cast<std::size_t>(length));
     for (int s = 0; s < length; ++s)
-        stepValues[static_cast<std::size_t>(s)] = pattern.isOn(channel.id, s);
-    steps.setSteps(std::move(stepValues));
+        stepValues[static_cast<std::size_t>(s)] =
+            pattern.isOn(channel.id, loopLength > 0 ? s % loopLength : s);
+    steps.setSteps(std::move(stepValues), loopLength > 0 ? loopLength : -1);
 }
 
 void ChannelRow::mouseDown(const juce::MouseEvent& e)
@@ -412,7 +564,7 @@ void ChannelRow::resized()
     insert.setBounds(area.removeFromLeft(metrics::insertWidth));
     area.removeFromLeft(4);
     name.setBounds(area.removeFromLeft(metrics::nameWidth).reduced(0, 2));
-    area.removeFromLeft(8);
+    loop.setBounds(area.removeFromLeft(loopWidth));
     steps.setBounds(area);
 }
 
@@ -489,6 +641,45 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
     addButton.onClick = [this] { showAddMenu(); };
     noFocus(addButton);
     addAndMakeVisible(addButton);
+
+    loopButton.setClickingTogglesState(true);
+    loopButton.setTooltip("Loop: channels whose notes are shorter than the pattern repeat them "
+                          "(each channel's loop switch is next to its name)");
+    loopButton.onClick = [this]
+    {
+        const bool on = loopButton.getToggleState();
+        edit([on](model::Project& p) { p.loopChannels = on; });
+    };
+    noFocus(loopButton);
+    addAndMakeVisible(loopButton);
+
+    // Pattern length. Other lengths (from dragging the handle) show as an extra item.
+    lengthBox.setTooltip("Pattern length in steps (drag the handle after the steps for others)");
+    for (int steps : {16, 32, 64})
+        lengthBox.addItem(juce::String(steps), steps);
+    lengthBox.onChange = [this]
+    {
+        const int steps = lengthBox.getSelectedId();
+        if (steps > 0 && steps != doc.project().current().minLengthInSteps)
+            edit([steps](model::Project& p) { p.current().minLengthInSteps = steps; });
+    };
+    noFocus(lengthBox);
+    addAndMakeVisible(lengthBox);
+
+    lengthHandle.currentLength = [this]
+    { return doc.project().lengthInSteps(doc.project().current()); };
+    lengthHandle.groupWidth = [this]
+    {
+        const int w = stepWidth();
+        return StepGrid::widthFor(8, w) - StepGrid::widthFor(4, w);
+    };
+    lengthHandle.newGestureId = [this] { return doc.newGestureId(); };
+    lengthHandle.onLengthChanged = [this](int steps, int gesture)
+    {
+        if (steps != doc.project().current().minLengthInSteps)
+            edit([steps](model::Project& p) { p.current().minLengthInSteps = steps; }, gesture);
+    };
+    addAndMakeVisible(lengthHandle);
 
     refresh();
     startTimerHz(30);
@@ -593,18 +784,49 @@ void ChannelRack::refresh()
         resized();
     }
 
+    const int width = stepWidth();
     for (std::size_t i = 0; i < rows.size(); ++i)
+    {
         rows[i]->update(project.channels[i], project);
+        rows[i]->setStepWidth(width);
+    }
+
+    loopButton.setToggleState(project.loopChannels, juce::dontSendNotification);
+    const int minLength = project.current().minLengthInSteps;
+    if (lengthBox.indexOfItemId(minLength) < 0)
+    {
+        // A dragged length: list it after the presets so the box can show it.
+        lengthBox.clear(juce::dontSendNotification);
+        for (int steps : {16, 32, 64})
+            lengthBox.addItem(juce::String(steps), steps);
+        lengthBox.addItem(juce::String(minLength), minLength);
+    }
+    lengthBox.setSelectedId(minLength, juce::dontSendNotification);
+    resized(); // the step area (and the handle) follow the pattern length
 
     if (auto* parent = getParentComponent())
         parent->resized();
 }
 
+int ChannelRack::stepWidth() const
+{
+    // As wide as possible up to the normal size, shrinking so the rack fits to the right of
+    // where it sits in its parent.
+    const auto& project = doc.project();
+    const int steps = project.lengthInSteps(project.current());
+    const int parentWidth = getParentWidth() > 0 ? getParentWidth() : 1280;
+    const int room = parentWidth - std::max(12, getX()) - 12 - hardShadowOffset - padding * 2 -
+                     rowFixedWidth - handleWidth;
+    int width = metrics::stepWidth;
+    while (width > minStepWidth && StepGrid::widthFor(steps, width) > room)
+        --width;
+    return width;
+}
+
 int ChannelRack::preferredWidth() const
 {
-    return hardShadowOffset + padding * 2 + metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
-           metrics::insertWidth + 4 + metrics::nameWidth + 8 +
-           StepGrid::widthFor(doc.project().lengthInSteps(doc.project().current()));
+    return hardShadowOffset + padding * 2 + rowFixedWidth + handleWidth +
+           StepGrid::widthFor(doc.project().lengthInSteps(doc.project().current()), stepWidth());
 }
 
 int ChannelRack::preferredHeight() const
@@ -650,7 +872,8 @@ void ChannelRack::paint(juce::Graphics& g)
     g.setColour(colour(t.colours.textDim));
     g.setFont(juce::FontOptions(13.0f));
     g.drawText(juce::String::fromUTF8(doc.project().current().name.c_str()),
-               text.withTrimmedRight(30.0f), juce::Justification::centredLeft, true);
+               text.withTrimmedRight(30.0f + 62.0f + 4.0f + 52.0f),
+               juce::Justification::centredLeft, true);
 
     panel = getLocalBounds().toFloat();
     if (t.effects.hardShadow)
@@ -681,12 +904,25 @@ void ChannelRack::resized()
     closeButton.setBounds(header.removeFromRight(headerHeight + hardShadowOffset)
                               .withTrimmedRight(hardShadowOffset)
                               .reduced(5));
+    lengthBox.setBounds(header.removeFromRight(62).reduced(2, 4));
+    header.removeFromRight(4);
+    loopButton.setBounds(header.removeFromRight(52).reduced(2, 4));
+
     auto area = bounds.reduced(padding);
+    area.removeFromRight(hardShadowOffset);
+    const int rowsTop = area.getY();
     for (auto& row : rows)
     {
-        row->setBounds(area.removeFromTop(metrics::rowHeight));
+        row->setBounds(area.removeFromTop(metrics::rowHeight).withTrimmedRight(handleWidth));
         area.removeFromTop(metrics::rowGap);
     }
+    // The handle sits right after the last step column, the height of the rows.
+    const auto& project = doc.project();
+    const int stepsRight =
+        padding + rowFixedWidth +
+        StepGrid::widthFor(project.lengthInSteps(project.current()), stepWidth());
+    lengthHandle.setBounds(stepsRight + 2, rowsTop, handleWidth - 2,
+                           std::max(metrics::rowHeight, area.getY() - rowsTop - metrics::rowGap));
     const int nameX =
         metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) + metrics::insertWidth + 4;
     addButton.setBounds(padding + nameX, area.getY(), metrics::nameWidth, metrics::rowHeight - 4);

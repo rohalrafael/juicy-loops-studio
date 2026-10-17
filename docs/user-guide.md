@@ -91,6 +91,20 @@ the whole song.
 | Drop audio files below the rows | Add channels |
 | Click + | Add a channel: **Sample…** or **Instrument ›** (a plugin synth) |
 | Click a note preview | Open the Piano Roll for that channel |
+| Length box (title bar) | Pattern length: 16, 32 or 64 steps |
+| Drag the handle after the last step | Make the pattern longer or shorter, 4 steps at a time |
+| **Loop** (title bar) | Loop on/off for the whole rack |
+| Circular arrow next to a name | Loop on/off for that channel |
+
+**Pattern length and looping.** The pattern is as long as the length box says, or longer when a
+channel's notes need it (the Piano Roll can add bars). With **Loop** on (the default), a channel
+whose notes are shorter than the pattern repeats them: its notes are rounded up to 1, 2, 4, 8...
+bars, and that block plays again and again. Example: a 4-bar bass line with a 1-bar drum beat
+gives 4 bars of drums. The repeats are shown greyed. Clicking a greyed step makes it real: the
+repeats up to there are copied in first (the channel's loop doubles), so what you hear doesn't
+change. Because the loop length comes from the notes, a channel can't end with empty bars while
+it loops; switch its loop off (the arrow) to have it play once and stay silent after. Long
+patterns shrink the step buttons to fit.
 
 **Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
 with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its
@@ -111,6 +125,7 @@ installed, the channel stays silent and keeps them.
 | Right-click / drag | Delete clips |
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Bar, beat or step |
+| Click / drag the ruler | Move the playhead there (snapped); switches to SONG mode |
 
 ## Piano Roll
 
@@ -123,6 +138,11 @@ installed, the channel stays silent and keeps them.
 | Velocity lane (bottom) | Drag a stem up/down to set velocity |
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Beat, step, ½ step, ⅓ step or none |
+| Click / drag the ruler | Move the playhead there (snapped); switches to PAT mode |
+| Click and hold a key on the left | Play that note (slide to play others) |
+
+Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
+while you drag it up or down you hear the new pitch.
 
 Note names follow FL: C5 is middle C (MIDI 60) and plays a sample at its original pitch. Note
 length doesn't change the sound yet: samples always play to their end, like FL's default sampler.

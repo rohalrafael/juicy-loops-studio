@@ -72,6 +72,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
     // Geometry shared by the parts.
     float pixelsPerStep() const { return zoom; }
     int snapSteps() const;
+    // Moves the playhead to ruler position x (snapped) and switches to song mode.
+    void seekToX(float x);
     int stepAtX(float x) const; // grid coordinates
     float xForStep(double step) const { return static_cast<float>(step) * zoom; }
     int trackAtY(float y) const;

@@ -170,6 +170,22 @@ for each chunk:
   processor, or in `Engine::prepare()` before audio starts. `process()` never allocates. The
   pool is reset when the audio device format changes.
 
+### Looping channels, seeking, audition
+
+- **Looping channels** are a model feature: `Project::loopLengthInSteps()` gives the length a
+  channel repeats at (its notes rounded up to 1, 2, 4... bars; 0 when looping is off, the
+  channel has no notes, or they fill the pattern), and `toEngineState()` writes the repeats into
+  the snapshot. The sequencer just plays notes. `Pattern::fillLoop()` turns repeats into real
+  notes when a greyed step is clicked (ChannelRow).
+- **Seeking:** `Transport::seek(beat)` stores a target that `advance()` applies at the start of
+  the next block, like the rewind from `stop()` (a later `stop()` wins over an earlier seek and
+  vice versa). The engine sees the block start somewhere else and releases held notes, as for
+  any jump. The Playlist ruler seeks in song time (and switches to SONG), the Piano Roll ruler
+  in pattern time (and switches to PAT).
+- **Audition:** the Piano Roll calls `audition(pitch)` / `stopAudition()`; MainComponent sends
+  them as live events (`Engine::sendLive()`) to the selected channel, so they play instruments
+  and samples exactly like the typing keyboard.
+
 ### Instruments and note-offs
 
 A channel can be played by a plugin instrument (`Channel::pluginId` set) instead of a sample.

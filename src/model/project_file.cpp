@@ -97,7 +97,8 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
     for (const auto& c : project.channels)
     {
         json channel = {{"id", c.id},         {"name", c.name},   {"volume", tidy(c.volume)},
-                        {"pan", tidy(c.pan)}, {"muted", c.muted}, {"mixerTrack", c.mixerTrack}};
+                        {"pan", tidy(c.pan)}, {"muted", c.muted}, {"mixerTrack", c.mixerTrack},
+                        {"loop", c.loop}};
         if (c.isInstrument())
             channel["instrument"] = {
                 {"id", c.pluginId}, {"name", c.pluginName}, {"state", c.pluginState}};
@@ -163,6 +164,7 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
         {"version", projectFormatVersion},
         {"tempo", project.tempo},
         {"beatsPerBar", project.beatsPerBar},
+        {"loopChannels", project.loopChannels},
         {"channels", channels},
         {"patterns", patterns},
         {"playlist", {{"tracks", project.playlist.numTracks}, {"clips", clips}}},
@@ -205,6 +207,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
     project.patterns.clear();
     project.tempo = read.clamped<double>(root, "tempo", 130.0, 10.0, 999.0);
     project.beatsPerBar = read.clamped<int>(root, "beatsPerBar", 4, 1, 16);
+    project.loopChannels = read.get<bool>(root, "loopChannels", true);
 
     // Channels and their samples.
     const auto projectDir = projectFile.parent_path();
@@ -222,6 +225,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         channel.pan = read.clamped<float>(c, "pan", 0.0f, -1.0f, 1.0f);
         channel.muted = read.get<bool>(c, "muted", false);
         channel.mixerTrack = read.clamped<int>(c, "mixerTrack", 0, 0, Mixer::numInserts);
+        channel.loop = read.get<bool>(c, "loop", true);
 
         // A plugin instrument channel. Kept even if the plugin isn't installed here (it stays
         // silent), so the project survives a round trip through another machine.

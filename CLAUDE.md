@@ -303,6 +303,15 @@ and run it before milestones or after platform-specific changes.
   Clock under bar:beat:step: `model::formatTime` "M:SS.mmm", current / total of what loops.
   Tempo -/+ buttons step 1 BPM (range interval 1, custom snap keeps typed values to 0.001).
 
+- 2026-10-17: Rulers seek (`Transport::seek`; Playlist ruler -> SONG mode, Piano Roll ruler -> PAT
+  mode, snapped). Piano Roll audition (keys and notes, while held; drag = new pitch) via live
+  events. Channel Rack: length box 16/32/64 (= `Pattern::minLengthInSteps`, user's "4/8/16" meant
+  groups of 4 steps) + drag handle (groups of 4); steps shrink to fit (20 -> 8 px). **Looping**
+  (user's choices): rack Loop switch (`Project::loopChannels`) + per-channel `Channel::loop`, both
+  default on; loop length automatic = notes rounded up to 1/2/4/8.. bars; repeats expanded in
+  `toEngineState`; greyed in the rack; clicking a greyed step `fillLoop`s first. Limitation: a
+  looping channel can't end in empty bars (switch its loop off).
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools

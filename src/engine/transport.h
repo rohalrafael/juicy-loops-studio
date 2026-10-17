@@ -32,6 +32,8 @@ class Transport
     void pause();
     // Stops playback and rewinds to the start, like FL's stop button.
     void stop();
+    // Moves the playhead to `beat` (keeps playing if it was). Clicking a ruler does this.
+    void seek(double beat);
     // Play <-> stop (rewinds), like FL's spacebar.
     void togglePlay();
     // Play <-> pause, like FL's play button.
@@ -53,6 +55,7 @@ class Transport
   private:
     std::atomic<bool> playing{false};
     std::atomic<bool> rewindRequested{false};
+    std::atomic<double> seekTarget{-1.0}; // < 0 = no seek pending
     std::atomic<double> bpm{defaultTempo};
     std::atomic<int> barLength{4};
     std::atomic<double> position{0.0}; // written only by the audio thread

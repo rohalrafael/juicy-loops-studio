@@ -50,7 +50,12 @@ juce::String noteName(int pitch)
 class PianoRollView::Keyboard final : public juce::Component
 {
   public:
-    explicit Keyboard(PianoRollView& v) : view(v) { setInterceptsMouseClicks(false, false); }
+    explicit Keyboard(PianoRollView& v) : view(v) {}
+
+    // Clicking a key plays it while the button is held; dragging slides to other keys.
+    void mouseDown(const juce::MouseEvent& e) override { play(e); }
+    void mouseDrag(const juce::MouseEvent& e) override { play(e); }
+    void mouseUp(const juce::MouseEvent&) override { view.stopAudition(); }
 
     void paint(juce::Graphics& g) override
     {
@@ -73,6 +78,11 @@ class PianoRollView::Keyboard final : public juce::Component
                 g.setColour(juce::Colour(0xff1a1a1a));
                 g.fillRect(row.withTrimmedRight(row.getWidth() * 0.35f));
             }
+            if (pitch == view.auditionPitch)
+            {
+                g.setColour(colour(t.colours.accent));
+                g.fillRect(row.withTrimmedRight(black ? row.getWidth() * 0.35f : 0.0f));
+            }
             g.setColour(juce::Colours::black.withAlpha(0.25f));
             g.fillRect(row.removeFromBottom(1.0f));
             if (pitch % 12 == 0)
@@ -87,13 +97,27 @@ class PianoRollView::Keyboard final : public juce::Component
     }
 
   private:
+    void play(const juce::MouseEvent& e)
+    {
+        const int pitch = view.pitchAtY(e.position.y + view.viewport.getViewPositionY());
+        if (pitch >= 0 && pitch < numPitches)
+            view.audition(pitch, model::Note::defaultVelocity);
+    }
+
     PianoRollView& view;
 };
 
-class PianoRollView::Ruler final : public juce::Component
+class PianoRollView::Ruler final : public juce::Component, public juce::SettableTooltipClient
 {
   public:
-    explicit Ruler(PianoRollView& v) : view(v) { setInterceptsMouseClicks(false, false); }
+    explicit Ruler(PianoRollView& v) : view(v)
+    {
+        setTooltip("Click or drag to move the playhead (switches to PAT mode)");
+    }
+
+    // Clicking (or dragging along) the ruler moves the playhead there, snapped.
+    void mouseDown(const juce::MouseEvent& e) override { seek(e); }
+    void mouseDrag(const juce::MouseEvent& e) override { seek(e); }
 
     void paint(juce::Graphics& g) override
     {
@@ -137,6 +161,16 @@ class PianoRollView::Ruler final : public juce::Component
     }
 
   private:
+    void seek(const juce::MouseEvent& e)
+    {
+        const int tick = view.snapDown(
+            view.tickAtX(e.position.x + static_cast<float>(view.viewport.getViewPositionX())));
+        // The Piano Roll shows the pattern, so jumping in it means pattern mode.
+        if (view.doc.project().songMode)
+            view.doc.setViewState([](model::Project& p) { p.songMode = false; });
+        view.transport.seek(static_cast<double>(std::max(0, tick)) / model::ticksPerBeat);
+    }
+
     PianoRollView& view;
 };
 
@@ -285,6 +319,7 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
         drag = onRightEdge(dragNote, e.position.x) ? Drag::resize : Drag::move;
         grabOffsetTicks = view.tickAtX(e.position.x) - note.startTick;
         grabPitch = note.pitch;
+        view.audition(note.pitch, note.velocity);
         return;
     }
 
@@ -298,6 +333,7 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
     drag = Drag::move;
     grabOffsetTicks = view.tickAtX(e.position.x) - note.startTick;
     grabPitch = note.pitch;
+    view.audition(note.pitch, note.velocity);
 }
 
 void NoteGrid::mouseDrag(const juce::MouseEvent& e)
@@ -325,6 +361,8 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
         view.newNoteLength = note.lengthTicks;
     }
 
+    if (note.pitch != original.pitch)
+        view.audition(note.pitch, note.velocity); // hear where the note is going
     if (note == original)
         return;
     const int index = dragNote;
@@ -336,6 +374,7 @@ void NoteGrid::mouseUp(const juce::MouseEvent&)
 {
     drag = Drag::none;
     dragNote = -1;
+    view.stopAudition();
 }
 
 void NoteGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w)
@@ -541,6 +580,27 @@ double PianoRollView::playheadTick() const
         return -1.0;
     const double length = project.lengthInSteps(project.current()) * model::ticksPerStep;
     return length > 0.0 ? std::fmod(position, length) : -1.0;
+}
+
+void PianoRollView::audition(int pitch, float velocity)
+{
+    if (pitch == auditionPitch)
+        return;
+    stopAudition();
+    auditionPitch = pitch;
+    if (onAuditionStart)
+        onAuditionStart(pitch, velocity);
+    keyboard->repaint();
+}
+
+void PianoRollView::stopAudition()
+{
+    if (auditionPitch < 0)
+        return;
+    if (onAuditionStop)
+        onAuditionStop(auditionPitch);
+    auditionPitch = -1;
+    keyboard->repaint();
 }
 
 void PianoRollView::refresh()

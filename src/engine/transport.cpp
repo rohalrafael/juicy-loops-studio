@@ -19,6 +19,12 @@ void Transport::pause()
     playing.store(false);
 }
 
+void Transport::seek(double beat)
+{
+    rewindRequested.store(false);
+    seekTarget.store(std::max(0.0, beat));
+}
+
 void Transport::stop()
 {
     playing.store(false);
@@ -75,9 +81,16 @@ BlockPosition Transport::advance(int numSamples, double sampleRate)
 {
     if (rewindRequested.exchange(false))
     {
+        seekTarget.store(-1.0);
         anchorBeat = 0.0;
         samplesSinceAnchor = 0;
         position.store(0.0);
+    }
+    if (const double target = seekTarget.exchange(-1.0); target >= 0.0)
+    {
+        anchorBeat = target;
+        samplesSinceAnchor = 0;
+        position.store(target);
     }
 
     BlockPosition block;

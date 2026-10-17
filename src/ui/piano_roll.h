@@ -18,6 +18,7 @@ class PianoRollView;
 
 // The note grid. Mouse, as in FL:
 //   left-click empty space  add a note (same length as the last one), then drag to move it
+//                           (the note sounds while the button is held, at its current pitch)
 //   drag a note             move it in time and pitch (snapped)
 //   drag a note's right end resize it (new notes then use that length)
 //   right-click / drag      delete notes
@@ -95,6 +96,14 @@ class PianoRollView final : public juce::Component, private juce::Timer
     void editNotes(const std::function<void(std::vector<model::Note>&)>& change, int gestureId);
 
     int newNoteLength = model::ticksPerStep; // the last length used, as in FL
+
+    // Audition: plays `pitch` on the channel until stopAudition() (or another pitch). Clicking
+    // notes and keyboard keys uses it; the owner connects it to the engine.
+    void audition(int pitch, float velocity);
+    void stopAudition();
+    int auditionPitch = -1; // sounding now, or -1
+    std::function<void(int pitch, float velocity)> onAuditionStart;
+    std::function<void(int pitch)> onAuditionStop;
 
     void setZoom(float pixelsPerTick, float anchorGridX);
     float pixelsPerTick() const { return zoom; }

@@ -38,6 +38,9 @@ struct Channel
     float pan = 0.0f;    // -1 (left) .. +1 (right)
     bool muted = false;
     int mixerTrack = 0; // 0 = Master, 1.. = inserts
+    // Repeat this channel's notes when the pattern is longer than they are (see
+    // Project::loopLengthInSteps()). Applies only while Project::loopChannels is on.
+    bool loop = true;
 
     // A hosted plugin instrument plays the channel instead of a sample (see setInstrument()).
     std::string pluginId;    // the host's identifier string; empty = sampler channel
@@ -126,6 +129,11 @@ struct Pattern
     std::map<ChannelId, std::vector<Note>> notes;
 
     const std::vector<Note>& notesFor(ChannelId channel) const;
+    // Where a channel's notes end, in steps (0 if it has none).
+    int contentEndInSteps(ChannelId channel) const;
+    // Makes a looping channel's repeats real: copies its notes in [0, fromSteps) over and over
+    // until toSteps, so it sounds the same and can then be edited beyond its old loop.
+    void fillLoop(ChannelId channel, int fromSteps, int toSteps);
     // Length in steps: the minimum, or the last note's end rounded up to a whole bar.
     int lengthInSteps(int stepsPerBar) const;
     bool isEmpty() const;
@@ -165,6 +173,9 @@ struct Project
     Mixer mixer;
     double tempo = 130.0; // BPM
     int beatsPerBar = 4;  // time signature numerator (n/4)
+    // The Channel Rack's loop switch: channels whose notes are shorter than the pattern repeat
+    // them (each channel can opt out with Channel::loop).
+    bool loopChannels = true;
 
     // View state: kept across undo/redo (see Document).
     PatternId currentPattern = 0;
@@ -202,6 +213,12 @@ struct Project
     int lengthInSteps(const Pattern& pattern) const { return pattern.lengthInSteps(stepsPerBar()); }
     // Length of the arrangement: end of the last clip, rounded up to a whole bar (0 if empty).
     int songLengthInSteps() const;
+
+    // A channel's notes rounded up to 1, 2, 4, 8... bars: the length it repeats at.
+    int naturalLoopInSteps(const Pattern& pattern, ChannelId channel) const;
+    // The length a channel actually repeats at in `pattern`, or 0 if it doesn't (looping off,
+    // no notes, or the notes already fill the pattern).
+    int loopLengthInSteps(const Pattern& pattern, ChannelId channel) const;
 
     // Adds an effect with default settings to a mixer track's chain. Returns 0 if the track
     // is full or the type unknown.

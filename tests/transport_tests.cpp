@@ -95,3 +95,26 @@ TEST_CASE("Beats per bar is clamped")
     t.setBeatsPerBar(99);
     CHECK(t.beatsPerBar() == Transport::maxBeatsPerBar);
 }
+
+TEST_CASE("Seeking moves the playhead, playing or not")
+{
+    Transport transport;
+    transport.seek(6.5);
+    auto block = transport.advance(512, 48000.0); // stopped: the seek still applies
+    CHECK_FALSE(block.playing);
+    CHECK(transport.positionInBeats() == 6.5);
+
+    transport.play();
+    block = transport.advance(24000, 48000.0); // 130 BPM: 24000 samples = 1.0833 beats
+    CHECK(block.startBeat == 6.5);
+    transport.seek(2.0);
+    block = transport.advance(512, 48000.0);
+    CHECK(block.startBeat == 2.0);
+    CHECK(transport.isPlaying());
+
+    // Stop after a seek still rewinds to the start.
+    transport.seek(10.0);
+    transport.stop();
+    transport.advance(512, 48000.0);
+    CHECK(transport.positionInBeats() == 0.0);
+}

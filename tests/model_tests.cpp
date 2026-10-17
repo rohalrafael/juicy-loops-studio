@@ -1,5 +1,6 @@
 #include "model/document.h"
 #include "model/project.h"
+#include "model/project_file.h"
 
 #include "engine/drum_synth.h"
 
@@ -324,4 +325,69 @@ TEST_CASE("Times are shown as minutes, seconds and milliseconds")
     Project project;
     project.tempo = 120.0;
     CHECK(formatTime(16 * project.secondsPerStep()) == "0:02.000");
+}
+
+TEST_CASE("Channels shorter than the pattern loop; their repeats are played")
+{
+    Project project;
+    const auto drums = project.addChannel("Drums", nullptr);
+    const auto bass = project.addChannel("Bass", nullptr);
+    auto& pattern = project.current();
+    pattern.set(drums, 0, true);
+    pattern.set(drums, 6, true);                                          // drums: 1 bar of content
+    pattern.notes[bass].push_back({0, 64 * ticksPerStep - 24, 48, 0.8f}); // bass: 4 bars
+    REQUIRE(project.lengthInSteps(pattern) == 64);
+
+    CHECK(project.naturalLoopInSteps(pattern, drums) == 16);
+    CHECK(project.loopLengthInSteps(pattern, drums) == 16);
+    CHECK(project.loopLengthInSteps(pattern, bass) == 0); // fills the pattern already
+    pattern.set(drums, 20, true);                         // now 2 bars of content
+    CHECK(project.loopLengthInSteps(pattern, drums) == 32);
+    pattern.set(drums, 40, true); // 3 bars -> rounds up to 4 = the pattern: no repeats
+    CHECK(project.loopLengthInSteps(pattern, drums) == 0);
+    pattern.set(drums, 20, false);
+    pattern.set(drums, 40, false);
+
+    // The snapshot holds the repeats.
+    auto state = toEngineState(project);
+    CHECK(state->patterns[0].notes[0].size() == 8); // 2 steps x 4 bars
+    CHECK(state->patterns[0].notes[1].size() == 1);
+
+    // Off per channel, or for the whole rack: played once.
+    project.findChannel(drums)->loop = false;
+    CHECK(project.loopLengthInSteps(pattern, drums) == 0);
+    CHECK(toEngineState(project)->patterns[0].notes[0].size() == 2);
+    project.findChannel(drums)->loop = true;
+    project.loopChannels = false;
+    CHECK(toEngineState(project)->patterns[0].notes[0].size() == 2);
+}
+
+TEST_CASE("Filling a loop copies its notes so the channel sounds the same")
+{
+    Project project;
+    const auto drums = project.addChannel("Drums", nullptr);
+    auto& pattern = project.current();
+    pattern.minLengthInSteps = 64;
+    pattern.set(drums, 0, true);
+    pattern.set(drums, 6, true);
+    const auto before = toEngineState(project)->patterns[0].notes[0].size();
+
+    pattern.fillLoop(drums, 16, 32);
+    CHECK(pattern.isOn(drums, 16));
+    CHECK(pattern.isOn(drums, 22));
+    CHECK_FALSE(pattern.isOn(drums, 32));
+    CHECK(project.loopLengthInSteps(pattern, drums) == 32);
+    CHECK(toEngineState(project)->patterns[0].notes[0].size() == before); // same 8 hits
+}
+
+TEST_CASE("Loop switches are saved")
+{
+    Project project;
+    const auto id = project.addChannel("Drums", nullptr);
+    project.findChannel(id)->loop = false;
+    project.loopChannels = false;
+    const auto loaded = loadProject(saveProject(project, "/p/x.jls"), "/p/x.jls", {});
+    REQUIRE(loaded.project);
+    CHECK_FALSE(loaded.project->loopChannels);
+    CHECK_FALSE(loaded.project->findChannel(id)->loop);
 }

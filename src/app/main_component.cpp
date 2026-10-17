@@ -163,6 +163,14 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         [this](const std::string& id, const std::string& state, double rate, int block)
         { return pluginHost.createInstrument(id, state, rate, block); });
     channelRack.onOpenPianoRoll = [this](model::ChannelId) { showPianoRoll(); };
+    // Clicking notes and keys in the Piano Roll plays them on its channel, like live input.
+    pianoRoll.onAuditionStart = [this](int pitch, float velocity)
+    {
+        engine.sendLive(
+            {engine::LiveEvent::Kind::noteOn, document.project().selectedChannel, pitch, velocity});
+    };
+    pianoRoll.onAuditionStop = [this](int pitch)
+    { engine.sendLive({engine::LiveEvent::Kind::noteOff, 0, pitch, 0.0f}); };
     channelRack.listInstruments = [this]
     {
         std::vector<ui::PluginItem> list;

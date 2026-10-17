@@ -11,6 +11,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
   "version": 1,
   "tempo": 130.0,
   "beatsPerBar": 4,
+  "loopChannels": true,
   "channels": [
     { "id": 1, "name": "Kick", "sample": { "builtin": "kick" },
       "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 1 },
@@ -44,8 +45,10 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `format`, `version` | Always `"juicy-loops-studio-project"`; format version (currently 1) |
 | `tempo` | BPM, 10 to 999 |
 | `beatsPerBar` | Time signature numerator (n/4), 1 to 16 |
+| `loopChannels` | The Channel Rack's Loop switch (default `true`) |
 | `channels[]` | In Channel Rack order. `id` is referenced by patterns. `mixerTrack` is 0 for Master, otherwise an insert |
 | `channels[].sample` | `{"builtin": "kick"/"clap"/"hat"/"snare"}`, or `{"path": absolute, "relativePath": relative to the project file}`, or `null` |
+| `channels[].loop` | Whether the channel repeats its notes when the pattern is longer (default `true`) |
 | `channels[].instrument` | Instead of `sample`, for a channel played by a plugin: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
 | `patterns[]` | In pattern-selector order. `minLength` is in steps; the pattern grows to fit its notes |
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |

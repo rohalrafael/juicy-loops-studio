@@ -25,6 +25,34 @@ const std::vector<Note>& Pattern::notesFor(ChannelId channel) const
     return it == notes.end() ? none : it->second;
 }
 
+int Pattern::contentEndInSteps(ChannelId channel) const
+{
+    int lastTick = 0;
+    for (const auto& note : notesFor(channel))
+        lastTick = std::max(lastTick, note.endTick());
+    return (lastTick + ticksPerStep - 1) / ticksPerStep;
+}
+
+void Pattern::fillLoop(ChannelId channel, int fromSteps, int toSteps)
+{
+    if (fromSteps <= 0 || toSteps <= fromSteps)
+        return;
+    auto& list = notes[channel];
+    const int loopTicks = fromSteps * ticksPerStep;
+    std::vector<Note> original;
+    for (const auto& note : list)
+        if (note.startTick < loopTicks)
+            original.push_back(note);
+    std::erase_if(list, [loopTicks](const Note& n) { return n.startTick >= loopTicks; });
+    for (int offset = loopTicks; offset < toSteps * ticksPerStep; offset += loopTicks)
+        for (auto note : original)
+        {
+            note.startTick += offset;
+            if (note.startTick < toSteps * ticksPerStep)
+                list.push_back(note);
+        }
+}
+
 int Pattern::lengthInSteps(int stepsPerBar) const
 {
     int lastTick = 0;
@@ -317,6 +345,26 @@ std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& nam
     return std::make_shared<const engine::SampleBuffer>(engine::synthesizeDrum(sound, sampleRate));
 }
 
+int Project::naturalLoopInSteps(const Pattern& pattern, ChannelId channel) const
+{
+    const int end = pattern.contentEndInSteps(channel);
+    if (end <= 0)
+        return 0;
+    int loop = std::max(1, stepsPerBar());
+    while (loop < end && loop < Pattern::maxSteps)
+        loop *= 2;
+    return loop;
+}
+
+int Project::loopLengthInSteps(const Pattern& pattern, ChannelId channel) const
+{
+    const auto* c = findChannel(channel);
+    if (!loopChannels || c == nullptr || !c->loop)
+        return 0;
+    const int loop = naturalLoopInSteps(pattern, channel);
+    return loop < lengthInSteps(pattern) ? loop : 0;
+}
+
 std::string formatTime(double seconds)
 {
     const auto ms = static_cast<long long>(std::floor(std::max(0.0, seconds) * 1000.0 + 1e-6));
@@ -377,9 +425,17 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
         ps.lengthTicks = project.lengthInSteps(pattern) * ticksPerStep;
         ps.notes.resize(project.channels.size());
         for (std::size_t ch = 0; ch < project.channels.size(); ++ch)
-            for (const auto& note : pattern.notesFor(project.channels[ch].id))
-                ps.notes[ch].push_back(
-                    {note.startTick, note.lengthTicks, note.pitch, note.velocity});
+        {
+            // A looping channel's notes are repeated here, so the engine just plays them.
+            const auto id = project.channels[ch].id;
+            const int loopTicks = project.loopLengthInSteps(pattern, id) * ticksPerStep;
+            const int repeatTicks = loopTicks > 0 ? loopTicks : ps.lengthTicks;
+            for (int offset = 0; offset < ps.lengthTicks; offset += repeatTicks)
+                for (const auto& note : pattern.notesFor(id))
+                    if (offset == 0 || note.startTick + offset < ps.lengthTicks)
+                        ps.notes[ch].push_back(
+                            {note.startTick + offset, note.lengthTicks, note.pitch, note.velocity});
+        }
         state->patterns.push_back(std::move(ps));
 
         if (pattern.id == project.current().id)

@@ -1,0 +1,244 @@
+# Decision log
+
+Why things are the way they are, newest last. Each entry records *what* was decided and *why*,
+plus known gaps at the time. Add an entry when you make a decision others would otherwise
+second-guess (a convention, a trade-off, a dependency, a behaviour copied from FL or deliberately
+not). Older entries describe the project as it was then; later entries may supersede them.
+
+- 2026-10-16: Language set to **C++** (over Rust) for its plugin-hosting and DAW
+  ecosystem.
+- 2026-10-16: **JUCE 9 + CMake**, deps via FetchContent. JUCE 9's open-source
+  license is AGPLv3 (not GPLv3), so the project is **AGPLv3**.
+- 2026-10-16: Engine is a separate JUCE-free library so it can be unit-tested
+  without a GUI.
+- 2026-10-16: Transport semantics follow FL: the Play button toggles play/pause;
+  Space and the Stop button stop *and rewind* to the start.
+- 2026-10-16: Metronome: 1760 Hz accent on bar downbeats, 880 Hz on other beats,
+  30 ms decaying sine. Off by default; Ctrl+M toggles it (FL's shortcut). Time
+  signature is numerator only (n/4) for now.
+- 2026-10-16: Playhead is computed from an integer sample count since the last tempo
+  change (not by summing per-block increments), and trigger offsets are rounded. This
+  fixed a real drift bug and keeps triggers exact to the sample; there's a test for it.
+- 2026-10-16: Channel Rack v1: steps belong to the pattern (keyed by channel id), 16 steps =
+  1 bar of 16ths, pattern loops. Default channels Kick/Clap/Hat/Snare use *synthesized*
+  sounds (no shipped samples). Left-click toggles/paints steps, right-click erases. The
+  channel name button opens a menu (rename / replace sample / delete). Dropping audio files
+  on a row replaces its sample; dropping elsewhere adds channels. Volume default 80%,
+  balance-style pan. Undo is Ctrl+Z, redo Ctrl+Y / Ctrl+Shift+Z. (FL's real scheme differs:
+  Ctrl+Z toggles last undo/redo, Ctrl+Alt+Z steps back. Revisit.)
+- Known gaps: no channel settings window, no pattern length UI (model supports 1-64),
+  samples load synchronously on the UI thread, no channel reordering or selection.
+- 2026-10-16: Look: maintainer picked **Juicy** (plum #17121c/#241b2c, blood orange #ff7a45,
+  lime #b7f04a) as the main direction. Further mockups (Citrus, Watermelon, Blueberry) are
+  deliberately *not* FL-like. Plan: themes become data, selectable in Options › Theme,
+  with import/export of custom theme JSON files. A theme sets colours *and* font, corner
+  radii, border width and glow; anything missing falls back to the default. Format
+  draft is on the mockup canvas's ThemePicker board.
+- 2026-10-16: Theme system built. Built-ins Juicy (default), Citrus, Watermelon,
+  Blueberry are JSON strings in `src/theme/builtin_themes.cpp`, parsed like user files.
+  `Theme`'s member defaults == Juicy (tested). Options › Theme… opens ThemeDialog (cards,
+  import/export/open folder). User themes live in `<settings dir>/themes/*.json`, ids
+  `custom:<file>`. Settings: `$XDG_CONFIG_HOME/JuicyLoopsStudio/` on Linux (JUCE's
+  default would be a folder directly in $HOME). Fonts are bundled as **static** Regular
+  TTFs: variable fonts loaded at their default axis (Outfit = Thin). Menu bar: File/Edit/
+  Options/Help (native on macOS). Format doc: `docs/themes.md`.
+- 2026-10-16: Patterns + Playlist. `Project` has `patterns` (never empty; steps keyed by
+  channel id) and `playlist.clips` {pattern, track, startStep, lengthInSteps}; positions
+  are in steps (16ths). A clip longer than its pattern **repeats** it. Song length = last
+  clip end rounded up to a bar; SONG mode loops it. `currentPattern` and `songMode` are
+  **view state**: `Document::setViewState()` changes them without an undo step, and
+  undo/redo keeps them. Time signature moved into `Project::beatsPerBar` (transport mirrors
+  it for the metronome). Playlist mouse: left-click places + drag moves, right edge resizes,
+  right-click deletes, Ctrl+wheel zooms; snap Bar/Beat/Step. Channel Rack is a floating
+  panel over the Playlist (drag its title bar; F6 toggles). Keys: L = PAT/SONG, F4 = new
+  pattern. Patterns menu: new/clone/rename/delete.
+- 2026-10-16: Keyboard focus: shortcuts live in MainComponent and most widgets don't take
+  focus, so focus must come back after menus and dialogs: `menuBarActivated(false)`, a click
+  anywhere (mouse listener on all children), and a timer safety net (only while our window
+  is the active one). Found by UI testing, along with step painting skipping steps on fast
+  drags (now interpolated).
+- Known gaps: no seeking (clicking the ruler), no pattern length UI, no track names/mute,
+  no clip selection or multi-select, the playlist has a fixed 16 tracks.
+- 2026-10-16: Piano Roll. Patterns store **notes** per channel (`Note`: startTick,
+  lengthTicks, pitch, velocity; 96 ticks/beat, 24/step). A Channel Rack step is a note at
+  C5 (60), one step long, on a step boundary (`Note::isStep`). A channel with any other
+  notes shows a mini note preview in the rack instead of steps; clicking it opens the Piano
+  Roll, as in FL. Pattern length = notes rounded up to whole bars (min 1 bar; see 2026-10-17)
+  (`Project::lengthInSteps(pattern)`). Engine works in ticks; the sequencer collects note
+  starts per block (pattern loop / clip repeats / song loop split) and sorts by offset.
+  Sampler pitch = resample by 2^((p-60)/12); velocity gain = v / (100/128). **Note length
+  isn't audible yet**: samples play to the end, like FL's default sampler.
+  `Project::selectedChannel` is view state (left-click a channel name; right-click = menu).
+  F7 shows the Piano Roll for it, F5 the Playlist (they share the main area). FL note names
+  (C5 = 60). Piano Roll mouse mirrors the Playlist: click adds + drag moves, right edge
+  resizes (sets the length for new notes), right-click deletes, Ctrl+wheel zooms; snap
+  Beat/Step/half/third/None; velocity lane sets the nearest stem (and chord) within 8 px.
+- Known gaps (Piano Roll): no note selection/multi-select/copy, no audition when clicking
+  keys, no cut-at-note-end option, can't set pattern length by hand.
+- 2026-10-16: Mixer. `Project::mixer.tracks` = Master + 16 inserts (fader dB, pan, mute,
+  solo, up to 8 `EffectSlot`s {id, type, params, enabled}). Channels have `mixerTrack`
+  (defaults Kick..Snare -> 1..4, new channels -> next free insert, 0 = Master). Engine: the
+  sampler renders into per-track stereo buses; inserts run effects, fader/pan, meter, then
+  sum into Master; Master goes to the output; metronome bypasses the mixer. Effect DSP
+  state lives in `EffectProcessor`s owned by `engine::EffectPool` (UI thread, keyed by
+  effect id) and is shared into each snapshot via shared_ptr, so tails survive edits; the
+  audio thread never copies or releases those pointers. Pool is reset when the device
+  format changes (MainComponent timer). Effects are written from scratch (engine stays
+  JUCE-free) and describe their params (`ParamInfo`) so the UI builds knobs generically.
+  Meters: `Engine::takePeak()` (atomic max, read-and-reset by the UI). Mixer docked at the
+  bottom (F9), selected track's slots on the right, `EffectPanel` floats.
+- Known gaps (Mixer): no sends/routing between inserts, no renaming tracks, no param
+  smoothing (fast knob moves can click), no tempo-synced delay.
+- 2026-10-16: Projects + export. `.jls` = JSON (`model/project_file`, nlohmann now a top-level
+  dependency shared by theme + model). Samples are referenced (absolute + relative path;
+  relative tried first), built-ins by name; effect params saved by name; loading clamps,
+  skips unknown entries with warnings, keeps missing sample references. Floats are saved
+  rounded to 6 decimals. Tempo moved into `Project::tempo` (undoable; transport mirrors it).
+  `Document` has revision-based `isModified()`, `markSaved()`, `reset()`. Export =
+  `model::renderProject()` (private Engine + EffectPool, song once + 2 s tail, current pattern
+  if the Playlist is empty) + `io::writeWav()` (24-bit). File menu: Ctrl+N/O/S/Shift+S/R,
+  title shows name and `*`, Save / Don't save / Cancel prompt on New/Open/Quit.
+- Known gaps (files): export runs on the UI thread (blocks briefly, and holds live audio), no recent-files list, no
+  autosave, no "collect samples into project folder". Clipping: solved 2026-10-17 with a **Soft
+  Clipper** effect (maintainer's choice over a limiter), on the Master in new projects
+  (`makeDefaultProject`). Linear below the knee, tanh shoulder up to the ceiling (default
+  -0.3 dB); no oversampling yet.
+- 2026-10-17: Plugin hosting phase 1 (effects). `src/plugins/plugin_host` (JUCE,
+  `JUCE_PLUGINHOST_VST3/LV2=1`; CLAP isn't in JUCE). `EffectSlot` type `"plugin"` + pluginId /
+  pluginName / pluginState (base64). `EffectPool::setPluginFactory` creates them;
+  `EffectProcessor::saveState()` lets plugins report state; failures are cached in the pool.
+  `PluginWindow` shows the editor (it holds the processor; the editor is deleted first).
+  Plugin states are synced into the project before save/export. Known list in
+  `<settings>/plugins.xml`, crash file `plugin-scan-crash.txt`. In-process hosting only. All
+  JUCE dialogs set `dialogBackgroundColour` from the theme (the default is light grey).
+- 2026-10-17: Tested with LSP plugins (`lsp-plugins-vst3/-lv2`, 198 each): scanning both
+  formats, adding via grouped menu (manufacturer > category > plugin; LV2's " Plugin"
+  category suffix stripped), VST3 editor window, processing (export peak matched the
+  plugin's -39 dB output), state through save/reopen/export. The LV2 editor stayed blank
+  on Xvfb only; on the maintainer's Hyprland desktop it shows (an Xvfb artifact).
+- 2026-10-17: **Crash fixed in JUCE:** closing an LV2 plugin window segfaulted (maintainer report,
+  core dump via `coredumpctl debug`). JUCE 9.0.4 `XEmbedComponent` queues `callAsync([this]
+  ...)` on ConfigureNotify; the window was deleted before it ran. Fixed by
+  `patches/juce-xembed-use-after-free.patch` (SafePointer check), applied idempotently by
+  `cmake/apply_patch.cmake` as JUCE's FetchContent PATCH_COMMAND. Patches keep JUCE's CRLF
+  line endings (`.gitattributes: *.patch -text`). Report upstream and drop the patch when
+  JUCE ships a fix. Debug crashes with `coredumpctl debug <pid> --debugger-arguments="-batch
+  -ex 'thread 1' -ex 'bt 40'"`. Message boxes use NoIcon (JUCE's icons
+  are huge and off-theme).
+
+- 2026-10-17: Plugin instruments (phase 2). `Channel::pluginId/pluginName/pluginState` (project
+  key `instrument`, replaces `sample`); `setInstrument()` / `setSample()` switch kinds.
+  Engine-side `InstrumentProcessor` gets sorted `NoteEvent`s per block (JUCE-free, testable with
+  a fake). **No stuck notes** by construction: the sequencer gives each trigger an absolute
+  `endTick` (cut at clip/pattern-repeat end) and the *engine* holds the note until then (fixed
+  512-entry array); same key retriggered = note-off first; stop/pause/jump = note-offs + all-notes
+  -off; a removed channel/replaced plugin drops its held notes. Instruments live in `EffectPool`
+  keyed by channel id. UI: + menu (Sample / Instrument), row menu (use/replace instrument, show
+  plugin), clicking an instrument channel's name toggles its window (FL-like). The grouped plugin
+  menu is shared (`ui/plugin_menu`). `PluginWindow` takes (owner, plugin) and closes when its
+  owner no longer matches the pool's. Plugins get no AudioPlayHead yet. **Export now renders with
+  the live EffectPool** (under the audio callback lock, processors reset before/after): fresh
+  instances were silent because LSP Sampler loads its sample asynchronously. Verified on Xvfb with
+  LSP Sampler Stereo + a 440 Hz WAV: notes at steps 0 and 8 cut after one step (+10 ms fade),
+  identical after save/reopen. Known: delete + undo of an instrument channel restores the plugin
+  state as of the last save.
+
+- 2026-10-17: Surge XT (VST3, `surge-xt`) tested: editor renders on Xvfb, export plays C5 =
+  261.6 Hz with releases on time; maintainer reports its window is "a bit wonky" on Hyprland but works.
+- 2026-10-17: Live input. `Engine::sendLive(LiveEvent)` from any non-audio thread (senders
+  serialized by a mutex, SPSC queue to the audio thread, applied at chunk start). Note-offs match
+  by **pitch** (ends on the channel it started on); sustain lifted where it went down; live notes
+  remapped/dropped on snapshot change like sequenced ones; sampler channels just trigger. Typing
+  keyboard = FL layout (Z row C5, Q row C6, skipping L and punctuation), **on by default**,
+  Ctrl+T / "Keys" button / Options menu; polled via `isKeyCurrentlyDown` in `keyStateChanged`,
+  released on focus loss. MIDI: all inputs omni, new devices auto-enabled
+  (`MidiDeviceListConnection`); notes, CCs, pitch bend. Not saved: device choices. Not yet:
+  recording, octave shift for the typing keyboard, highlighting played keys.
+
+- 2026-10-17: Play head + clock. `engine::PlayPosition` (playing, bpm, beats per bar, beat within
+  the loop, loop length, seconds, samples) computed per chunk and passed via
+  `setPlayPosition()` to every effect/instrument before `process()`; `plugins::HostPlayHead`
+  turns it into JUCE's `AudioPlayHead` (owned by each wrapper, declared before the instance).
+  Position is within what loops (pattern/song), reported as a loop from 0. Verified with LSP
+  Artistic Delay's SYNC: showed 130 then 100 BPM (LSP latches the value until SYNC is re-pressed).
+  Clock under bar:beat:step: `model::formatTime` "M:SS.mmm", current / total of what loops.
+  Tempo -/+ buttons step 1 BPM (range interval 1, custom snap keeps typed values to 0.001).
+
+- 2026-10-17: Rulers seek (`Transport::seek`; Playlist ruler -> SONG mode, Piano Roll ruler -> PAT
+  mode, snapped). Piano Roll audition (keys and notes, while held; drag = new pitch) via live
+  events. Channel Rack: length box 16/32/64 (= `Pattern::minLengthInSteps`, maintainer's "4/8/16" meant
+  groups of 4 steps) + drag handle (groups of 4); steps shrink to fit (20 -> 8 px). **Looping**
+  (maintainer's choices): rack Loop switch (`Project::loopChannels`) + per-channel `Channel::loop`, both
+  default on; loop length automatic = notes rounded up to 1/2/4/8.. bars; repeats expanded in
+  `toEngineState`; greyed in the rack; clicking a greyed step `fillLoop`s first. Limitation: a
+  looping channel can't end in empty bars (switch its loop off).
+
+- 2026-10-17 (correction from the maintainer): the rack's 16|32|64 (joined buttons, not a drop-down)
+  and handle set only the **shown** steps (`Pattern::gridSteps`, file key `gridLength`, old
+  `minLength` read as it). What plays = notes rounded up to whole bars ("only the first 16 are
+  used until I add a note in 17-32, even with loop on"). Steps past it are greyed pattern
+  repeats; clicking one fills the repeat in first.
+
+- 2026-10-17: Scale highlighter (backlog 1): `model::Scale` none/major/minor + `scaleRoot`, view
+  state (kept through undo, saved in `view`), `isInScale()`. Rows: in-scale lighter, others
+  darker, root tinted with the accent; colours derived from `lane`/`accent` (no new theme keys).
+  Every key labelled (not just C).
+
+- 2026-10-17: Selection (backlog 2): Ctrl+drag rubber band in the Piano Roll and the Playlist
+  (accentAlt outline), drag a selected item = move all (Piano Roll: right end = resize all),
+  Delete / Ctrl+A / Esc via `keyCommand()`. Selection = indices kept in the view (not model/undo).
+  A click outside a selection only deselects, as in FL. Copy/paste: Ctrl+C/X/V (`model/clipboard`),
+  pasted one block (whole beats / bars) after the copy, then after each paste; pastes selected.
+
+- 2026-10-17: Note slicer (backlog 3): Piano Roll "Slice" button + piece size (1/4, 1/8, 1/8 T,
+  1/16, 1/16 T, 1/32, 1/64), shortcut Alt+U (FL's chop key); selected notes, or all if none;
+  pieces stay selected. `model::sliceNote()`.
+
+- 2026-10-17: **Customizable shortcuts** (maintainer's request: "for borderline everything"). Commands in
+  `src/app/commands` (stable ids, saved in `shortcuts.xml`; never renumber) on JUCE's
+  ApplicationCommandManager; MainComponent = command target; menus via `addCommandItem`; editor =
+  JUCE KeyMappingEditorComponent (Options > Keyboard shortcuts, Ctrl+Shift+K). Tempo up/down
+  (Ctrl+Up/Down) by a step and a fine step (Ctrl+Shift+Up/Down), **defaults 5 and 1 BPM** (maintainer's
+  choice), changeable in Options > Settings (Ctrl+,). New defaults: Alt+Up/Down slice size,
+  Alt+Right/Left snap, Alt+L / Alt+1/2/3 rack loop / 16/32/64, Numpad +/- pattern, F2 rename,
+  Ctrl+Shift+C clone, Shift+Space play/pause, Ctrl+Q quit. Views take `ui::EditAction`s.
+  Import/Export of full shortcut sets in the shortcuts window; tooltips of controls with commands
+  show their current keys (`updateShortcutHints()`, refreshed on mapping changes).
+
+- 2026-10-17: Browser panel (backlog). `ui/browser` (TreeView of added folders, docks left/right,
+  Alt+F8), previews via `engine::PreviewPlayer` (lock-free, after the Master; raw sample pointer
+  kept alive by `retired` + `consumed()`), background loading (ThreadPool, generation counter).
+  Click = first 5 s (Settings: preview length), Shift+click = whole, waveform click = from there,
+  Play/Pause button. Drag "file:<path>" onto the Channel Rack (DragAndDropTarget). Commands:
+  toggle browser, switch side, add folder, preview play/pause. Loader still caps at 120 s.
+  Next in the backlog: audio clips (drop on the Playlist), which this enables.
+
+- 2026-10-17: Keyboard navigation + focus areas (maintainer request). Browser: Up/Down move (and preview
+  samples), Right/Left open/close, Enter = open folder or load the sample into the selected
+  channel; Ctrl+click = load. Selected channel row highlighted. Focus areas (Browser, Channel
+  Rack, Playlist/Piano Roll, Mixer) with an accent outline; click to focus, Ctrl+Tab /
+  Ctrl+Shift+Tab cycle (Alt+Tab is usually the desktop's). All rebindable commands ("Navigation").
+  Fixed on the way: plain arrow keys were swallowed as typing-keyboard notes (key code truncated
+  to a char); the settings file now saves within 1 s (was only on clean exit).
+
+- 2026-10-17: Replacing a channel's sample renames the channel after it (FL). Browser Ctrl+Up/Down =
+  move + load into the selected channel + preview (FL); so **tempo moved to Shift+Up/Down** (fine
+  stays Ctrl+Shift+Up/Down). Focus order setting: Fixed or Last used first (Alt+Tab-like, commits
+  on modifier release). Fixed: the Settings window's Browser section wasn't shown (an unmatched
+  edit); it and a Focus section are there now.
+
+- 2026-10-17: Audio clips (backlog, option b). Engine: song-time sample clips, mid-clip start on
+  play/jump (`collectClipsUnderPlayhead`), cut at clip end and on stop/jump with a 128-sample fade
+  (`Sampler::triggerClip/stopClips`). Model: `Channel::audioClip`, `Clip::audio`, one channel per
+  file (`audioClipChannel`), hidden in the rack (View > Channel rack options > Show audio clips).
+  Playlist: drop files / Browser samples, waveform drawing, picker panel (patterns + audio
+  clips; click = brush, drag = place). Song mode only; no time-stretching (tempo changes move the
+  clip's grid position, not the sample's speed); no left-edge trim/offset yet.
+
+- 2026-10-17: Sampler window + time-stretching (maintainer agreed: built-in channel window, FL-like, not
+  a plugin). Modes Off / Resample / Stretch (FL's others are proprietary élastique/E3), original
+  tempo, pitch. Stretch = Signalsmith Stretch 1.4.0 (MIT), offline in `StretchCache`, resampled
+  meanwhile. Audio clips default to Stretch at the drop tempo. Clicking a sample channel's name
+  toggles its Sampler (FL); double-click an audio clip opens it. Left-edge trim
+  (`Clip::offsetSteps`). Verified by export: 2 s 110 Hz clip at 130 -> 160 BPM: Stretch 1.63 s
+  at 110 Hz, Resample 1.63 s at 135.4 Hz.

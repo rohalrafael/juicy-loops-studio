@@ -9,3 +9,4 @@ compile_commands.json
 build-docker/
 build-dist/
 dist/
+CLAUDE.local.md

@@ -71,9 +71,9 @@ The sandbox keeps its own plugin list (`~/.config/JuicyLoopsStudio/plugins.xml` 
 volume). Scan once in Options › Plugins, or copy the host's list in (same packages, same paths):
 `docker cp ~/.config/JuicyLoopsStudio/plugins.xml jls-sandbox:/home/$USER/.config/JuicyLoopsStudio/`.
 
-## Two ways to work with Claude
+## Working with an AI agent (e.g. Claude Code)
 
-- **Claude on the host, tools in the sandbox** (the setup in use): Claude runs on the host as usual and runs builds,
+- **Agent on the host, tools in the sandbox:** the agent runs on the host as usual and runs builds,
   tests and installs through `tools/sandbox.sh run ...`. Memory, git pushes (through the host's
   SSH agent) and the conversation stay on the host.
 - **Claude inside the sandbox** (`tools/sandbox.sh claude`): everything it runs stays in the

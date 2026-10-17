@@ -33,6 +33,9 @@ struct ChannelState
     float gainRight = 1.0f;
     bool muted = false;
     int mixerTrack = 0; // index into EngineState::tracks; 0 = Master
+    // Playback speed of the sample (1 = as recorded): the Sampler's pitch, and its Resample mode
+    // following the tempo. A Stretch-mode sample arrives already stretched, at speed 1.
+    double speed = 1.0;
 };
 
 struct EffectState
@@ -72,6 +75,7 @@ struct ClipState
     int startTick = 0;    // position in the song
     int lengthTicks = 16 * ticksPerBeat / 4;
     int audioChannel = -1; // audio clips: index into EngineState::channels, whose sample plays
+    int offsetTicks = 0;   // audio clips: where in the sample the clip starts (left trim)
 };
 
 struct EngineState

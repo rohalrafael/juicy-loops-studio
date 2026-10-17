@@ -151,3 +151,27 @@ TEST_CASE("Audio clip channels: one per file, removed with their clips, saved an
     project.removeChannel(a);
     CHECK(project.playlist.clips.empty());
 }
+
+TEST_CASE("A trimmed audio clip starts later in its sample")
+{
+    Song song(0, 4);
+    song.project.playlist.clips[0].offsetSteps = 4; // left edge dragged 4 steps in
+    song.engine.setState(model::toEngineState(song.project));
+    song.engine.transport().play();
+    auto out = song.run(block);
+    CHECK(out[0] == Approx(rampAt(4 * samplesPerStep)).margin(1e-4));
+
+    // Starting in the middle of a trimmed clip adds both offsets.
+    Song mid(0, 4);
+    mid.project.playlist.clips[0].offsetSteps = 2;
+    mid.engine.setState(model::toEngineState(mid.project));
+    mid.engine.transport().seek(0.25); // 1 step in
+    mid.engine.transport().play();
+    out = mid.run(block);
+    CHECK(out[0] == Approx(rampAt(3 * samplesPerStep)).margin(1e-4));
+
+    // Saved with the project.
+    const auto loaded = model::loadProject(model::saveProject(mid.project, "/s/t.jls"), "/s/t.jls",
+                                           [](const std::string&) { return ramp(); });
+    CHECK(loaded.project->playlist.clips.at(0).offsetSteps == 2);
+}

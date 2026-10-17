@@ -101,6 +101,13 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
                         {"loop", c.loop}};
         if (c.audioClip)
             channel["audioClip"] = true;
+        if (c.sampler != SamplerSettings{})
+            channel["sampler"] = {
+                {"stretch", c.sampler.mode == StretchMode::resample  ? "resample"
+                            : c.sampler.mode == StretchMode::stretch ? "stretch"
+                                                                     : "off"},
+                {"originalTempo", tidy(static_cast<float>(c.sampler.originalTempo))},
+                {"pitch", tidy(static_cast<float>(c.sampler.pitch))}};
         if (c.isInstrument())
             channel["instrument"] = {
                 {"id", c.pluginId}, {"name", c.pluginName}, {"state", c.pluginState}};
@@ -131,7 +138,11 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
     {
         json clip = {{"track", c.track}, {"start", c.startStep}, {"length", c.lengthInSteps}};
         if (c.isAudio())
+        {
             clip["audio"] = c.audio; // an audio clip: the channel whose sample it plays
+            if (c.offsetSteps > 0)
+                clip["offset"] = c.offsetSteps;
+        }
         else
             clip["pattern"] = c.pattern;
         clips.push_back(std::move(clip));
@@ -238,6 +249,16 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         channel.mixerTrack = read.clamped<int>(c, "mixerTrack", 0, 0, Mixer::numInserts);
         channel.loop = read.get<bool>(c, "loop", true);
         channel.audioClip = read.get<bool>(c, "audioClip", false);
+        if (const auto sampler = c.find("sampler"); sampler != c.end() && sampler->is_object())
+        {
+            const auto mode = read.get<std::string>(*sampler, "stretch", "off");
+            channel.sampler.mode = mode == "resample"  ? StretchMode::resample
+                                   : mode == "stretch" ? StretchMode::stretch
+                                                       : StretchMode::off;
+            channel.sampler.originalTempo =
+                read.clamped<double>(*sampler, "originalTempo", 0.0, 0.0, 999.0);
+            channel.sampler.pitch = read.clamped<double>(*sampler, "pitch", 0.0, -24.0, 24.0);
+        }
 
         // A plugin instrument channel. Kept even if the plugin isn't installed here (it stays
         // silent), so the project survives a round trip through another machine.
@@ -353,6 +374,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
             clip.track = read.clamped<int>(c, "track", 0, 0, project.playlist.numTracks - 1);
             clip.startStep = std::max(0, read.get<int>(c, "start", 0));
             clip.lengthInSteps = std::max(1, read.get<int>(c, "length", Pattern::defaultLength));
+            clip.offsetSteps = clip.isAudio() ? std::max(0, read.get<int>(c, "offset", 0)) : 0;
             project.playlist.clips.push_back(clip);
         }
     }

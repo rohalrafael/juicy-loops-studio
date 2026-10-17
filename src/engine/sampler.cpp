@@ -67,7 +67,7 @@ void Sampler::trigger(const EngineState& state, int channelIndex, int pitch, flo
     voice.sample = channel.sample.get();
     voice.position = 0.0;
     voice.increment = channel.sample->sampleRate / sampleRate *
-                      std::exp2((std::clamp(pitch, 0, 127) - 60) / 12.0);
+                      std::exp2((std::clamp(pitch, 0, 127) - 60) / 12.0) * channel.speed;
     voice.gain = std::clamp(velocity, 0.0f, 1.0f) / (100.0f / 128.0f);
     voice.startedAt = ++triggerCounter;
     voice.remaining = -1;
@@ -81,7 +81,9 @@ void Sampler::triggerClip(const EngineState& state, int channelIndex, double sta
     const auto& channel = state.channels[static_cast<std::size_t>(channelIndex)];
     if (!channel.sample || channel.sample->numFrames() == 0)
         return;
-    const double startFrame = std::max(0.0, startSeconds) * channel.sample->sampleRate;
+    // Song seconds into the clip -> frames into the sample, at the channel's playback speed.
+    const double startFrame =
+        std::max(0.0, startSeconds) * channel.sample->sampleRate * channel.speed;
     if (startFrame >= channel.sample->numFrames() - 1)
         return; // the clip is longer than its sample and we're past the sound
 
@@ -90,7 +92,7 @@ void Sampler::triggerClip(const EngineState& state, int channelIndex, double sta
     voice.channelId = channel.id;
     voice.sample = channel.sample.get();
     voice.position = startFrame;
-    voice.increment = channel.sample->sampleRate / sampleRate;
+    voice.increment = channel.sample->sampleRate / sampleRate * channel.speed;
     voice.gain = 1.0f;
     voice.startedAt = ++triggerCounter;
     voice.remaining =

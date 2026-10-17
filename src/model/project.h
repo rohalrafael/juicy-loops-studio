@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -25,6 +26,24 @@ using EffectId = std::uint32_t;
 inline constexpr int stepsPerBeat = 4;                    // a step is a 16th note
 inline constexpr int ticksPerBeat = engine::ticksPerBeat; // note positions are in ticks
 inline constexpr int ticksPerStep = ticksPerBeat / stepsPerBeat;
+
+// How a sample follows the project tempo (the Sampler's time-stretching modes).
+enum class StretchMode
+{
+    off,      // plays at its own speed whatever the tempo
+    resample, // speed follows the tempo; pitch moves with it (like a record)
+    stretch,  // length follows the tempo; pitch stays (time-stretched in the background)
+};
+
+// The Sampler's settings for a sample channel.
+struct SamplerSettings
+{
+    StretchMode mode = StretchMode::off;
+    double originalTempo = 0.0; // BPM the sample is at; 0 = not set (taken as the project's)
+    double pitch = 0.0;         // semitones, -24..24
+
+    bool operator==(const SamplerSettings&) const = default;
+};
 
 struct Channel
 {
@@ -45,6 +64,7 @@ struct Channel
     // The source of audio clips in the Playlist (Clip::audio): its sample plays in song time.
     // Hidden from the Channel Rack unless Project::showAudioClips is on.
     bool audioClip = false;
+    SamplerSettings sampler; // time-stretching and pitch (sample channels)
 
     // A hosted plugin instrument plays the channel instead of a sample (see setInstrument()).
     std::string pluginId;    // the host's identifier string; empty = sampler channel
@@ -163,6 +183,7 @@ struct Clip
     int startStep = 0;
     int lengthInSteps = Pattern::defaultLength;
     ChannelId audio = 0; // audio clips: the Channel (Channel::audioClip) to play
+    int offsetSteps = 0; // audio clips: how far into the sample the clip starts (left-edge trim)
 
     bool isAudio() const { return audio != 0; }
     int endStep() const { return startStep + lengthInSteps; }
@@ -222,6 +243,14 @@ struct Project
 
     // New channels go to the first insert no other channel uses (Master if all are taken).
     ChannelId addChannel(std::string name, std::shared_ptr<const engine::SampleBuffer> sample);
+    // Sampler maths for a sample channel at the project tempo:
+    // how much faster than recorded it plays (Off / Resample; 1 for Stretch, whose sample is
+    // stretched instead), and how much longer the Stretch result is than the sample.
+    double playbackSpeed(const Channel& channel) const;
+    double stretchFactor(const Channel& channel) const;
+    // How long the sample lasts when played, in seconds (after speed or stretching).
+    double playedSeconds(const Channel& channel) const;
+
     // The audio-clip channel for a sample file: the existing one for that path, or a new one
     // (named after the file, routed like a new channel, hidden in the Channel Rack).
     ChannelId audioClipChannel(const std::string& path, const std::string& name,
@@ -284,7 +313,13 @@ Project makeDefaultProject(double sampleRate = 44100.0);
 // Snapshot for the audio thread (allocates; UI thread only). Effect processors and plugin
 // instruments come from `effects`, which keeps their state between snapshots; without a pool
 // they are left out.
+//
+// `stretched` supplies Stretch-mode samples already stretched for the current tempo (or null
+// while they're being made: the channel then plays resampled, so it stays in time).
+using StretchedSamples =
+    std::function<std::shared_ptr<const engine::SampleBuffer>(const Channel& channel)>;
 std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
-                                                   engine::EffectPool* effects = nullptr);
+                                                   engine::EffectPool* effects = nullptr,
+                                                   const StretchedSamples& stretched = {});
 
 } // namespace jls::model

@@ -62,10 +62,12 @@ class PlaylistGrid final : public juce::Component,
         erase,
         select,        // Ctrl + drag: rubber band
         moveSelection, // dragging one of several selected clips moves them all
+        trimStart,     // dragging an audio clip's left edge: start later in the sample
     };
 
     int clipAt(juce::Point<float> p) const; // index into playlist.clips, or -1
     bool onRightEdge(int clipIndex, float x) const;
+    bool onLeftEdge(int clipIndex, float x) const; // audio clips only: trims the start
     void eraseAt(juce::Point<float> p);
     juce::Rectangle<float> clipBounds(const model::Clip& clip) const;
     void paintClip(juce::Graphics& g, const model::Clip& clip, bool selected) const;

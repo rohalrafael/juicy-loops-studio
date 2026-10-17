@@ -54,8 +54,9 @@ class Collector
         }
     }
 
-    // An audio clip starting at `tick` (block time), lasting `length` ticks.
-    void addClip(int channel, double tick, double length)
+    // An audio clip starting at `tick` (block time), lasting `length` ticks, `offset` ticks into
+    // its sample.
+    void addClip(int channel, double tick, double length, double offset)
     {
         if (count == static_cast<int>(out.size()))
             return;
@@ -67,6 +68,7 @@ class Collector
         trigger.velocity = 100.0f / 128.0f; // unity
         trigger.endTick = tick + length;
         trigger.audioClip = true;
+        trigger.clipOffsetTicks = offset;
         trigger.lengthTicks = length;
         out[static_cast<std::size_t>(count++)] = trigger;
     }
@@ -136,7 +138,8 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
                 if (clipStart >= from && clipStart < to &&
                     clip.audioChannel < static_cast<int>(state.channels.size()) &&
                     !state.channels[static_cast<std::size_t>(clip.audioChannel)].muted)
-                    collector.addClip(clip.audioChannel, clipStart, clip.lengthTicks);
+                    collector.addClip(clip.audioChannel, clipStart, clip.lengthTicks,
+                                      clip.offsetTicks);
                 continue;
             }
             if (clip.patternIndex < 0 ||
@@ -174,7 +177,7 @@ int collectClipsUnderPlayhead(const EngineState& state, double tick, std::span<T
         trigger.channelIndex = clip.audioChannel;
         trigger.velocity = 100.0f / 128.0f;
         trigger.audioClip = true;
-        trigger.clipOffsetTicks = offset;
+        trigger.clipOffsetTicks = clip.offsetTicks + offset;
         trigger.lengthTicks = clip.lengthTicks - offset;
         trigger.endTick = tick + trigger.lengthTicks;
         out[static_cast<std::size_t>(count++)] = trigger;

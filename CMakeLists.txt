@@ -17,6 +17,14 @@ FetchContent_Declare(nlohmann_json
     URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa)
 FetchContent_MakeAvailable(nlohmann_json)
 
+# Time-stretching (MIT, header-only; pulls in signalsmith-linear). Used by the engine's
+# Sampler for its Stretch mode.
+FetchContent_Declare(signalsmith_stretch
+    GIT_REPOSITORY https://github.com/Signalsmith-Audio/signalsmith-stretch.git
+    GIT_TAG 1.4.0
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(signalsmith_stretch)
+
 # Engine, model and theme: plain C++, no JUCE or GUI dependency, so they stay unit-testable.
 add_subdirectory(src/engine)
 add_subdirectory(src/model)

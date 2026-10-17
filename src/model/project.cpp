@@ -143,6 +143,38 @@ ChannelId Project::addChannel(std::string name, std::shared_ptr<const engine::Sa
     return channels.back().id;
 }
 
+double Project::playbackSpeed(const Channel& channel) const
+{
+    const double pitch = std::exp2(std::clamp(channel.sampler.pitch, -24.0, 24.0) / 12.0);
+    const double original =
+        channel.sampler.originalTempo > 0.0 ? channel.sampler.originalTempo : tempo;
+    switch (channel.sampler.mode)
+    {
+    case StretchMode::off:
+        return pitch;
+    case StretchMode::resample:
+        return pitch * tempo / original;
+    case StretchMode::stretch:
+        return 1.0;
+    }
+    return 1.0;
+}
+
+double Project::stretchFactor(const Channel& channel) const
+{
+    if (channel.sampler.mode != StretchMode::stretch || channel.sampler.originalTempo <= 0.0)
+        return 1.0;
+    return channel.sampler.originalTempo / tempo; // faster song = shorter sample
+}
+
+double Project::playedSeconds(const Channel& channel) const
+{
+    if (channel.sample == nullptr || channel.sample->numFrames() == 0)
+        return 0.0;
+    const double seconds = channel.sample->numFrames() / channel.sample->sampleRate;
+    return seconds * stretchFactor(channel) / playbackSpeed(channel);
+}
+
 ChannelId Project::audioClipChannel(const std::string& path, const std::string& name,
                                     std::shared_ptr<const engine::SampleBuffer> sample)
 {
@@ -153,6 +185,9 @@ ChannelId Project::audioClipChannel(const std::string& path, const std::string& 
     auto* channel = findChannel(id);
     channel->samplePath = path;
     channel->audioClip = true;
+    // Audio clips keep in time with the song: stretched relative to the tempo they came in at.
+    channel->sampler.mode = StretchMode::stretch;
+    channel->sampler.originalTempo = tempo;
     return id;
 }
 
@@ -429,7 +464,8 @@ Project makeDefaultProject(double sampleRate)
 }
 
 std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
-                                                   engine::EffectPool* effects)
+                                                   engine::EffectPool* effects,
+                                                   const StretchedSamples& stretched)
 {
     auto state = std::make_unique<engine::EngineState>();
     state->channels.reserve(project.channels.size());
@@ -448,6 +484,18 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
         else
         {
             cs.sample = channel.sample;
+            cs.speed = project.playbackSpeed(channel);
+            const double factor = project.stretchFactor(channel);
+            const bool needsStretch =
+                channel.sampler.mode == StretchMode::stretch &&
+                (std::abs(factor - 1.0) > 1e-6 || std::abs(channel.sampler.pitch) > 1e-6);
+            if (needsStretch)
+            {
+                if (auto done = stretched ? stretched(channel) : nullptr)
+                    cs.sample = std::move(done);
+                else // not ready yet: resample so it stays in time meanwhile
+                    cs.speed = std::exp2(channel.sampler.pitch / 12.0) / factor;
+            }
         }
         // Balance pan: centre = full volume on both sides.
         const float pan = std::clamp(channel.pan, -1.0f, 1.0f);
@@ -491,7 +539,8 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
             if (channel != project.channels.end())
                 state->clips.push_back({-1, clip.startStep * ticksPerStep,
                                         clip.lengthInSteps * ticksPerStep,
-                                        static_cast<int>(channel - project.channels.begin())});
+                                        static_cast<int>(channel - project.channels.begin()),
+                                        clip.offsetSteps * ticksPerStep});
             continue;
         }
         const auto it = std::find_if(project.patterns.begin(), project.patterns.end(),

@@ -9,7 +9,7 @@ namespace jls::ui
 namespace
 {
 
-constexpr float edgeGrabWidth = 6.0f; // pixels at a clip's right end that resize it
+constexpr float edgeGrabWidth = 6.0f; // pixels at a clip's ends that resize / trim it
 constexpr int minimumBars = 64;
 constexpr int spareBars = 8; // empty room after the last clip
 
@@ -150,9 +150,22 @@ bool PlaylistGrid::onRightEdge(int clipIndex, float x) const
     return x >= end - grab;
 }
 
+bool PlaylistGrid::onLeftEdge(int clipIndex, float x) const
+{
+    if (clipIndex < 0)
+        return false;
+    const auto& c = view.document().project().playlist.clips[static_cast<std::size_t>(clipIndex)];
+    if (!c.isAudio())
+        return false;
+    const float start = view.xForStep(c.startStep);
+    const float grab = std::min(edgeGrabWidth, (view.xForStep(c.endStep()) - start) / 3.0f);
+    return x < start + grab;
+}
+
 void PlaylistGrid::mouseMove(const juce::MouseEvent& e)
 {
-    setMouseCursor(onRightEdge(clipAt(e.position), e.position.x)
+    const int clip = clipAt(e.position);
+    setMouseCursor(onRightEdge(clip, e.position.x) || onLeftEdge(clip, e.position.x)
                        ? juce::MouseCursor::LeftRightResizeCursor
                        : juce::MouseCursor::NormalCursor);
 }
@@ -212,7 +225,9 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
     }
     if (dragClip >= 0)
     {
-        drag = onRightEdge(dragClip, e.position.x) ? Drag::resize : Drag::move;
+        drag = onRightEdge(dragClip, e.position.x)  ? Drag::resize
+               : onLeftEdge(dragClip, e.position.x) ? Drag::trimStart
+                                                    : Drag::move;
         grabOffsetSteps =
             view.stepAtX(e.position.x) -
             doc.project().playlist.clips[static_cast<std::size_t>(dragClip)].startStep;
@@ -308,6 +323,19 @@ void PlaylistGrid::mouseDrag(const juce::MouseEvent& e)
         const double end = view.stepAtX(e.position.x);
         const int snappedEnd = static_cast<int>(std::lround(end / snap)) * snap;
         clip.lengthInSteps = std::max(snap, snappedEnd - clip.startStep);
+    }
+    else if (drag == Drag::trimStart)
+    {
+        // The end stays put; the start moves, and the sample starts as much later (or earlier,
+        // but not before the sample's beginning).
+        const double wanted = view.stepAtX(e.position.x);
+        int start = static_cast<int>(std::lround(wanted / snap)) * snap;
+        start = std::clamp(start, clip.startStep - clip.offsetSteps, clip.endStep() - 1);
+        start = std::max(0, start);
+        const int delta = start - clip.startStep;
+        clip.startStep = start;
+        clip.lengthInSteps -= delta;
+        clip.offsetSteps += delta;
     }
 
     if (clip == original)
@@ -528,9 +556,13 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
             const int columns = static_cast<int>(std::min(width, bounds.getWidth()));
             for (int x = 0; x < columns; ++x)
             {
+                // The clip starts offsetSteps into the sample (left trim).
+                const float sampleX = x + view.xForStep(clip.offsetSteps);
+                if (sampleX >= width)
+                    break;
                 const auto& [low, high] = peaks[static_cast<std::size_t>(
                     std::min<long long>(static_cast<long long>(peaks.size()) - 1,
-                                        static_cast<long long>(x / width * peaks.size())))];
+                                        static_cast<long long>(sampleX / width * peaks.size())))];
                 g.fillRect(bounds.getX() + x, mid - high * half, 1.0f,
                            std::max(1.0f, (high - low) * half));
             }

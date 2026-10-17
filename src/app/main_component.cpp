@@ -984,14 +984,14 @@ void MainComponent::updateShortcutHints()
         auto* client = dynamic_cast<juce::SettableTooltipClient*>(&component);
         if (client == nullptr)
             return;
-        auto& properties = component.getProperties();
-        if (!properties.contains("baseTooltip"))
-            properties.set("baseTooltip", client->getTooltip());
+        auto& props = component.getProperties();
+        if (!props.contains("baseTooltip"))
+            props.set("baseTooltip", client->getTooltip());
         juce::StringArray parts;
         for (const auto& [label, id] : uses)
             if (const auto keys = keysFor(id); keys.isNotEmpty())
                 parts.add(juce::String(label).isEmpty() ? keys : juce::String(label) + ": " + keys);
-        const auto base = properties["baseTooltip"].toString();
+        const auto base = props["baseTooltip"].toString();
         const auto text = parts.isEmpty() ? base : base + " (" + parts.joinIntoString(", ") + ")";
         client->setTooltip(text);
         // Sliders keep a copy in their number box (made when it was created): update it too.

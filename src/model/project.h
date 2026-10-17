@@ -8,6 +8,7 @@
 #include "engine/engine_state.h"
 #include "engine/sample_buffer.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -125,7 +126,9 @@ struct Pattern
 
     PatternId id = 0;
     std::string name;
-    int minLengthInSteps = defaultLength; // grows past this (in whole bars) to fit its notes
+    // Steps the Channel Rack shows (16/32/64 or dragged). Doesn't change what plays: the
+    // pattern plays only as far as its notes (see lengthInSteps()).
+    int gridSteps = defaultLength;
     std::map<ChannelId, std::vector<Note>> notes;
 
     const std::vector<Note>& notesFor(ChannelId channel) const;
@@ -134,7 +137,8 @@ struct Pattern
     // Makes a looping channel's repeats real: copies its notes in [0, fromSteps) over and over
     // until toSteps, so it sounds the same and can then be edited beyond its old loop.
     void fillLoop(ChannelId channel, int fromSteps, int toSteps);
-    // Length in steps: the minimum, or the last note's end rounded up to a whole bar.
+    // Length in steps, i.e. what plays and loops: the last note's end rounded up to a whole bar,
+    // at least one bar.
     int lengthInSteps(int stepsPerBar) const;
     bool isEmpty() const;
 
@@ -211,6 +215,11 @@ struct Project
     int stepsPerBar() const { return beatsPerBar * stepsPerBeat; }
     double secondsPerStep() const { return 60.0 / tempo / stepsPerBeat; }
     int lengthInSteps(const Pattern& pattern) const { return pattern.lengthInSteps(stepsPerBar()); }
+    // Steps the Channel Rack shows: its grid setting, or more when the notes reach further.
+    int gridLengthInSteps(const Pattern& pattern) const
+    {
+        return std::max(pattern.gridSteps, lengthInSteps(pattern));
+    }
     // Length of the arrangement: end of the last clip, rounded up to a whole bar (0 if empty).
     int songLengthInSteps() const;
 

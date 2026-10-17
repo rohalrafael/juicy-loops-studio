@@ -23,7 +23,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
       "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 6 }
   ],
   "patterns": [
-    { "id": 1, "name": "Pattern 1", "minLength": 16,
+    { "id": 1, "name": "Pattern 1", "gridLength": 16,
       "notes": [ { "channel": 1, "notes": [[0, 24, 60, 0.78125], [96, 24, 60, 0.78125]] } ] }
   ],
   "playlist": { "tracks": 16, "clips": [ { "pattern": 1, "track": 0, "start": 0, "length": 16 } ] },
@@ -50,7 +50,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `channels[].sample` | `{"builtin": "kick"/"clap"/"hat"/"snare"}`, or `{"path": absolute, "relativePath": relative to the project file}`, or `null` |
 | `channels[].loop` | Whether the channel repeats its notes when the pattern is longer (default `true`) |
 | `channels[].instrument` | Instead of `sample`, for a channel played by a plugin: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
-| `patterns[]` | In pattern-selector order. `minLength` is in steps; the pattern grows to fit its notes |
+| `patterns[]` | In pattern-selector order. `gridLength`: steps the Channel Rack shows (older files: `minLength`); the pattern plays as far as its notes, in whole bars |
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
 | `playlist.clips[]` | `start` and `length` in steps; a clip longer than its pattern repeats it |
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |

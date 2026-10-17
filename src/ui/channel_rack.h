@@ -12,6 +12,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -235,7 +236,9 @@ class ChannelRack final : public juce::Component,
     std::vector<std::unique_ptr<ChannelRow>> rows;
     juce::TextButton addButton{"+"};
     juce::TextButton loopButton{"Loop"}; // Project::loopChannels
-    juce::ComboBox lengthBox;            // pattern length: 16 / 32 / 64 steps
+    // Steps shown: 16 | 32 | 64 (none lit after dragging the handle to another length).
+    std::array<juce::TextButton, 3> lengthButtons{juce::TextButton{"16"}, juce::TextButton{"32"},
+                                                  juce::TextButton{"64"}};
     LengthHandle lengthHandle;
     juce::TextButton closeButton{juce::String::fromUTF8("\xc3\x97")}; // multiplication sign
     juce::ComponentDragger dragger;

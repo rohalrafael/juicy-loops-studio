@@ -172,11 +172,16 @@ for each chunk:
 
 ### Looping channels, seeking, audition
 
+- **Pattern length:** `Project::lengthInSteps()` is what plays: the notes rounded up to whole
+  bars, at least one bar. `Pattern::gridSteps` is only how many steps the Channel Rack shows
+  (`gridLengthInSteps()` = the larger of the two); steps past the play length are drawn as the
+  pattern's repeat.
 - **Looping channels** are a model feature: `Project::loopLengthInSteps()` gives the length a
   channel repeats at (its notes rounded up to 1, 2, 4... bars; 0 when looping is off, the
   channel has no notes, or they fill the pattern), and `toEngineState()` writes the repeats into
   the snapshot. The sequencer just plays notes. `Pattern::fillLoop()` turns repeats into real
-  notes when a greyed step is clicked (ChannelRow).
+  notes when a greyed step is clicked (ChannelRow): it repeats either the channel's own loop or,
+  past the play length, the whole pattern, so the click never changes what else is heard.
 - **Seeking:** `Transport::seek(beat)` stores a target that `advance()` applies at the start of
   the next block, like the rewind from `stop()` (a later `stop()` wins over an earlier seek and
   vice versa). The engine sees the block start somewhere else and releases held notes, as for

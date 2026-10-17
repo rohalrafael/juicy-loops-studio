@@ -62,7 +62,7 @@ int Pattern::lengthInSteps(int stepsPerBar) const
 
     const int steps = (lastTick + ticksPerStep - 1) / ticksPerStep;
     const int bar = std::max(1, stepsPerBar);
-    return std::min(maxSteps, std::max(minLengthInSteps, (steps + bar - 1) / bar * bar));
+    return std::min(maxSteps, std::max(bar, (steps + bar - 1) / bar * bar));
 }
 
 bool Pattern::isEmpty() const

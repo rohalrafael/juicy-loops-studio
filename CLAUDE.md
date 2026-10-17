@@ -202,7 +202,7 @@ and run it before milestones or after platform-specific changes.
   lengthTicks, pitch, velocity; 96 ticks/beat, 24/step). A Channel Rack step is a note at
   C5 (60), one step long, on a step boundary (`Note::isStep`). A channel with any other
   notes shows a mini note preview in the rack instead of steps; clicking it opens the Piano
-  Roll, as in FL. Pattern length = `minLengthInSteps` (16), grown to whole bars to fit notes
+  Roll, as in FL. Pattern length = notes rounded up to whole bars (min 1 bar; see 2026-10-17)
   (`Project::lengthInSteps(pattern)`). Engine works in ticks; the sequencer collects note
   starts per block (pattern loop / clip repeats / song loop split) and sorts by offset.
   Sampler pitch = resample by 2^((p-60)/12); velocity gain = v / (100/128). **Note length
@@ -311,6 +311,12 @@ and run it before milestones or after platform-specific changes.
   default on; loop length automatic = notes rounded up to 1/2/4/8.. bars; repeats expanded in
   `toEngineState`; greyed in the rack; clicking a greyed step `fillLoop`s first. Limitation: a
   looping channel can't end in empty bars (switch its loop off).
+
+- 2026-10-17 (correction from the user): the rack's 16|32|64 (joined buttons, not a drop-down)
+  and handle set only the **shown** steps (`Pattern::gridSteps`, file key `gridLength`, old
+  `minLength` read as it). What plays = notes rounded up to whole bars ("only the first 16 are
+  used until I add a note in 17-32, even with loop on"). Steps past it are greyed pattern
+  repeats; clicking one fills the repeat in first.
 
 ## Dev environment notes
 

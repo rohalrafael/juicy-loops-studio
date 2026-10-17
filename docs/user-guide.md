@@ -91,20 +91,22 @@ the whole song.
 | Drop audio files below the rows | Add channels |
 | Click + | Add a channel: **Sample…** or **Instrument ›** (a plugin synth) |
 | Click a note preview | Open the Piano Roll for that channel |
-| Length box (title bar) | Pattern length: 16, 32 or 64 steps |
-| Drag the handle after the last step | Make the pattern longer or shorter, 4 steps at a time |
+| 16 \| 32 \| 64 (title bar) | How many steps the rack shows |
+| Drag the handle after the last step | Show more or fewer steps, 4 at a time |
 | **Loop** (title bar) | Loop on/off for the whole rack |
 | Circular arrow next to a name | Loop on/off for that channel |
 
-**Pattern length and looping.** The pattern is as long as the length box says, or longer when a
-channel's notes need it (the Piano Roll can add bars). With **Loop** on (the default), a channel
-whose notes are shorter than the pattern repeats them: its notes are rounded up to 1, 2, 4, 8...
-bars, and that block plays again and again. Example: a 4-bar bass line with a 1-bar drum beat
-gives 4 bars of drums. The repeats are shown greyed. Clicking a greyed step makes it real: the
-repeats up to there are copied in first (the channel's loop doubles), so what you hear doesn't
-change. Because the loop length comes from the notes, a channel can't end with empty bars while
-it loops; switch its loop off (the arrow) to have it play once and stay silent after. Long
-patterns shrink the step buttons to fit.
+**Pattern length and looping.** 16 | 32 | 64 and the handle only set how many steps you see.
+The pattern *plays* as far as its notes go, rounded up to whole bars: with notes only in the
+first 16 steps it plays 16 steps and starts over, even when 32 are shown. Steps past that are
+greyed and show what will be heard there (the repeat). Clicking a greyed step makes that bar
+real: the repeat is copied in first, so nothing you hear changes, and the pattern now plays up
+to there. With **Loop** on (the default), a channel whose notes are shorter than the pattern
+repeats them: its notes are rounded up to 1, 2, 4, 8... bars, and that block plays again and
+again. Example: a 4-bar bass line with a 1-bar drum beat gives 4 bars of drums. Those repeats
+are greyed too. Because the loop length comes from the notes, a looping channel can't end with
+empty bars; switch its loop off (the arrow) to have it play once per pattern. Long patterns
+shrink the step buttons to fit.
 
 **Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
 with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its

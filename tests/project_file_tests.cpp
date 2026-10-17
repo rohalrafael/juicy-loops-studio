@@ -50,7 +50,7 @@ Project richProject()
     project.current().set(kick, 0, true);
     project.current().notes[hat].push_back({30, 50, 67, 0.4f});
     const auto second = project.addPattern();
-    project.findPattern(second)->minLengthInSteps = 32;
+    project.findPattern(second)->gridSteps = 32;
     project.playlist.clips = {{project.current().id, 0, 0, 16}, {second, 3, 24, 40}};
 
     project.mixer.tracks[2].volumeDb = -3.5f;
@@ -104,7 +104,7 @@ TEST_CASE("Projects survive a save and load round trip")
     {
         CHECK(p.patterns[i].id == original.patterns[i].id);
         CHECK(p.patterns[i].name == original.patterns[i].name);
-        CHECK(p.patterns[i].minLengthInSteps == original.patterns[i].minLengthInSteps);
+        CHECK(p.patterns[i].gridSteps == original.patterns[i].gridSteps);
         CHECK(p.patterns[i].notes == original.patterns[i].notes);
     }
     CHECK(p.playlist.clips == original.playlist.clips);

@@ -366,11 +366,13 @@ TEST_CASE("Filling a loop copies its notes so the channel sounds the same")
 {
     Project project;
     const auto drums = project.addChannel("Drums", nullptr);
+    const auto bass = project.addChannel("Bass", nullptr);
     auto& pattern = project.current();
-    pattern.minLengthInSteps = 64;
     pattern.set(drums, 0, true);
     pattern.set(drums, 6, true);
+    pattern.notes[bass].push_back({0, 64 * ticksPerStep, 48, 0.8f}); // makes the pattern 4 bars
     const auto before = toEngineState(project)->patterns[0].notes[0].size();
+    REQUIRE(before == 8);
 
     pattern.fillLoop(drums, 16, 32);
     CHECK(pattern.isOn(drums, 16));
@@ -378,6 +380,24 @@ TEST_CASE("Filling a loop copies its notes so the channel sounds the same")
     CHECK_FALSE(pattern.isOn(drums, 32));
     CHECK(project.loopLengthInSteps(pattern, drums) == 32);
     CHECK(toEngineState(project)->patterns[0].notes[0].size() == before); // same 8 hits
+}
+
+TEST_CASE("The rack's grid length doesn't change what plays; notes do")
+{
+    Project project;
+    const auto drums = project.addChannel("Drums", nullptr);
+    auto& pattern = project.current();
+    pattern.set(drums, 0, true);
+    pattern.gridSteps = 32; // the user picked 32 in the rack
+    CHECK(project.lengthInSteps(pattern) == 16);
+    CHECK(project.gridLengthInSteps(pattern) == 32);
+    CHECK(toEngineState(project)->patterns[0].lengthTicks == 16 * ticksPerStep);
+
+    pattern.set(drums, 20, true); // a note in the second bar: now both bars play
+    CHECK(project.lengthInSteps(pattern) == 32);
+    // Notes past the grid widen it.
+    pattern.notes[drums].push_back({60 * ticksPerStep, ticksPerStep, 60, 0.8f});
+    CHECK(project.gridLengthInSteps(pattern) == 64);
 }
 
 TEST_CASE("Loop switches are saved")

@@ -193,6 +193,10 @@ for each chunk:
   channel or pattern changes. Moving a selection applies one offset to all, clamped so every
   item stays on the grid. Selection keys reach the views through `keyCommand()`, called from
   `MainComponent::keyPressed()` for whichever view fills the main area.
+- **Copy/paste:** `model/clipboard` (tested): a copy keeps its items and a block from the first
+  start (rounded down) to the last end (rounded up) in whole beats (notes) or bars (clips);
+  each `nextPaste()` lands one block further. The clipboards live in the views (in memory, not
+  the system clipboard); pasted items become the selection.
 - **Slicer:** `model::sliceNote()` does the cutting (tested); `PianoRollView::sliceNotes()`
   rebuilds the channel's note list in one undoable edit and selects the pieces.
 - **Audition:** the Piano Roll calls `audition(pitch)` / `stopAudition()`; MainComponent sends

@@ -803,8 +803,33 @@ bool PianoRollView::keyCommand(const juce::KeyPress& key)
         sliceNotes();
         return true;
     }
+    const auto cmd = juce::ModifierKeys::commandModifier;
+    if (key == juce::KeyPress('v', cmd, 0))
+    {
+        if (clipboard.empty())
+            return true;
+        // Right after the copied block (or the last paste); the pasted notes get selected.
+        const auto pasted = model::nextPaste(clipboard);
+        const int first = static_cast<int>(notes().size());
+        editNotes([pasted](std::vector<model::Note>& list)
+                  { list.insert(list.end(), pasted.begin(), pasted.end()); }, 0);
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(pasted.size()); ++i)
+            selection.push_back(first + i);
+        grid.repaint();
+        return true;
+    }
     if (selection.empty())
         return false;
+    if (key == juce::KeyPress('c', cmd, 0) || key == juce::KeyPress('x', cmd, 0))
+    {
+        // Blocks are whole beats, so a pasted bar lands on the next bar.
+        clipboard = model::copyNotes(notes(), selection, model::ticksPerBeat);
+        if (key.getKeyCode() == 'c' || key.getKeyCode() == 'C')
+            return true;
+        // Cut = copy + delete.
+        return keyCommand(juce::KeyPress(juce::KeyPress::deleteKey));
+    }
     if (key == juce::KeyPress::escapeKey)
     {
         clearSelection();

@@ -4,6 +4,7 @@
 // bar ruler and track names that follow its scrolling.
 
 #include "engine/transport.h"
+#include "model/clipboard.h"
 #include "model/document.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -21,7 +22,8 @@ class PlaylistView;
 //   drag a clip's right end resize it (a longer clip repeats its pattern)
 //   right-click / drag      delete clips
 //   Ctrl + drag             select the clips in a rectangle; drag a selected clip to move them
-//                           all; Delete removes them, Ctrl+A selects all, Esc deselects
+//                           all; Delete removes them, Ctrl+A selects all, Esc deselects;
+//                           Ctrl+C / X copy / cut, Ctrl+V pastes after the copied bars
 //   Ctrl + mouse wheel      zoom horizontally
 class PlaylistGrid final : public juce::Component
 {
@@ -88,7 +90,7 @@ class PlaylistView final : public juce::Component, private juce::Timer
     std::vector<int> selection;
     bool isSelected(int clip) const;
     void clearSelection();
-    // Delete / Ctrl+A / Esc for the selection; returns true if the key was used.
+    // Delete / Ctrl+A / Esc for the selection, Ctrl+C / X / V; returns true if the key was used.
     bool keyCommand(const juce::KeyPress& key);
     int stepAtX(float x) const; // grid coordinates
     float xForStep(double step) const { return static_cast<float>(step) * zoom; }
@@ -122,7 +124,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
 
     model::Document& doc;
     engine::Transport& transport;
-    float zoom = 4.0f; // pixels per step: a 4/4 bar is 64 px
+    model::ClipClipboard clipboard; // Ctrl+C / Ctrl+V
+    float zoom = 4.0f;              // pixels per step: a 4/4 bar is 64 px
 
     juce::Label title{{}, "Playlist"};
     juce::Label snapLabel{{}, "Snap"};

@@ -1,3 +1,4 @@
+#include "model/clipboard.h"
 #include "model/document.h"
 #include "model/project.h"
 #include "model/project_file.h"
@@ -466,4 +467,40 @@ TEST_CASE("Slicing a note into rolls keeps pitch, velocity and the overall span"
     // Pieces as long as the note (or longer): unchanged.
     CHECK(sliceNote(note, 4 * ticksPerStep).size() == 1);
     CHECK(sliceNote(note, 0).size() == 1);
+}
+
+TEST_CASE("Copied notes paste right after their block, again and again")
+{
+    // A 1-bar beat whose last hit ends at step 14: the block is the whole bar (rounded to beats).
+    std::vector<Note> notes = {{0, ticksPerStep, 60, 0.8f},
+                               {6 * ticksPerStep, ticksPerStep, 60, 0.8f},
+                               {13 * ticksPerStep, ticksPerStep, 62, 0.5f}};
+    auto clipboard = copyNotes(notes, {0, 1, 2}, ticksPerBeat);
+    CHECK(clipboard.start == 0);
+    CHECK(clipboard.length == 16 * ticksPerStep);
+    auto first = nextPaste(clipboard);
+    REQUIRE(first.size() == 3);
+    CHECK(first[0].startTick == 16 * ticksPerStep);
+    CHECK(first[2].pitch == 62);
+    CHECK(first[2].velocity == 0.5f);
+    CHECK(nextPaste(clipboard)[0].startTick == 32 * ticksPerStep);
+
+    // A short roll in the middle of a bar: block = the beat it's in.
+    auto roll = copyNotes(notes, {1}, ticksPerBeat);
+    CHECK(roll.start == ticksPerBeat);
+    CHECK(roll.length == ticksPerBeat);
+    CHECK(nextPaste(roll)[0].startTick == 6 * ticksPerStep + ticksPerBeat);
+
+    CHECK(copyNotes(notes, {}, ticksPerBeat).empty());
+}
+
+TEST_CASE("Copied clips paste a whole number of bars later, on their own tracks")
+{
+    std::vector<Clip> clips = {{1, 0, 0, 16}, {2, 3, 8, 16}}; // ends at step 24
+    auto clipboard = copyClips(clips, {0, 1}, 16);
+    CHECK(clipboard.length == 32);
+    const auto pasted = nextPaste(clipboard);
+    CHECK(pasted[0].startStep == 32);
+    CHECK(pasted[1].startStep == 40);
+    CHECK(pasted[1].track == 3);
 }

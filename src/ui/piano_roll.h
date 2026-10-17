@@ -4,6 +4,7 @@
 // scrollable NoteGrid plus a keyboard, a ruler and a velocity lane that follow its scrolling.
 
 #include "engine/transport.h"
+#include "model/clipboard.h"
 #include "model/document.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -24,7 +25,8 @@ class PianoRollView;
 //   right-click / drag      delete notes
 //   Ctrl + drag             select the notes in a rectangle; drag a selected note to move them
 //                           all (its right end resizes them all); Delete removes them, Ctrl+A
-//                           selects all, Esc deselects
+//                           selects all, Esc deselects; Ctrl+C / X copy / cut them, Ctrl+V
+//                           pastes after the copied block (again: after the last paste)
 //   Ctrl + mouse wheel      zoom horizontally
 class NoteGrid final : public juce::Component
 {
@@ -113,7 +115,8 @@ class PianoRollView final : public juce::Component, private juce::Timer
     std::vector<int> selection;
     bool isSelected(int note) const;
     void clearSelection();
-    // Delete / Ctrl+A / Esc for the selection, Alt+U to slice; returns true if the key was used.
+    // Delete / Ctrl+A / Esc for the selection, Ctrl+C / X / V, Alt+U to slice; returns true if the
+    // key was used.
     bool keyCommand(const juce::KeyPress& key);
 
     // The slicer: cuts the selected notes (all of the channel's notes when none are selected)
@@ -170,6 +173,7 @@ class PianoRollView final : public juce::Component, private juce::Timer
     SyncedViewport viewport;
     NoteGrid grid;
     float lastPlayheadX = -1.0f;
+    model::NoteClipboard clipboard;        // Ctrl+C / Ctrl+V, also across channels and patterns
     model::ChannelId selectionChannel = 0; // what the selection belongs to
     model::PatternId selectionPattern = 0;
     model::ChannelId scrolledFor = 0;

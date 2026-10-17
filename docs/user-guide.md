@@ -131,6 +131,7 @@ installed, the channel stays silent and keeps them.
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |
 | Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
 
 ## Piano Roll
 
@@ -147,6 +148,7 @@ installed, the channel stays silent and keeps them.
 | Ctrl + drag | Select the notes in a rectangle (outlined) |
 | Drag a selected note | Move all selected notes together (its right end resizes them all) |
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected notes; paste them right after the copied beats (again: after the last paste), also into another channel or pattern |
 | Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
 | Click and hold a key on the left | Play that note (slide to play others) |
 | Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |

@@ -577,8 +577,35 @@ bool PlaylistView::keyCommand(const juce::KeyPress& key)
         grid.repaint();
         return true;
     }
+    const auto cmd = juce::ModifierKeys::commandModifier;
+    if (key == juce::KeyPress('v', cmd, 0))
+    {
+        if (clipboard.empty())
+            return true;
+        // Right after the copied bars (or the last paste); the pasted clips get selected.
+        auto pasted = model::nextPaste(clipboard);
+        std::erase_if(pasted, [this](const model::Clip& c)
+                      { return doc.project().findPattern(c.pattern) == nullptr; });
+        const int first = static_cast<int>(doc.project().playlist.clips.size());
+        doc.apply(
+            [pasted](model::Project& p)
+            { p.playlist.clips.insert(p.playlist.clips.end(), pasted.begin(), pasted.end()); });
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(pasted.size()); ++i)
+            selection.push_back(first + i);
+        grid.repaint();
+        return true;
+    }
     if (selection.empty())
         return false;
+    if (key == juce::KeyPress('c', cmd, 0) || key == juce::KeyPress('x', cmd, 0))
+    {
+        clipboard =
+            model::copyClips(doc.project().playlist.clips, selection, doc.project().stepsPerBar());
+        if (key.getKeyCode() == 'c' || key.getKeyCode() == 'C')
+            return true;
+        return keyCommand(juce::KeyPress(juce::KeyPress::deleteKey)); // cut = copy + delete
+    }
     if (key == juce::KeyPress::escapeKey)
     {
         clearSelection();

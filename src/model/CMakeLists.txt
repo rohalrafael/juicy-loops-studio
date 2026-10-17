@@ -1,5 +1,6 @@
 add_library(jls_model STATIC
     document.cpp
+    clipboard.cpp
     project.cpp
     project_file.cpp
     render.cpp)

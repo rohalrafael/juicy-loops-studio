@@ -169,6 +169,18 @@ struct Playlist
     std::vector<Clip> clips;
 };
 
+// Scales the Piano Roll can highlight.
+enum class Scale
+{
+    none, // just white/black keys
+    major,
+    minor, // natural minor
+};
+
+// True if `pitch` belongs to `scale` built on `root` (0 = C ... 11 = B). Every pitch does for
+// Scale::none.
+bool isInScale(int pitch, int root, Scale scale);
+
 struct Project
 {
     std::vector<Channel> channels; // in Channel Rack order
@@ -185,6 +197,8 @@ struct Project
     PatternId currentPattern = 0;
     ChannelId selectedChannel = 0; // 0 = none; the Piano Roll (F7) edits this channel
     int selectedMixerTrack = 1;    // the mixer track whose effect slots are shown
+    Scale scale = Scale::none;     // Piano Roll scale highlight
+    int scaleRoot = 0;             // 0 = C ... 11 = B
     bool songMode = false;
 
     ChannelId nextChannelId = 1;

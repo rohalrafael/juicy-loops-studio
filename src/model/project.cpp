@@ -365,6 +365,17 @@ int Project::loopLengthInSteps(const Pattern& pattern, ChannelId channel) const
     return loop < lengthInSteps(pattern) ? loop : 0;
 }
 
+bool isInScale(int pitch, int root, Scale scale)
+{
+    // Semitones above the root that are in the scale, as bit masks.
+    constexpr unsigned major = 0b101010110101; // 0 2 4 5 7 9 11
+    constexpr unsigned minor = 0b010110101101; // 0 2 3 5 7 8 10
+    if (scale == Scale::none)
+        return true;
+    const int degree = ((pitch - root) % 12 + 12) % 12;
+    return ((scale == Scale::major ? major : minor) >> degree) & 1u;
+}
+
 std::string formatTime(double seconds)
 {
     const auto ms = static_cast<long long>(std::floor(std::max(0.0, seconds) * 1000.0 + 1e-6));

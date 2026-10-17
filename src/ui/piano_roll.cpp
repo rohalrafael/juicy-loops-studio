@@ -62,7 +62,7 @@ class PianoRollView::Keyboard final : public juce::Component
         const auto& t = currentTheme();
         const int offset = view.viewport.getViewPositionY();
         g.fillAll(colour(t.colours.panel));
-        g.setFont(juce::FontOptions(10.0f));
+        g.setFont(juce::FontOptions(9.5f));
         for (int pitch = 0; pitch < numPitches; ++pitch)
         {
             const float y = view.yForPitch(pitch) - offset;
@@ -85,14 +85,16 @@ class PianoRollView::Keyboard final : public juce::Component
             }
             g.setColour(juce::Colours::black.withAlpha(0.25f));
             g.fillRect(row.removeFromBottom(1.0f));
-            if (pitch % 12 == 0)
-            {
-                g.setColour(juce::Colour(0xff333333));
-                g.drawText(noteName(pitch),
-                           juce::Rectangle<float>(0.0f, y, getWidth() - 4.0f,
-                                                  static_cast<float>(rowHeight)),
-                           juce::Justification::centredRight);
-            }
+            // Every key is labelled (in the white part, right of a black key); C stands out,
+            // and notes outside the highlighted scale are faded.
+            const auto& project = view.doc.project();
+            const bool inScale = model::isInScale(pitch, project.scaleRoot, project.scale);
+            g.setColour(juce::Colour(pitch % 12 == 0 ? 0xff222222 : 0xff666666)
+                            .withMultipliedAlpha(inScale ? 1.0f : 0.35f));
+            g.drawText(
+                noteName(pitch),
+                juce::Rectangle<float>(0.0f, y, getWidth() - 4.0f, static_cast<float>(rowHeight)),
+                juce::Justification::centredRight);
         }
     }
 
@@ -399,8 +401,20 @@ void NoteGrid::paint(juce::Graphics& g)
         const float y = view.yForPitch(pitch);
         if (y > clip.getBottom() || y + PianoRollView::rowHeight < clip.getY())
             continue;
+        // Without a scale: black-key rows a little darker. With one: notes outside it darker,
+        // its notes lighter, and the root tinted with the accent.
         const auto lane = colour(t.colours.lane);
-        g.setColour(isBlackKey(pitch) ? lane.darker(0.25f) : lane);
+        juce::Colour rowColour = isBlackKey(pitch) ? lane.darker(0.25f) : lane;
+        if (project.scale != model::Scale::none)
+        {
+            if (!model::isInScale(pitch, project.scaleRoot, project.scale))
+                rowColour = lane.darker(0.45f);
+            else if ((pitch - project.scaleRoot) % 12 == 0)
+                rowColour = lane.interpolatedWith(colour(t.colours.accent), 0.14f);
+            else
+                rowColour = lane.brighter(0.12f);
+        }
+        g.setColour(rowColour);
         g.fillRect(static_cast<float>(clip.getX()), y, static_cast<float>(clip.getWidth()),
                    static_cast<float>(PianoRollView::rowHeight));
         if (pitch % 12 == 0)
@@ -497,6 +511,36 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     snapBox.setSelectedId(snapStep, juce::dontSendNotification);
     snapBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(snapBox);
+
+    // Scale highlight: Off / Major / Minor, on a root note.
+    addAndMakeVisible(scaleLabel);
+    scaleBox.addItem("Off", 1);
+    scaleBox.addItem("Major", 2);
+    scaleBox.addItem("Minor", 3);
+    scaleBox.setTooltip("Highlight the notes of a scale");
+    rootBox.setTooltip("Root note of the scale");
+    for (int root = 0; root < 12; ++root)
+        rootBox.addItem(noteName(root + 60).dropLastCharacters(1), root + 1);
+    const auto setScale = [this]
+    {
+        const auto scale = static_cast<model::Scale>(std::max(0, scaleBox.getSelectedId() - 1));
+        const int root = std::max(0, rootBox.getSelectedId() - 1);
+        const auto& p = doc.project();
+        if (scale != p.scale || root != p.scaleRoot)
+            doc.setViewState(
+                [scale, root](model::Project& project)
+                {
+                    project.scale = scale;
+                    project.scaleRoot = root;
+                });
+    };
+    scaleBox.onChange = setScale;
+    rootBox.onChange = setScale;
+    for (auto* box : {&scaleBox, &rootBox})
+    {
+        box->setWantsKeyboardFocus(false);
+        addAndMakeVisible(*box);
+    }
 
     viewport.setViewedComponent(&grid, false);
     viewport.setScrollBarsShown(true, true);
@@ -613,6 +657,9 @@ void PianoRollView::refresh()
              << juce::String::fromUTF8(" \xc2\xb7 ")
              << juce::String::fromUTF8(project.current().name.c_str());
     title.setText(text, juce::dontSendNotification);
+    scaleBox.setSelectedId(static_cast<int>(project.scale) + 1, juce::dontSendNotification);
+    rootBox.setSelectedId(project.scaleRoot + 1, juce::dontSendNotification);
+    rootBox.setEnabled(project.scale != model::Scale::none);
     updateGridSize();
     grid.repaint();
     keyboard->repaint();
@@ -681,6 +728,10 @@ void PianoRollView::resized()
     auto header = area.removeFromTop(headerHeight).reduced(10, 4);
     snapBox.setBounds(header.removeFromRight(90));
     snapLabel.setBounds(header.removeFromRight(44));
+    header.removeFromRight(12);
+    scaleBox.setBounds(header.removeFromRight(84));
+    rootBox.setBounds(header.removeFromRight(58));
+    scaleLabel.setBounds(header.removeFromRight(46));
     title.setBounds(header);
 
     auto top = area.removeFromTop(rulerHeight);

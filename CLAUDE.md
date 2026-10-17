@@ -146,9 +146,6 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
-- **Scale highlighter (Piano Roll):** pick a scale (root + major/minor for now) and highlight its
-  notes' rows. Today rows are only shaded white-key light / black-key dark. Likely view state,
-  saved with the project; a theme colour for the highlight.
 - **Selection by Ctrl + drag** in the Piano Roll and the Playlist: a rectangle selects notes /
   clips (then move, delete, copy...).
 - **Note slicer (Piano Roll), like FL's:** with notes selected, a shortcut (and a context-menu
@@ -331,6 +328,11 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   `minLength` read as it). What plays = notes rounded up to whole bars ("only the first 16 are
   used until I add a note in 17-32, even with loop on"). Steps past it are greyed pattern
   repeats; clicking one fills the repeat in first.
+
+- 2026-10-17: Scale highlighter (backlog 1): `model::Scale` none/major/minor + `scaleRoot`, view
+  state (kept through undo, saved in `view`), `isInScale()`. Rows: in-scale lighter, others
+  darker, root tinted with the accent; colours derived from `lane`/`accent` (no new theme keys).
+  Every key labelled (not just C).
 
 ## Dev environment notes
 

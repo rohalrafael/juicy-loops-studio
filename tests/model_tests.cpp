@@ -411,3 +411,37 @@ TEST_CASE("Loop switches are saved")
     CHECK_FALSE(loaded.project->loopChannels);
     CHECK_FALSE(loaded.project->findChannel(id)->loop);
 }
+
+TEST_CASE("Scales: major and minor degrees from any root")
+{
+    // C major: the white keys.
+    for (int pitch = 60; pitch < 72; ++pitch)
+    {
+        const bool white = pitch % 12 == 0 || pitch % 12 == 2 || pitch % 12 == 4 ||
+                           pitch % 12 == 5 || pitch % 12 == 7 || pitch % 12 == 9 ||
+                           pitch % 12 == 11;
+        CHECK(isInScale(pitch, 0, Scale::major) == white);
+    }
+    // A minor = C major's notes.
+    for (int pitch = 0; pitch < 128; ++pitch)
+        CHECK(isInScale(pitch, 9, Scale::minor) == isInScale(pitch, 0, Scale::major));
+    // D minor has B flat (A#), not B.
+    CHECK(isInScale(70, 2, Scale::minor));
+    CHECK_FALSE(isInScale(71, 2, Scale::minor));
+    CHECK(isInScale(61, 0, Scale::none));
+
+    // Kept through undo, and saved.
+    Document doc(Project{});
+    doc.apply([](Project& p) { p.addChannel("A", nullptr); });
+    doc.setViewState(
+        [](Project& p)
+        {
+            p.scale = Scale::minor;
+            p.scaleRoot = 9;
+        });
+    doc.undo();
+    CHECK(doc.project().scale == Scale::minor);
+    const auto loaded = loadProject(saveProject(doc.project(), "/p/s.jls"), "/p/s.jls", {});
+    CHECK(loaded.project->scale == Scale::minor);
+    CHECK(loaded.project->scaleRoot == 9);
+}

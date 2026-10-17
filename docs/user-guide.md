@@ -142,11 +142,14 @@ installed, the channel stays silent and keeps them.
 | Snap (top right) | Beat, step, ½ step, ⅓ step or none |
 | Click / drag the ruler | Move the playhead there (snapped); switches to PAT mode |
 | Click and hold a key on the left | Play that note (slide to play others) |
+| Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |
 
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
 while you drag it up or down you hear the new pitch.
 
-Note names follow FL: C5 is middle C (MIDI 60) and plays a sample at its original pitch. Note
+Every key is labelled; note names follow FL: C5 is middle C (MIDI 60) and plays a sample at its
+original pitch. With a scale chosen, its notes' rows are lighter, the others darker (their key
+labels faded), and the root's rows are tinted. The scale is saved with the project. Note
 length doesn't change the sound yet: samples always play to their end, like FL's default sampler.
 
 ## Mixer

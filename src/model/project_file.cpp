@@ -173,7 +173,11 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
          {{"currentPattern", project.currentPattern},
           {"selectedChannel", project.selectedChannel},
           {"selectedMixerTrack", project.selectedMixerTrack},
-          {"songMode", project.songMode}}},
+          {"songMode", project.songMode},
+          {"scale", project.scale == Scale::major   ? "major"
+                    : project.scale == Scale::minor ? "minor"
+                                                    : "none"},
+          {"scaleRoot", project.scaleRoot}}},
         {"nextIds",
          {{"channel", project.nextChannelId},
           {"pattern", project.nextPatternId},
@@ -457,6 +461,9 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
     project.selectedMixerTrack =
         read.clamped<int>(viewObj, "selectedMixerTrack", 1, 0, Mixer::numInserts);
     project.songMode = read.get<bool>(viewObj, "songMode", false);
+    const auto scale = read.get<std::string>(viewObj, "scale", "none");
+    project.scale = scale == "major" ? Scale::major : scale == "minor" ? Scale::minor : Scale::none;
+    project.scaleRoot = read.clamped<int>(viewObj, "scaleRoot", 0, 0, 11);
 
     result.project = std::move(project);
     return result;

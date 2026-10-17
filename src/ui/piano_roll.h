@@ -136,6 +136,9 @@ class PianoRollView final : public juce::Component, private juce::Timer
     juce::Label title{{}, "Piano roll"};
     juce::Label snapLabel{{}, "Snap"};
     juce::ComboBox snapBox;
+    juce::Label scaleLabel{{}, "Scale"};
+    juce::ComboBox rootBox;  // C .. B
+    juce::ComboBox scaleBox; // Off / Major / Minor
     std::unique_ptr<Keyboard> keyboard;
     std::unique_ptr<Ruler> ruler;
     std::unique_ptr<VelocityLane> velocityLane;

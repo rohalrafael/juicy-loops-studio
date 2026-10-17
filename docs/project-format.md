@@ -33,7 +33,8 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
       "effects": [ { "id": 1, "type": "reverb", "enabled": true,
                      "params": { "Size": 0.6, "Damping": 0.4, "Width": 1.0, "Mix": 0.25 } } ] }
   ] },
-  "view": { "currentPattern": 1, "selectedChannel": 1, "selectedMixerTrack": 1, "songMode": false },
+  "view": { "currentPattern": 1, "selectedChannel": 1, "selectedMixerTrack": 1, "songMode": false,
+            "scale": "minor", "scaleRoot": 9 },
   "nextIds": { "channel": 7, "pattern": 2, "effect": 2 }
 }
 ```
@@ -56,7 +57,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
 | `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
 | `effects[].plugin` | For `"type": "plugin"`: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
-| `view` | Selections and PAT/SONG mode, restored on open |
+| `view` | Selections, PAT/SONG mode and the Piano Roll scale (`scale`: `none`/`major`/`minor`, `scaleRoot`: 0 = C ... 11 = B), restored on open |
 | `nextIds` | Id counters for new channels, patterns and effects |
 
 ## Loading rules

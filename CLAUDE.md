@@ -352,5 +352,7 @@ and run it before milestones or after platform-specific changes.
   text extraction.
 - Pushing: Claude may push. Its shell doesn't inherit `SSH_AUTH_SOCK`; the agent socket
   lives in `~/.ssh/agent/`: `SSH_AUTH_SOCK=$(ls -t ~/.ssh/agent/s.* | head -1) git push`.
+  After a reboot the old sockets there are dead until the user's agent is running again with the
+  key loaded; if a push fails with "access rights", ask the user (commits stay local meanwhile).
 - Windows/macOS CI is skipped for now (Linux-native first). Don't dispatch the full
   matrix unless the user asks.

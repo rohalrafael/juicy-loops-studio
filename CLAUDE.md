@@ -142,6 +142,20 @@ and run it before milestones or after platform-specific changes.
        live input, out-of-process hosting
 8. [x] Project save/load (.jls JSON), WAV export
 
+## Backlog
+
+Requested by the user, not started yet (newest first). Ask before starting one unless told to.
+
+- **Scale highlighter (Piano Roll):** pick a scale (root + major/minor for now) and highlight its
+  notes' rows. Today rows are only shaded white-key light / black-key dark. Likely view state,
+  saved with the project; a theme colour for the highlight.
+- **Selection by Ctrl + drag** in the Piano Roll and the Playlist: a rectangle selects notes /
+  clips (then move, delete, copy...).
+- **Note slicer (Piano Roll), like FL's:** with notes selected, a shortcut (and a context-menu
+  entry) splits each into consecutive notes of a chosen granularity (e.g. 1/4, 1/8, 1/16 step
+  values), keeping pitch and velocity. For hi-hat rolls. Depends on selection.
+- Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
+
 ## Decision log
 
 - 2026-10-16: Language set to **C++** (over Rust) for its plugin-hosting and DAW

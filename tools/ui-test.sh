@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$ROOT/build/src/app/JuicyLoopsStudio_artefacts/Debug/Juicy Loops Studio"
+APP="$ROOT/${JLS_BUILD_DIR:-build}/src/app/JuicyLoopsStudio_artefacts/Debug/Juicy Loops Studio"
 OUT="${OUT:-/tmp/jls-ui-test}"
 mkdir -p "$OUT"
 export DISPLAY=:99

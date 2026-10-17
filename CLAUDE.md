@@ -296,8 +296,13 @@ and run it before milestones or after platform-specific changes.
 
 ## Dev environment notes
 
-- The user is happy to install tools on request. Ask instead of working around a
-  missing tool.
+- **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools
+  and test plugins (LSP, Surge XT), JACK dummy audio and ALSA MIDI. Build/test/UI-test there
+  (`tools/sandbox.sh run ...`, build dir `build-docker/`). Install missing tools in the sandbox
+  yourself (`sudo pacman -S`) and add lasting ones to `docker/Dockerfile`, instead of asking the
+  user to install them on the host. Listening and Hyprland-specific behaviour still need the
+  user's desktop. If Docker networking fails after a kernel update, `JLS_SANDBOX_NETWORK=host`.
+- On the host, the user is happy to install tools on request (ask, don't work around).
 - Installed locally (Arch): cmake, ninja, clang (clang-format/clang-tidy), gh, ImageMagick.
 - **UI testing: use `tools/ui-test.sh`** (Xvfb display :99 + xdotool + ImageMagick). The
   user is on **Wayland (Hyprland)**: xdotool can't click the app on the real desktop

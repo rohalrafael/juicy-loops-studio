@@ -148,12 +148,17 @@ Requested by the user, not started yet (newest first). Ask before starting one u
 
 - **Browser panel (file explorer), like FL's:** dockable on the left or the right; add folders
   to it and drag samples from it onto the Channel Rack (new channel / replace sample), the
-  Playlist, etc. Extras like newer FL versions: click a sample to hear a preview; selecting one
-  shows its waveform, where clicking plays from that point ("click around" the sample).
-- **Audio clips in the Playlist:** dropping a sample on the Playlist places it as a clip that
-  shows its waveform. Note: today the Playlist only holds pattern clips, so this needs a new clip
-  kind (FL makes an "audio clip" channel for it) and engine playback of clips aligned to song time.
-
+  Playlist, etc. Previews (user's design): **click = short preview** (first few seconds, e.g. 5 s,
+  adjustable in Settings) so very long files don't play for ages; **Shift+click = play the whole
+  sample** (a command, so rebindable); a **play/pause button** by the waveform at the bottom of
+  the panel; selecting a sample shows its waveform, clicking in it plays from there.
+- **Audio clips in the Playlist:** dropping a sample on the Playlist places a clip showing its
+  waveform. Proposed (user prefers it over FL's audio-clip channels; awaiting go-ahead): audio
+  **sources** are their own list in the project, *not* Channel Rack channels; each source keeps
+  what a channel would give it (mixer track, volume, pan; edited from the clip's menu); an
+  FL-style **picker panel** in the Playlist lists all patterns and audio clips to drag from.
+  Reuse the sampler + mixer routing internally. Needed either way: the engine must start a clip
+  part-way in (play/seek into the middle of a clip), not only from its beginning.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log

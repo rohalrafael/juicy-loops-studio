@@ -596,8 +596,9 @@ void MainComponent::paintOverChildren(juce::Graphics& g)
         return;
     const auto& t = ui::currentTheme();
     g.setColour(ui::colour(t.colours.accent).withAlpha(0.85f));
-    g.drawRoundedRectangle(c->getBounds().toFloat().expanded(1.5f), t.shape.windowRadius + 1.5f,
-                           1.5f);
+    // Inside the area's bounds: when it moves (the Channel Rack can be dragged), JUCE repaints
+    // exactly its old and new bounds, so an outline drawn outside them would leave a trail.
+    g.drawRoundedRectangle(c->getBounds().toFloat().reduced(0.75f), t.shape.windowRadius, 1.5f);
 }
 
 void MainComponent::toggleBrowser()

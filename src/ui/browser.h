@@ -34,8 +34,14 @@ class BrowserPanel final : public juce::Component, private juce::Timer
     // Play / pause the selected sample's preview (whole sample, from where it paused).
     void playPause();
 
-    std::function<double()> previewSeconds; // length of a click preview
-    std::function<void()> onSideChanged;    // the owner re-lays out
+    // Keyboard (from the owner's commands while the Browser has the focus).
+    void moveSelection(int delta); // up / down through the visible items; previews samples
+    void openSelected(bool open);  // folders: open (true) or close (false)
+    void confirmSelected();        // Enter: toggle a folder, or use the sample (onUseSample)
+
+    std::function<double()> previewSeconds;             // length of a click preview
+    std::function<void(const juce::File&)> onUseSample; // load into the selected channel
+    std::function<void()> onSideChanged;                // the owner re-lays out
     std::function<void()> onClose;
 
     void paint(juce::Graphics& g) override;

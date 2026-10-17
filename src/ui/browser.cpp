@@ -37,6 +37,7 @@ class BrowserPanel::Item final : public juce::TreeViewItem
   public:
     Item(BrowserPanel& p, juce::File f, bool isRoot) : panel(p), file(std::move(f)), root(isRoot) {}
 
+    const juce::File& getFile() const { return file; }
     bool mightContainSubItems() override { return file.isDirectory(); }
     juce::String getUniqueName() const override { return file.getFullPathName(); }
     int getItemHeight() const override { return 22; }
@@ -83,7 +84,13 @@ class BrowserPanel::Item final : public juce::TreeViewItem
             menu.showMenuAsync({});
             return;
         }
-        if (!file.isDirectory())
+        if (!file.isDirectory() && e.mods.isCommandDown())
+        {
+            // Ctrl+click: put the sample into the selected channel.
+            if (panel.onUseSample)
+                panel.onUseSample(file);
+        }
+        else if (!file.isDirectory())
             panel.select(file, e.mods.isShiftDown());
         else if (!e.mods.isPopupMenu())
             setOpen(!isOpen());
@@ -259,6 +266,50 @@ void BrowserPanel::setOnRight(bool shouldBeOnRight)
     sideButton.setButtonText(right ? "<" : ">");
     if (onSideChanged)
         onSideChanged();
+}
+
+void BrowserPanel::moveSelection(int delta)
+{
+    const int rows = tree.getNumRowsInTree();
+    if (rows == 0)
+        return;
+    auto* selected = tree.getSelectedItem(0);
+    const int row = selected != nullptr ? selected->getRowNumberInTree() : (delta > 0 ? -1 : rows);
+    auto* item = tree.getItemOnRow(std::clamp(row + delta, 0, rows - 1));
+    if (item == nullptr || item == selected)
+        return;
+    item->setSelected(true, true);
+    tree.scrollToKeepItemVisible(item);
+    // Landing on a sample previews it, as clicking would.
+    if (auto* entry = dynamic_cast<Item*>(item);
+        entry != nullptr && !entry->getFile().isDirectory())
+        select(entry->getFile(), false);
+}
+
+void BrowserPanel::openSelected(bool open)
+{
+    auto* item = tree.getSelectedItem(0);
+    if (item == nullptr)
+        return;
+    if (item->mightContainSubItems() && item->isOpen() != open)
+        item->setOpen(open);
+    else if (!open && item->getParentItem() != nullptr && item->getParentItem() != treeRoot.get())
+    {
+        // Left on a file or a closed folder: go up to the folder it's in.
+        item->getParentItem()->setSelected(true, true);
+        tree.scrollToKeepItemVisible(item->getParentItem());
+    }
+}
+
+void BrowserPanel::confirmSelected()
+{
+    auto* entry = dynamic_cast<Item*>(tree.getSelectedItem(0));
+    if (entry == nullptr)
+        return;
+    if (entry->getFile().isDirectory())
+        entry->setOpen(!entry->isOpen());
+    else if (onUseSample)
+        onUseSample(entry->getFile());
 }
 
 void BrowserPanel::chooseFolderToAdd()

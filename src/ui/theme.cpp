@@ -168,6 +168,8 @@ ThemeManager::ThemeManager() : active(theme::defaultTheme())
     options.folderName = "JuicyLoopsStudio";
     options.filenameSuffix = ".settings";
     options.osxLibrarySubFolder = "Application Support";
+    // Write changes within a second, not only on a clean exit (a crash or kill would lose them).
+    options.millisecondsBeforeSaving = 1000;
 #if JUCE_LINUX || JUCE_BSD
     // JUCE's default on Linux is a folder directly in $HOME; follow the XDG convention instead.
     const auto xdg = juce::SystemStats::getEnvironmentVariable("XDG_CONFIG_HOME", {});

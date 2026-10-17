@@ -319,6 +319,12 @@ which gives:
   own tooltip (remembered in the component's `baseTooltip` property), and runs again whenever
   the mappings change. Views expose the controls that have commands (`loopSwitch()`,
   `lengthButton()`, `sliceControl()`, `snapControl()`...). Add new ones there.
+- **Focus areas:** `MainComponent::Area` (Browser, Channel Rack, main view, Mixer) says where
+  the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on the window. A click
+  in an area focuses it (`mouseDown`), Ctrl+Tab cycles (`cycleFocus`), `paintOverChildren`
+  outlines the focused one, and `navigate()` dispatches.
+- **Note keys vs commands:** the typing keyboard only claims plain character keys (codes below
+  128); special keys' codes can end in a letter's byte (Down = ...'T').
 - **Settings** used by commands (tempo steps) live in the settings file; Options › Settings
   (`ui/settings_dialog`) edits them.
 

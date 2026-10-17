@@ -42,6 +42,7 @@ class MainComponent final : public juce::AudioAppComponent,
     void releaseResources() override;
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override; // outline of the focused area
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
     bool keyStateChanged(bool isKeyDown) override;
@@ -78,6 +79,20 @@ class MainComponent final : public juce::AudioAppComponent,
     void showPianoRoll();
     void toggleMixer();
     void toggleBrowser();
+
+    // Keyboard focus areas: arrow keys and Enter act on the focused one (outlined). The window
+    // itself keeps JUCE's keyboard focus; this is only where navigation keys go.
+    enum class Area
+    {
+        browser,
+        channelRack,
+        mainView, // the Playlist or the Piano Roll, whichever is showing
+        mixer,
+    };
+    juce::Component* areaComponent(Area area);
+    void setFocusArea(Area area);
+    void cycleFocus(int direction);
+    void navigate(juce::CommandID command);
     void publishState();
     void showAudioSettings();
     void showAbout();
@@ -133,6 +148,7 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
     ui::MixerView mixer;         // docked below them (F9)
     ui::BrowserPanel browser;    // docked at the left or right (Alt+F8)
+    Area focusArea = Area::mainView;
     ui::EffectPanel effectPanel;
     bool effectPanelPlaced = false;
     juce::File currentFile;   // where the project was last saved/opened; empty if never

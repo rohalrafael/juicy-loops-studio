@@ -131,6 +131,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.previewSeconds = [this] { return ui::settings::previewSeconds(themes.settingsFile()); };
     browser.onSideChanged = [this] { resized(); };
     browser.onClose = [this] { toggleBrowser(); };
+    browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
     addChildComponent(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
@@ -480,6 +481,91 @@ void MainComponent::showPianoRoll()
     menuItemsChanged();
 }
 
+juce::Component* MainComponent::areaComponent(Area area)
+{
+    switch (area)
+    {
+    case Area::browser:
+        return &browser;
+    case Area::channelRack:
+        return &channelRack;
+    case Area::mainView:
+        return pianoRoll.isVisible() ? static_cast<juce::Component*>(&pianoRoll) : &playlist;
+    case Area::mixer:
+        return &mixer;
+    }
+    return nullptr;
+}
+
+void MainComponent::setFocusArea(Area area)
+{
+    if (area != focusArea)
+    {
+        focusArea = area;
+        repaint();
+    }
+}
+
+void MainComponent::cycleFocus(int direction)
+{
+    // Like Alt+Tab, through the areas that are showing.
+    const std::array order{Area::browser, Area::channelRack, Area::mainView, Area::mixer};
+    const auto current = std::find(order.begin(), order.end(), focusArea) - order.begin();
+    for (int step = 1; step <= 4; ++step)
+    {
+        const auto next = order[static_cast<std::size_t>((current + direction * step + 8) % 4)];
+        if (auto* c = areaComponent(next); c != nullptr && c->isVisible())
+        {
+            setFocusArea(next);
+            return;
+        }
+    }
+}
+
+void MainComponent::navigate(juce::CommandID command)
+{
+    using namespace jls::commands;
+    if (auto* c = areaComponent(focusArea); c == nullptr || !c->isVisible())
+        return;
+    switch (focusArea)
+    {
+    case Area::browser:
+        if (command == navUp || command == navDown)
+            browser.moveSelection(command == navUp ? -1 : 1);
+        else if (command == navLeft || command == navRight)
+            browser.openSelected(command == navRight);
+        else if (command == navConfirm)
+            browser.confirmSelected();
+        break;
+    case Area::channelRack:
+        if (command == navUp || command == navDown)
+            channelRack.selectOffset(command == navUp ? -1 : 1);
+        break;
+    case Area::mixer:
+        if (command == navLeft || command == navRight)
+        {
+            const int track =
+                std::clamp(document.project().selectedMixerTrack + (command == navLeft ? -1 : 1), 0,
+                           static_cast<int>(document.project().mixer.tracks.size()) - 1);
+            document.setViewState([track](model::Project& p) { p.selectedMixerTrack = track; });
+        }
+        break;
+    case Area::mainView:
+        break; // nothing yet
+    }
+}
+
+void MainComponent::paintOverChildren(juce::Graphics& g)
+{
+    auto* c = areaComponent(focusArea);
+    if (c == nullptr || !c->isVisible())
+        return;
+    const auto& t = ui::currentTheme();
+    g.setColour(ui::colour(t.colours.accent).withAlpha(0.85f));
+    g.drawRoundedRectangle(c->getBounds().toFloat().expanded(1.5f), t.shape.windowRadius + 1.5f,
+                           1.5f);
+}
+
 void MainComponent::toggleBrowser()
 {
     browser.setVisible(!browser.isVisible());
@@ -677,8 +763,18 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     return menu;
 }
 
-void MainComponent::mouseDown(const juce::MouseEvent&)
+void MainComponent::mouseDown(const juce::MouseEvent& e)
 {
+    // A click in an area gives it the navigation keys (arrows, Enter).
+    for (auto area : {Area::browser, Area::channelRack, Area::mixer, Area::mainView})
+        if (auto* c = areaComponent(area);
+            c != nullptr && c->isVisible() &&
+            (c == e.eventComponent || c->isParentOf(e.eventComponent)))
+        {
+            setFocusArea(area);
+            break;
+        }
+
     // Keyboard shortcuts are handled here, but focus can end up nowhere (e.g. after a menu or
     // dialog closes). Any click takes it back, unless the click went into a text field.
     if (dynamic_cast<juce::TextEditor*>(getCurrentlyFocusedComponent()) == nullptr)
@@ -892,6 +988,37 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case browserSwitchSide:
         browser.setOnRight(!browser.onRight());
+        break;
+    case focusNext:
+        cycleFocus(1);
+        break;
+    case focusPrevious:
+        cycleFocus(-1);
+        break;
+    case focusBrowser:
+        if (!browser.isVisible())
+            toggleBrowser();
+        setFocusArea(Area::browser);
+        break;
+    case focusChannelRack:
+        if (!channelRack.isVisible())
+            toggleChannelRack();
+        setFocusArea(Area::channelRack);
+        break;
+    case focusMainView:
+        setFocusArea(Area::mainView);
+        break;
+    case focusMixer:
+        if (!mixer.isVisible())
+            toggleMixer();
+        setFocusArea(Area::mixer);
+        break;
+    case navUp:
+    case navDown:
+    case navLeft:
+    case navRight:
+    case navConfirm:
+        navigate(static_cast<juce::CommandID>(info.commandID));
         break;
     case browserAddFolder:
         browser.chooseFolderToAdd();

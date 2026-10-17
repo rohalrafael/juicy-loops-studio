@@ -16,6 +16,13 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 
 ## Keyboard
 
+**Focus.** The arrow keys and Enter act on the focused area, which has an orange outline:
+the Browser, the Channel Rack, the Playlist / Piano Roll, or the Mixer. Click an area to focus
+it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** (like Alt+Tab, through the areas that are
+showing). In the Channel Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / →
+select the previous / next track. The selected channel's row is highlighted: that's where the
+Browser loads samples.
+
 Every shortcut can be changed in **Options › Keyboard shortcuts…** (Ctrl+Shift+K): click **+**
 next to a command and press the keys, click a key to change or remove it, or **reset to
 defaults**. A command can have several keys; if a key is already taken you're asked whether to
@@ -50,6 +57,8 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Ctrl+R | Export the song as a WAV file |
 | Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z | Undo / redo |
 | Ctrl+, | Settings (tempo steps, preview length) |
+| Ctrl+Tab / Ctrl+Shift+Tab | Focus the next / previous area |
+| ↑ ↓ ← → / Enter | Move / open or load in the focused area |
 
 While **Keys** is on, the typing keyboard's letter keys play notes even if you give one of them
 to a command; use them with Ctrl or Alt for shortcuts. The tempo steps are set in
@@ -114,6 +123,10 @@ are remembered.
 | Click in the waveform | Play from there to the end |
 | Play / Pause (bottom) | Play the whole sample, pause, and resume where it paused |
 | Drag a sample onto the Channel Rack | Add it as a channel (or onto a row: replace that channel's sample) |
+| Ctrl+click a sample | Load it into the selected channel (the highlighted row in the Channel Rack) |
+| ↑ / ↓ (Browser focused) | Move through the list; samples preview as you land on them |
+| → / ← | Open / close a folder (← on a file goes to its folder) |
+| Enter | Open or close a folder; on a sample: load it into the selected channel |
 
 Previews go straight to your speakers, past the mixer and the song, so they're heard while the
 song plays or not. Samples load in the background, so long files don't freeze the app; files

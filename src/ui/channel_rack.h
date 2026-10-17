@@ -150,6 +150,7 @@ class ChannelRow final : public juce::Component
     void setPlayingStep(int step) { steps.setPlayingStep(step); }
     void setStepWidth(int width) { steps.setStepWidth(width); }
 
+    void paint(juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
@@ -167,6 +168,7 @@ class ChannelRow final : public juce::Component
     StepGrid steps;
     int knobGesture = 0;
     bool isInstrument = false; // plays a plugin instead of a sample
+    bool selected = false;     // the selected channel: its row is highlighted
 };
 
 // FL-style Channel Rack, a floating panel (drag its title bar): one row per channel with mute, pan,
@@ -194,6 +196,10 @@ class ChannelRack final : public juce::Component,
     void chooseSampleFor(model::ChannelId id);
     void rename(model::ChannelId id);
     void select(model::ChannelId id);
+    // Selects the channel `offset` rows below (negative: above) the selected one.
+    void selectOffset(int offset);
+    // Loads an audio file into the selected channel (a new channel if none is selected).
+    void loadIntoSelected(const juce::File& file);
     void openPianoRoll(model::ChannelId id);
     // Menu ids firstInstrumentId + i pick listInstruments()[i]; see handleInstrumentMenu().
     static constexpr int manageInstrumentsId = 999;

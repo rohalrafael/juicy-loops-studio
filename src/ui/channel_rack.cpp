@@ -530,6 +530,11 @@ void ChannelRow::update(const model::Channel& channel, const model::Project& pro
                                  : juce::String("Click to select, right-click for options"));
     insert.setValue(channel.mixerTrack);
     name.setToggleState(project.selectedChannel == channel.id, juce::dontSendNotification);
+    if (const bool isSelected = project.selectedChannel == channel.id; isSelected != selected)
+    {
+        selected = isSelected;
+        repaint();
+    }
 
     loop.setState(channel.loop, project.loopChannels);
 
@@ -556,6 +561,17 @@ void ChannelRow::mouseDown(const juce::MouseEvent& e)
 {
     if (e.eventComponent == &name && e.mods.isPopupMenu())
         showMenu();
+}
+
+void ChannelRow::paint(juce::Graphics& g)
+{
+    if (!selected)
+        return;
+    // The selected channel (the Piano Roll's, and where the Browser loads samples).
+    const auto& t = currentTheme();
+    g.setColour(colour(t.colours.activeBackground).withAlpha(0.6f));
+    g.fillRoundedRectangle(getLocalBounds().toFloat().expanded(2.0f, 1.0f).withTrimmedRight(2.0f),
+                           t.shape.cornerRadius);
 }
 
 void ChannelRow::resized()
@@ -707,6 +723,28 @@ void ChannelRack::select(model::ChannelId id)
 {
     if (doc.project().selectedChannel != id)
         doc.setViewState([id](model::Project& p) { p.selectedChannel = id; });
+}
+
+void ChannelRack::selectOffset(int offset)
+{
+    const auto& channels = doc.project().channels;
+    if (channels.empty())
+        return;
+    const auto it = std::find_if(channels.begin(), channels.end(), [this](const model::Channel& c)
+                                 { return c.id == doc.project().selectedChannel; });
+    const int index = it == channels.end() ? (offset > 0 ? -1 : static_cast<int>(channels.size()))
+                                           : static_cast<int>(it - channels.begin());
+    const int next = std::clamp(index + offset, 0, static_cast<int>(channels.size()) - 1);
+    select(channels[static_cast<std::size_t>(next)].id);
+}
+
+void ChannelRack::loadIntoSelected(const juce::File& file)
+{
+    const auto id = doc.project().selectedChannel;
+    if (doc.project().findChannel(id) != nullptr)
+        replaceSample(id, file);
+    else
+        addChannelsFromFiles({file});
 }
 
 void ChannelRack::openPianoRoll(model::ChannelId id)

@@ -77,6 +77,19 @@ enum ID : juce::CommandID
     // Input
     toggleTypingKeyboard = 0x1701,
 
+    // Navigation: which area has the keyboard, and moving around in it
+    focusNext = 0x1901,
+    focusPrevious,
+    focusBrowser,
+    focusChannelRack,
+    focusMainView,
+    focusMixer,
+    navUp,
+    navDown,
+    navLeft,
+    navRight,
+    navConfirm,
+
     // Options / Help
     showSettings = 0x1801,
     showShortcuts,

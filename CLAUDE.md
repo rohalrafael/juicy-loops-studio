@@ -365,6 +365,14 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   toggle browser, switch side, add folder, preview play/pause. Loader still caps at 120 s.
   Next in the backlog: audio clips (drop on the Playlist), which this enables.
 
+- 2026-10-17: Keyboard navigation + focus areas (user request). Browser: Up/Down move (and preview
+  samples), Right/Left open/close, Enter = open folder or load the sample into the selected
+  channel; Ctrl+click = load. Selected channel row highlighted. Focus areas (Browser, Channel
+  Rack, Playlist/Piano Roll, Mixer) with an accent outline; click to focus, Ctrl+Tab /
+  Ctrl+Shift+Tab cycle (Alt+Tab is usually the desktop's). All rebindable commands ("Navigation").
+  Fixed on the way: plain arrow keys were swallowed as typing-keyboard notes (key code truncated
+  to a char); the settings file now saves within 1 s (was only on clean exit).
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools
@@ -401,6 +409,8 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   and `kill $!`. **Don't `pkill -f`** with the app path: it matches and kills its own shell.
   To shoot another theme, set `val` in `~/.config/JuicyLoopsStudio/JuicyLoopsStudio.settings`
   before launch and put it back to `juicy` afterwards.
+- When editing files with Python scripts, **assert that every anchor matched** (clang-format
+  reflows lines; a silent non-match once left new commands undefined and unbound).
 - `grep` here is ugrep and differs from GNU grep for some patterns; use Python for tricky
   text extraction.
 - Pushing: Claude may push. Its shell doesn't inherit `SSH_AUTH_SOCK`; the agent socket

@@ -68,8 +68,13 @@ bool LiveInput::isNoteKey(const juce::KeyPress& key) const
     if (!typing || key.getModifiers().isCommandDown() || key.getModifiers().isCtrlDown() ||
         key.getModifiers().isAltDown())
         return false;
+    // Only plain character keys: special keys (arrows, F-keys...) have codes whose low byte
+    // can look like a letter (Down ends in 'T'), which made them count as note keys.
+    const int code = key.getKeyCode();
+    if (code <= 0 || code >= 128)
+        return false;
     const auto c = static_cast<char>(
-        juce::CharacterFunctions::toLowerCase(static_cast<juce::juce_wchar>(key.getKeyCode())));
+        juce::CharacterFunctions::toLowerCase(static_cast<juce::juce_wchar>(code)));
     for (const auto& k : keys())
         if (k.character == c)
             return true;

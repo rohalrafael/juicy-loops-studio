@@ -129,12 +129,16 @@ shows a note preview and is edited in the Piano Roll, as in FL.
 
 **Transport.** The position is computed from a whole-number sample count since the last
 tempo or sample-rate change, so it doesn't drift; `advance()` returns the block's beat span
-`[startBeat, endBeat)`. Each block then goes through three stages:
+`[startBeat, endBeat)`. Each block then goes through these stages:
 - **Sequencer** (`collectTriggers`): finds every note start in that span, with pattern
   looping, clip repeats and song looping, and converts each to an exact sample offset in the
-  block.
+  block. Each trigger also carries its `endTick`: the note's end, cut at the end of its clip
+  or pattern repeat, in the same unwrapped tick timeline as the transport.
 - **Sampler:** renders the voices in segments between those offsets, so timing doesn't
-  depend on buffer size.
+  depend on buffer size. Samples play to their end (note length is ignored, as in FL's
+  default sampler).
+- **Instruments:** triggers on plugin-instrument channels become note events instead (see
+  below).
 - **Metronome:** uses the same beat span.
 
 ### Audio callback
@@ -144,10 +148,11 @@ for each chunk:
 
 1. Clear the per-track stereo **buses** (Master + inserts), preallocated in `prepare()`.
 2. Render sampler voices into the bus of their channel's mixer track.
-3. For each insert: run its effect chain in place → apply fader and pan (mute/solo already
+3. Render each instrument channel with its note events for the chunk, into its track's bus.
+4. For each insert: run its effect chain in place → apply fader and pan (mute/solo already
    folded into the gains) → record the peak → add into the Master bus.
-4. Master: effects → fader/pan → peak → add to the device output.
-5. Metronome clicks go straight to the output, bypassing the mixer.
+5. Master: effects → fader/pan → peak → add to the device output.
+6. Metronome clicks go straight to the output, bypassing the mixer.
 
 ### Effects
 
@@ -161,9 +166,36 @@ for each chunk:
   processor, or in `Engine::prepare()` before audio starts. `process()` never allocates. The
   pool is reset when the audio device format changes.
 
+### Instruments and note-offs
+
+A channel can be played by a plugin instrument (`Channel::pluginId` set) instead of a sample.
+The engine side is plain C++: `engine::InstrumentProcessor` takes a sorted list of
+`NoteEvent`s (note-on, note-off, all-notes-off, each at a sample offset) and writes a block of
+stereo audio. Instruments run every block, with or without events, so releases ring out.
+
+Stuck notes are the main risk, so the engine (not the sequencer) owns note ends:
+- **Held notes:** every note-on is remembered in a fixed array (`Engine::heldNotes`) until its
+  `endTick`; the note-off is sent in whichever block reaches that tick. A note that starts
+  and ends within one block gets both events at once. Because the end is fixed when the note
+  starts, editing or deleting the note, switching patterns or changing tempo can't strand it.
+- **Same key again** while it's held: the old note gets a note-off first (MIDI can't stack
+  the same key), and a later note-off already queued for it moves up so it doesn't cut the
+  new note.
+- **Stop, pause or a jump** (the block doesn't continue where the last one ended): every
+  held note gets a note-off at offset 0, and every instrument an all-notes-off.
+- **Snapshot changes:** held notes follow their channel by id (its index may change). A
+  removed channel or a replaced instrument drops its held notes; that instrument isn't
+  played again.
+- **Full array** (512 held notes): the note gets its note-off immediately rather than being
+  forgotten.
+
+Instruments live in the same `EffectPool` as effect processors (keyed by channel id; see
+`getInstrument()`), so a synth keeps its voices and settings across edits, and the pool's
+format reset and unused-collection cover them too.
+
 ### Plugins
 
-Hosted plugins (VST3 and LV2, through JUCE) are effects like any other.
+Hosted plugins (VST3 and LV2, through JUCE) are effects and instruments like any other.
 - **Instances:** a plugin slot has `type: "plugin"` plus the plugin's id, name and saved state.
   The `EffectPool`'s plugin factory, set by the app to `plugins::PluginHost::createEffect`, turns
   that into a `plugins::PluginEffect`, which wraps the JUCE plugin instance as an
@@ -178,8 +210,17 @@ Hosted plugins (VST3 and LV2, through JUCE) are effects like any other.
 - **Scanning:** `PluginHost` scans with JUCE's `PluginListComponent` (Options › Plugins), keeps
   the list in `plugins.xml` in the settings folder, and uses a "dead man's pedal" file so a
   plugin that crashes the scanner is skipped next time.
+- **Instruments:** `PluginHost::createInstrument` wraps an instrument plugin as a
+  `plugins::PluginInstrument` (no audio input, stereo out; mono synths go to both sides).
+  Note events become MIDI on channel 1 at their sample offsets, in a `MidiBuffer` reserved in
+  `prepare()`. Velocity 0..1 maps to 1..127 (0 would be a note-off in MIDI). The channel's
+  volume, pan and mute apply after the plugin, then it feeds its mixer track like a sample.
+- **Windows:** `PluginWindow` shows the editor of either kind. It holds the plugin's owner,
+  and `MainComponent` closes it when the effect/channel is removed or its plugin replaced (the
+  window's `owner()` no longer matches the pool's).
 - **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
-  Plugin instruments are phase 2: they need note-offs from the sequencer.
+  Plugins get no play head (tempo/position), so tempo-synced LFOs and arpeggiators run at their
+  own default tempo. No live playing (computer keyboard / MIDI input) yet.
 
 ## UI
 
@@ -216,9 +257,14 @@ Only layout sizes are fixed (`ui::metrics`). The theme file format is in
   `samplePath`) for this.
 - **Unsaved changes:** `Document` tracks them with revision numbers, so undoing back to the
   saved state counts as clean.
-- **Export:** `model::renderProject()` plays the project through a private `Engine` with its own
-  `EffectPool`, block by block, stops at the end of the song, renders the tail, and
-  `io::writeWav()` writes the result.
+- **Export:** `model::renderProject()` plays the project through a private `Engine`, block by
+  block, stops at the end of the song (releasing held notes), renders the tail, and
+  `io::writeWav()` writes the result. The app renders with the **live** `EffectPool` at the
+  device's format, holding the audio callback lock meanwhile: plugins aren't loaded a second
+  time, which matters because some (e.g. LSP's samplers) restore their state on a background
+  thread and would still be silent. Every processor is `reset()` before and after, so no tail
+  or voice leaks between live playback and the export. Tests use the overload that builds its
+  own pool from factories.
 
 **Settings** live in `$XDG_CONFIG_HOME/JuicyLoopsStudio/` on Linux (usually `~/.config`), in
 `~/Library/Application Support/JuicyLoopsStudio/` on macOS, and in `%APPDATA%\JuicyLoopsStudio\`
@@ -248,6 +294,13 @@ saved wherever the user chooses (`.jls`).
    its `ParamInfo` list. The UI picks it up automatically.
 3. Add tests to `tests/mixer_tests.cpp`. The "silent on silence / finite at extremes" test
    covers it automatically. Also add one test for its actual behaviour.
+
+**Make the engine send something new to instruments** (e.g. pitch bend, CC)
+1. Add a `NoteEvent::Kind` in `src/engine/instrument.h`.
+2. Emit it in `Engine::renderChunk()` through `addNoteEvent()` (never allocate; the event
+   array is fixed).
+3. Translate it to MIDI in `PluginInstrument::process()` (`src/plugins/plugin_host.cpp`).
+4. Test it with the recording `FakeInstrument` in `tests/instrument_tests.cpp`.
 
 **Add a themeable property**
 1. Add it to `theme::Theme` (`src/theme/theme.h`) with Juicy's value as the default.

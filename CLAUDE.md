@@ -47,15 +47,17 @@ plugin *hosting* and GUI support are still immature.
 ```
 src/app/      JUCE app shell: window, transport bar, MainComponent (owns Document + Engine)
 src/engine/   Real-time, JUCE-free: Engine (mixer buses), Transport, StepSequencer, Sampler,
-              Metronome, DrumSynth, effects (Filter/EQ/Delay/Reverb/Compressor), EffectPool,
-              SpscQueue, EngineState snapshot
+              Metronome, DrumSynth, effects (Filter/EQ/Delay/Reverb/Compressor/SoftClip),
+              InstrumentProcessor + NoteEvent, EffectPool (effects + instruments), SpscQueue,
+              EngineState snapshot
 src/model/    JUCE-free project data: Project (channels, patterns, playlist), Document (undo)
 src/theme/    JUCE-free theme data + JSON theme files (nlohmann/json) + 4 built-in themes
 src/ui/       JUCE components: ChannelRack (floating), PlaylistView, PianoRollView, MixerView +
               EffectPanel, ThemeManager +
               LookAndFeel (ui/theme), ThemeDialog
 src/io/       JUCE-based file I/O: SampleLoader (WAV/AIFF/FLAC/Ogg/MP3 -> SampleBuffer)
-src/plugins/  Plugin hosting + built-in instruments/effects                     [planned]
+src/plugins/  Plugin hosting (JUCE): PluginHost (scan/list/create), PluginEffect,
+              PluginInstrument, PluginWindow
 tests/        Catch2 unit tests (link engine/model only, never JUCE)
 ```
 
@@ -134,8 +136,8 @@ and run it before milestones or after platform-specific changes.
 4. [x] Pattern system + Playlist (PAT/SONG modes)
 5. [x] Piano Roll
 6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
-7. [~] Plugin hosting: phase 1 done (VST3/LV2 **effects**); phase 2 = plugin **instruments**
-       (needs note-offs from the sequencer; watch for stuck notes)
+7. [x] Plugin hosting: VST3/LV2 **effects** (phase 1) and **instruments** (phase 2). Still to
+       do: play head for plugins, live input (keyboard/MIDI), out-of-process hosting
 8. [x] Project save/load (.jls JSON), WAV export
 
 ## Decision log
@@ -233,7 +235,7 @@ and run it before milestones or after platform-specific changes.
   `model::renderProject()` (private Engine + EffectPool, song once + 2 s tail, current pattern
   if the Playlist is empty) + `io::writeWav()` (24-bit). File menu: Ctrl+N/O/S/Shift+S/R,
   title shows name and `*`, Save / Don't save / Cancel prompt on New/Open/Quit.
-- Known gaps (files): export runs on the UI thread (blocks briefly), no recent-files list, no
+- Known gaps (files): export runs on the UI thread (blocks briefly, and holds live audio), no recent-files list, no
   autosave, no "collect samples into project folder". Clipping: solved 2026-10-17 with a **Soft
   Clipper** effect (user's choice over a limiter), on the Master in new projects
   (`makeDefaultProject`). Linear below the knee, tanh shoulder up to the ceiling (default
@@ -260,6 +262,23 @@ and run it before milestones or after platform-specific changes.
   JUCE ships a fix. Debug crashes with `coredumpctl debug <pid> --debugger-arguments="-batch
   -ex 'thread 1' -ex 'bt 40'"`. Message boxes use NoIcon (JUCE's icons
   are huge and off-theme).
+
+- 2026-10-17: Plugin instruments (phase 2). `Channel::pluginId/pluginName/pluginState` (project
+  key `instrument`, replaces `sample`); `setInstrument()` / `setSample()` switch kinds.
+  Engine-side `InstrumentProcessor` gets sorted `NoteEvent`s per block (JUCE-free, testable with
+  a fake). **No stuck notes** by construction: the sequencer gives each trigger an absolute
+  `endTick` (cut at clip/pattern-repeat end) and the *engine* holds the note until then (fixed
+  512-entry array); same key retriggered = note-off first; stop/pause/jump = note-offs + all-notes
+  -off; a removed channel/replaced plugin drops its held notes. Instruments live in `EffectPool`
+  keyed by channel id. UI: + menu (Sample / Instrument), row menu (use/replace instrument, show
+  plugin), clicking an instrument channel's name toggles its window (FL-like). The grouped plugin
+  menu is shared (`ui/plugin_menu`). `PluginWindow` takes (owner, plugin) and closes when its
+  owner no longer matches the pool's. Plugins get no AudioPlayHead yet. **Export now renders with
+  the live EffectPool** (under the audio callback lock, processors reset before/after): fresh
+  instances were silent because LSP Sampler loads its sample asynchronously. Verified on Xvfb with
+  LSP Sampler Stereo + a 440 Hz WAV: notes at steps 0 and 8 cut after one step (+10 ms fade),
+  identical after save/reopen. Known: delete + undo of an instrument channel restores the plugin
+  state as of the last save.
 
 ## Dev environment notes
 

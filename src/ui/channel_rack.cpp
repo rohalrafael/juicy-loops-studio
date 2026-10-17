@@ -331,13 +331,15 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
     volume.textFromValueFunction = [](double v)
     { return juce::String(static_cast<int>(std::lround(v * 100.0))) + "%"; };
 
-    // Left-click selects the channel (the Piano Roll edits the selected one); right-click
-    // opens the channel menu, as in FL.
-    name.setTooltip("Click to select, right-click for options");
+    // Left-click selects the channel (the Piano Roll edits the selected one) and, for a plugin
+    // instrument, shows or hides its window; right-click opens the channel menu, as in FL.
     name.onClick = [this]
     {
-        if (!juce::ModifierKeys::currentModifiers.isPopupMenu())
-            rack.select(id);
+        if (juce::ModifierKeys::currentModifiers.isPopupMenu())
+            return;
+        rack.select(id);
+        if (isInstrument && rack.onShowInstrument)
+            rack.onShowInstrument(id, true);
     };
     name.addMouseListener(this, false);
 
@@ -372,6 +374,11 @@ void ChannelRow::update(const model::Channel& channel, const model::Project& pro
     pan.setValue(channel.pan, juce::dontSendNotification);
     volume.setValue(channel.volume, juce::dontSendNotification);
     name.setButtonText(juce::String::fromUTF8(channel.name.c_str()));
+    isInstrument = channel.isInstrument();
+    name.setTooltip(isInstrument ? "Plugin: " + juce::String::fromUTF8(channel.pluginName.c_str()) +
+                                       "\nClick to select and show the plugin, right-click for "
+                                       "options"
+                                 : juce::String("Click to select, right-click for options"));
     insert.setValue(channel.mixerTrack);
     name.setToggleState(project.selectedChannel == channel.id, juce::dontSendNotification);
 
@@ -411,23 +418,58 @@ void ChannelRow::resized()
 
 void ChannelRow::showMenu()
 {
+    enum
+    {
+        pianoRollId = 1,
+        showPluginId,
+        renameId,
+        replaceSampleId,
+        deleteId
+    };
+    std::vector<PluginItem> instruments;
     juce::PopupMenu menu;
-    menu.addItem("Piano roll", [this] { rack.openPianoRoll(id); });
+    menu.addItem(pianoRollId, "Piano roll");
+    if (isInstrument)
+        menu.addItem(showPluginId, "Show plugin");
     menu.addSeparator();
-    menu.addItem("Rename...", [this] { rack.rename(id); });
-    menu.addItem("Replace sample...", [this] { rack.chooseSampleFor(id); });
+    menu.addItem(renameId, "Rename...");
+    menu.addItem(replaceSampleId, isInstrument ? "Use a sample instead..." : "Replace sample...");
+    menu.addSubMenu(isInstrument ? "Replace instrument" : "Use an instrument plugin",
+                    rack.instrumentMenu(instruments));
     menu.addSeparator();
-    menu.addItem("Delete channel",
-                 [this]
-                 {
-                     // Deleting destroys this row; defer so we're off its call stack.
-                     auto& r = rack;
-                     const auto channel = id;
-                     juce::MessageManager::callAsync(
-                         [&r, channel]
-                         { r.edit([channel](model::Project& p) { p.removeChannel(channel); }); });
-                 });
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&name));
+    menu.addItem(deleteId, "Delete channel");
+
+    // The row may be destroyed by the time the menu returns (e.g. an undo removed the
+    // channel), so the callback only uses the rack and the id.
+    auto& r = rack;
+    const auto channel = id;
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&name),
+                       [&r, channel, instruments](int result)
+                       {
+                           switch (result)
+                           {
+                           case 0:
+                               return;
+                           case pianoRollId:
+                               r.openPianoRoll(channel);
+                               return;
+                           case showPluginId:
+                               if (r.onShowInstrument)
+                                   r.onShowInstrument(channel, false);
+                               return;
+                           case renameId:
+                               r.rename(channel);
+                               return;
+                           case replaceSampleId:
+                               r.chooseSampleFor(channel);
+                               return;
+                           case deleteId:
+                               r.edit([channel](model::Project& p) { p.removeChannel(channel); });
+                               return;
+                           default:
+                               r.handleInstrumentMenu(result, channel, instruments);
+                           }
+                       });
 }
 
 // -------------------------------------------------------------------------------- ChannelRack
@@ -443,8 +485,8 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
 
     dragBounds.setMinimumOnscreenAmounts(headerHeight, 80, 40, 80);
 
-    addButton.setTooltip("Add channel from audio file");
-    addButton.onClick = [this] { chooseSampleFor(0); };
+    addButton.setTooltip("Add a channel: sample or instrument plugin");
+    addButton.onClick = [this] { showAddMenu(); };
     noFocus(addButton);
     addAndMakeVisible(addButton);
 
@@ -468,6 +510,65 @@ void ChannelRack::openPianoRoll(model::ChannelId id)
     select(id);
     if (onOpenPianoRoll)
         onOpenPianoRoll(id);
+}
+
+juce::PopupMenu ChannelRack::instrumentMenu(std::vector<PluginItem>& items) const
+{
+    // Instrument plugins (VST3 / LV2), found by scanning in Options > Plugins.
+    items = listInstruments ? listInstruments() : std::vector<PluginItem>{};
+    auto menu = makePluginMenu(items, firstInstrumentId);
+    menu.addSeparator();
+    menu.addItem(manageInstrumentsId, "Manage plugins...");
+    return menu;
+}
+
+bool ChannelRack::handleInstrumentMenu(int result, model::ChannelId id,
+                                       const std::vector<PluginItem>& items)
+{
+    if (result == manageInstrumentsId)
+    {
+        if (onManagePlugins)
+            onManagePlugins();
+        return true;
+    }
+    const int index = result - firstInstrumentId;
+    if (index < 0 || index >= static_cast<int>(items.size()))
+        return false;
+
+    const auto& item = items[static_cast<std::size_t>(index)];
+    model::ChannelId target = id;
+    edit(
+        [&target, &item](model::Project& p)
+        {
+            if (target == 0)
+                target = p.addInstrumentChannel(item.id, item.name);
+            else if (auto* c = p.findChannel(target))
+                c->setInstrument(item.id, item.name);
+        });
+    if (target == 0)
+        return true;
+    select(target);
+    // Open the plugin right away so it can be set up, like FL does for new channels.
+    if (onShowInstrument)
+        onShowInstrument(target, false);
+    return true;
+}
+
+void ChannelRack::showAddMenu()
+{
+    constexpr int sampleId = 1;
+    std::vector<PluginItem> instruments;
+    juce::PopupMenu menu;
+    menu.addItem(sampleId, "Sample...");
+    menu.addSubMenu("Instrument", instrumentMenu(instruments));
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&addButton),
+                       [this, instruments](int result)
+                       {
+                           if (result == sampleId)
+                               chooseSampleFor(0);
+                           else
+                               handleInstrumentMenu(result, 0, instruments);
+                       });
 }
 
 void ChannelRack::refresh()
@@ -651,11 +752,7 @@ void ChannelRack::replaceSample(model::ChannelId id, const juce::File& file)
         [id, sample, path](model::Project& p)
         {
             if (auto* c = p.findChannel(id))
-            {
-                c->sample = sample;
-                c->samplePath = path;
-                c->builtinSample.clear();
-            }
+                c->setSample(sample, path); // also turns an instrument channel into a sampler
         });
 }
 

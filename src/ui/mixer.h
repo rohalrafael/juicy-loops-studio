@@ -4,6 +4,7 @@
 // selected track) and the floating EffectPanel that edits one effect's parameters.
 
 #include "model/document.h"
+#include "ui/plugin_menu.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -63,10 +64,7 @@ class MixerView final : public juce::Component
     std::function<void(model::EffectId)> onOpenEffect;
     // Set by the owner: known plugin effects, the "Manage plugins" action, and whether an effect
     // could be loaded (plugins may be missing on this machine).
-    struct PluginItem
-    {
-        std::string id, name, manufacturer, category;
-    };
+    using PluginItem = ui::PluginItem;
     std::function<std::vector<PluginItem>()> listPlugins;
     std::function<void()> onManagePlugins;
     std::function<bool(model::EffectId)> isEffectAvailable;

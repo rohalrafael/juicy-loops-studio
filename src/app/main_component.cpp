@@ -137,7 +137,20 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     effectPool.setPluginFactory(
         [this](const std::string& id, const std::string& state, double rate, int block)
         { return pluginHost.createEffect(id, state, rate, block); });
+    effectPool.setInstrumentFactory(
+        [this](const std::string& id, const std::string& state, double rate, int block)
+        { return pluginHost.createInstrument(id, state, rate, block); });
     channelRack.onOpenPianoRoll = [this](model::ChannelId) { showPianoRoll(); };
+    channelRack.listInstruments = [this]
+    {
+        std::vector<ui::PluginItem> list;
+        for (const auto& e : pluginHost.instruments())
+            list.push_back({e.id, e.name, e.manufacturer, e.category});
+        return list;
+    };
+    channelRack.onManagePlugins = [this] { pluginHost.showManager(); };
+    channelRack.onShowInstrument = [this](model::ChannelId id, bool toggle)
+    { showInstrumentEditor(id, toggle); };
 
 #if JUCE_MAC
     juce::MenuBarModel::setMacMainMenu(this);
@@ -163,6 +176,7 @@ MainComponent::~MainComponent()
 #endif
     document.onChange = nullptr;
     pluginWindows.clear(); // editors before their plugins
+    instrumentWindows.clear();
     shutdownAudio();
 }
 
@@ -179,12 +193,20 @@ void MainComponent::documentChanged()
     mixer.refresh();
     if (effectPanel.isVisible())
         effectPanel.refresh();
-    // Close plugin windows whose effect was removed (or replaced by undo).
+    // Close plugin windows whose effect or instrument was removed or replaced (e.g. by undo).
     for (auto it = pluginWindows.begin(); it != pluginWindows.end();)
     {
-        const auto* slot = project.findEffect(it->first);
-        if (slot == nullptr || effectPool.find(it->first) == nullptr)
+        if (project.findEffect(it->first) == nullptr ||
+            effectPool.find(it->first).get() != it->second->owner())
             it = pluginWindows.erase(it);
+        else
+            ++it;
+    }
+    for (auto it = instrumentWindows.begin(); it != instrumentWindows.end();)
+    {
+        if (project.findChannel(it->first) == nullptr ||
+            effectPool.findInstrument(it->first).get() != it->second->owner())
+            it = instrumentWindows.erase(it);
         else
             ++it;
     }
@@ -231,10 +253,47 @@ void MainComponent::openEffectEditor(model::EffectId id)
         juce::String::fromUTF8(slot->pluginName.c_str()) + juce::String::fromUTF8(" \xc2\xb7 ") +
         juce::String::fromUTF8(
             document.project().mixer.tracks[static_cast<std::size_t>(track)].name.c_str());
-    auto window = std::make_unique<plugins::PluginWindow>(processor, title);
+    auto* effect = dynamic_cast<plugins::PluginEffect*>(processor.get());
+    if (effect == nullptr)
+        return;
+    auto window = std::make_unique<plugins::PluginWindow>(processor, effect->plugin(), title);
     window->onClose = [this, id]
     { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); };
     pluginWindows[id] = std::move(window);
+}
+
+void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
+{
+    const auto* channel = document.project().findChannel(id);
+    if (channel == nullptr || !channel->isInstrument())
+        return;
+
+    if (auto it = instrumentWindows.find(id); it != instrumentWindows.end())
+    {
+        if (toggle)
+            instrumentWindows.erase(it);
+        else
+            it->second->toFront(true);
+        return;
+    }
+    auto instrument = effectPool.findInstrument(id);
+    auto* plugin = dynamic_cast<plugins::PluginInstrument*>(instrument.get());
+    if (plugin == nullptr)
+    {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(
+                juce::MessageBoxIconType::NoIcon, "Plugin not available",
+                juce::String::fromUTF8(channel->pluginName.c_str()) +
+                    " isn't installed or couldn't be loaded. Scan for plugins in Options > "
+                    "Plugins. The channel is kept in the project and stays silent."),
+            nullptr);
+        return;
+    }
+    const auto title = juce::String::fromUTF8(channel->name.c_str());
+    auto window = std::make_unique<plugins::PluginWindow>(instrument, plugin->plugin(), title);
+    window->onClose = [this, id]
+    { juce::MessageManager::callAsync([this, id] { instrumentWindows.erase(id); }); };
+    instrumentWindows[id] = std::move(window);
 }
 
 void MainComponent::syncPluginStates()
@@ -246,15 +305,24 @@ void MainComponent::syncPluginStates()
                 if (auto processor = effectPool.find(slot.id))
                     if (auto state = processor->saveState(); state != slot.pluginState)
                         states.emplace_back(slot.id, std::move(state));
-    if (states.empty())
+    std::vector<std::pair<model::ChannelId, std::string>> instrumentStates;
+    for (const auto& channel : document.project().channels)
+        if (channel.isInstrument())
+            if (auto instrument = effectPool.findInstrument(channel.id))
+                if (auto state = instrument->saveState(); state != channel.pluginState)
+                    instrumentStates.emplace_back(channel.id, std::move(state));
+    if (states.empty() && instrumentStates.empty())
         return;
     // Plugin settings live inside the plugin; copying them in isn't an undoable edit.
     document.setViewState(
-        [&states](model::Project& p)
+        [&states, &instrumentStates](model::Project& p)
         {
             for (auto& [id, state] : states)
                 if (auto* slot = p.findEffect(id))
                     slot->pluginState = std::move(state);
+            for (auto& [id, state] : instrumentStates)
+                if (auto* channel = p.findChannel(id))
+                    channel->pluginState = std::move(state);
         });
 }
 
@@ -846,13 +914,20 @@ void MainComponent::exportWav()
             const double rate =
                 engine.preparedSampleRate() > 0.0 ? engine.preparedSampleRate() : 44100.0;
 
-            // Rendering runs much faster than real time, but blocks the UI while it does.
+            // Rendering runs much faster than real time, but blocks the UI while it does. It
+            // uses the live effects and instruments (no reloading; some plugins restore their
+            // state asynchronously), so live audio is held off meanwhile.
             juce::MouseCursor::showWaitCursor();
+            engine.transport().pause();
             syncPluginStates();
-            const auto audio = model::renderProject(
-                document.project(), rate, 2.0,
-                [this](const std::string& id, const std::string& state, double r, int block)
-                { return pluginHost.createEffect(id, state, r, block); });
+            model::RenderedAudio audio;
+            {
+                const juce::ScopedLock audioLock(deviceManager.getAudioCallbackLock());
+                const int block = engine.preparedBlockSize() > 0 ? engine.preparedBlockSize() : 512;
+                if (std::abs(formatRate - rate) > 0.5 || formatBlock != block)
+                    effectPool.setFormat(rate, block); // no device yet: set the pool up for it
+                audio = model::renderProject(document.project(), rate, 2.0, effectPool, block);
+            }
             const auto result = io::writeWav(file, audio);
             juce::MouseCursor::hideWaitCursor();
 

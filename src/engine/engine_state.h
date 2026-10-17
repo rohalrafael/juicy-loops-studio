@@ -4,6 +4,7 @@
 // Everything here is read-only once published; positions are in ticks (ticksPerBeat).
 
 #include "engine/effects.h"
+#include "engine/instrument.h"
 #include "engine/sample_buffer.h"
 
 #include <cstdint>
@@ -25,6 +26,9 @@ struct ChannelState
 {
     std::uint32_t id = 0;
     std::shared_ptr<const SampleBuffer> sample;
+    // A plugin instrument plays the channel instead of the sample when set. Shared like effect
+    // processors (see EffectState): the audio thread never copies or releases it.
+    std::shared_ptr<InstrumentProcessor> instrument;
     float gainLeft = 1.0f;
     float gainRight = 1.0f;
     bool muted = false;
@@ -49,8 +53,9 @@ struct TrackState
 
 struct NoteState
 {
-    int startTick = 0; // within the pattern
-    int pitch = 60;    // 60 plays the sample at its original pitch
+    int startTick = 0;                  // within the pattern
+    int lengthTicks = ticksPerBeat / 4; // only instruments hear it; samples play to their end
+    int pitch = 60;                     // 60 plays the sample at its original pitch
     float velocity = 100.0f / 128.0f;
 };
 

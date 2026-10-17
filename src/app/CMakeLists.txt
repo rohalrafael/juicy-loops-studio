@@ -14,6 +14,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../ui/channel_rack.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp
+    ../ui/plugin_menu.cpp
     ../ui/piano_roll.cpp
     ../ui/playlist.cpp
     ../ui/theme_dialog.cpp)

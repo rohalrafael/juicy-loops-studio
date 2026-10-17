@@ -299,28 +299,7 @@ class MixerView::Slots final : public juce::Component
         // Grouped as manufacturer > category > plugin (the list arrives sorted that way).
         const auto plugins =
             view.listPlugins ? view.listPlugins() : std::vector<MixerView::PluginItem>{};
-        juce::PopupMenu pluginMenu;
-        for (std::size_t i = 0; i < plugins.size();)
-        {
-            juce::PopupMenu makerMenu;
-            const auto& maker = plugins[i].manufacturer;
-            while (i < plugins.size() && plugins[i].manufacturer == maker)
-            {
-                juce::PopupMenu categoryMenu;
-                const auto& category = plugins[i].category;
-                while (i < plugins.size() && plugins[i].manufacturer == maker &&
-                       plugins[i].category == category)
-                {
-                    categoryMenu.addItem(firstPluginId + static_cast<int>(i),
-                                         juce::String::fromUTF8(plugins[i].name.c_str()));
-                    ++i;
-                }
-                makerMenu.addSubMenu(juce::String::fromUTF8(category.c_str()), categoryMenu);
-            }
-            pluginMenu.addSubMenu(juce::String::fromUTF8(maker.c_str()), makerMenu);
-        }
-        if (plugins.empty())
-            pluginMenu.addItem(-1, "No plugins found yet: scan in Manage plugins", false);
+        const auto pluginMenu = makePluginMenu(plugins, firstPluginId);
         menu.addSeparator();
         menu.addSubMenu("Plugins", pluginMenu);
         menu.addItem(manageId, "Manage plugins...");

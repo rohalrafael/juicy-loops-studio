@@ -34,7 +34,7 @@ PatternState patternWithSteps(std::vector<int> onSteps, int length = 16)
     pattern.lengthTicks = length * tps;
     pattern.notes.resize(1);
     for (int s : onSteps)
-        pattern.notes[0].push_back({s * tps, 60, 100.0f / 128.0f});
+        pattern.notes[0].push_back({s * tps, tps, 60, 100.0f / 128.0f});
     return pattern;
 }
 
@@ -205,7 +205,8 @@ TEST_CASE("Song mode with an empty playlist is silent")
 TEST_CASE("Notes between steps trigger on their exact sample")
 {
     EngineState state = stateWithSteps({});
-    state.patterns[0].notes[0] = {{12, 60, 0.5f}, {tps * 3 + 8, 64, 1.0f}}; // half a step in, ...
+    state.patterns[0].notes[0] = {{12, tps, 60, 0.5f},
+                                  {tps * 3 + 8, tps, 64, 1.0f}}; // half a step in, ...
     const auto triggers = collectAll(state, 16 * samplesPerStep, 441);
     REQUIRE(triggers.size() == 2);
     CHECK(triggers[0].sampleOffset == samplesPerStep / 2); // 12 ticks = half a 16th

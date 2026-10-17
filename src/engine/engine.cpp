@@ -1,9 +1,11 @@
 // Audio-thread processing order per block (see docs/architecture.md, "Audio callback"):
 //   1. adopt the newest snapshot (old one goes back to the UI thread for deletion)
 //   2. advance the transport, collect note triggers for the block
-//   3. render sampler voices into their mixer-track buses, split at trigger offsets
-//   4. run each insert's effects + fader/pan + meter, sum into the Master
-//   5. Master effects + fader/pan + meter, add to the output; metronome on top
+//   3. render sampler voices into their mixer-track buses, split at trigger offsets; turn
+//      triggers on instrument channels (and the ends of held notes) into note events
+//   4. render instruments with their events, add them into their mixer-track buses
+//   5. run each insert's effects + fader/pan + meter, sum into the Master
+//   6. Master effects + fader/pan + meter, add to the output; metronome on top
 
 #include "engine/engine.h"
 
@@ -46,12 +48,20 @@ void Engine::prepare(double newSampleRate, int maxBlockSize)
     busMemory.assign(static_cast<std::size_t>(maxMixerTracks * 2 * maxBlock), 0.0f);
     for (std::size_t i = 0; i < buses.size(); ++i)
         buses[i] = busMemory.data() + i * static_cast<std::size_t>(maxBlock);
+    instrumentMemory.assign(static_cast<std::size_t>(2 * maxBlock), 0.0f);
+    heldCount = 0;
+    wasPlaying = false;
 
     if (current != nullptr)
+    {
         for (auto& track : current->tracks)
             for (auto& effect : track.effects)
                 if (effect.processor)
                     effect.processor->prepare(newSampleRate, maxBlock);
+        for (auto& channel : current->channels)
+            if (channel.instrument)
+                channel.instrument->prepare(newSampleRate, maxBlock);
+    }
 
     preparedRate.store(newSampleRate);
     preparedBlock.store(maxBlock);
@@ -78,7 +88,152 @@ void Engine::adoptNewestState()
         if (current != nullptr)
             retired.push(current);
         current = *next;
+
+        // Held notes follow their channel to its new index. A removed channel or replaced
+        // instrument takes its notes with it (the old instrument is no longer played).
+        int kept = 0;
+        for (int i = 0; i < heldCount; ++i)
+        {
+            auto note = heldNotes[static_cast<std::size_t>(i)];
+            const auto& channels = current->channels;
+            const auto it = std::find_if(channels.begin(), channels.end(),
+                                         [&](const auto& c) { return c.id == note.channelId; });
+            if (it == channels.end() || it->instrument.get() != note.instrument)
+                continue;
+            note.channelIndex = static_cast<int>(it - channels.begin());
+            heldNotes[static_cast<std::size_t>(kept++)] = note;
+        }
+        heldCount = kept;
     }
+}
+
+bool Engine::isInstrument(int channelIndex) const
+{
+    return current != nullptr && channelIndex >= 0 &&
+           channelIndex < static_cast<int>(current->channels.size()) &&
+           current->channels[static_cast<std::size_t>(channelIndex)].instrument != nullptr;
+}
+
+void Engine::addNoteEvent(int channelIndex, NoteEvent event)
+{
+    if (noteEventCount < maxNoteEvents)
+    {
+        noteEvents[static_cast<std::size_t>(noteEventCount)] = {channelIndex, noteEventCount,
+                                                                event};
+        ++noteEventCount;
+    }
+}
+
+void Engine::releaseAllNotes()
+{
+    for (int i = 0; i < heldCount; ++i)
+    {
+        const auto& note = heldNotes[static_cast<std::size_t>(i)];
+        addNoteEvent(note.channelIndex, {NoteEvent::Kind::noteOff, 0, note.pitch});
+    }
+    heldCount = 0;
+    if (current != nullptr)
+        for (int ch = 0; ch < static_cast<int>(current->channels.size()); ++ch)
+            if (isInstrument(ch))
+                addNoteEvent(ch, {NoteEvent::Kind::allNotesOff, 0});
+}
+
+void Engine::startInstrumentNote(const Trigger& trigger, int offsetOfEnd)
+{
+    const auto& channel = current->channels[static_cast<std::size_t>(trigger.channelIndex)];
+
+    // The same key again while it's still held: end the old note first (MIDI can't stack them).
+    for (int i = 0; i < heldCount; ++i)
+    {
+        const auto& note = heldNotes[static_cast<std::size_t>(i)];
+        if (note.channelIndex == trigger.channelIndex && note.pitch == trigger.pitch)
+        {
+            addNoteEvent(trigger.channelIndex,
+                         {NoteEvent::Kind::noteOff, trigger.sampleOffset, trigger.pitch});
+            heldNotes[static_cast<std::size_t>(i)] =
+                heldNotes[static_cast<std::size_t>(--heldCount)];
+            break;
+        }
+    }
+    // A note-off already queued for a later point in this block belongs to the old note; it
+    // must not cut the new one, so move it to the new note's start.
+    for (int i = 0; i < noteEventCount; ++i)
+    {
+        auto& e = noteEvents[static_cast<std::size_t>(i)];
+        if (e.channelIndex == trigger.channelIndex && e.event.kind == NoteEvent::Kind::noteOff &&
+            e.event.pitch == trigger.pitch && e.event.sampleOffset > trigger.sampleOffset)
+            e.event.sampleOffset = trigger.sampleOffset;
+    }
+
+    addNoteEvent(trigger.channelIndex,
+                 {NoteEvent::Kind::noteOn, trigger.sampleOffset, trigger.pitch, trigger.velocity});
+
+    if (offsetOfEnd >= 0) // ends within this block
+    {
+        addNoteEvent(
+            trigger.channelIndex,
+            {NoteEvent::Kind::noteOff, std::max(offsetOfEnd, trigger.sampleOffset), trigger.pitch});
+    }
+    else if (heldCount < maxHeldNotes)
+    {
+        heldNotes[static_cast<std::size_t>(heldCount++)] = {channel.id, trigger.channelIndex,
+                                                            channel.instrument.get(), trigger.pitch,
+                                                            trigger.endTick};
+    }
+    else // no room to remember it: end it right away rather than risk a hanging note
+    {
+        addNoteEvent(trigger.channelIndex,
+                     {NoteEvent::Kind::noteOff, trigger.sampleOffset, trigger.pitch});
+    }
+}
+
+void Engine::renderInstruments(int numTracks, int numSamples)
+{
+    // Group the events by channel, in time order (emission order breaks ties: a note-off that
+    // was queued before a note-on at the same offset stays before it).
+    std::sort(noteEvents.begin(), noteEvents.begin() + noteEventCount,
+              [](const ChannelEvent& a, const ChannelEvent& b)
+              {
+                  if (a.channelIndex != b.channelIndex)
+                      return a.channelIndex < b.channelIndex;
+                  if (a.event.sampleOffset != b.event.sampleOffset)
+                      return a.event.sampleOffset < b.event.sampleOffset;
+                  return a.order < b.order;
+              });
+
+    // Walk the sorted array, copying each channel's events into one contiguous list.
+    std::array<NoteEvent, 256> channelEvents{};
+    float* left = instrumentMemory.data();
+    float* right = left + maxBlock;
+    int e = 0;
+    for (int ch = 0; ch < static_cast<int>(current->channels.size()); ++ch)
+    {
+        while (e < noteEventCount && noteEvents[static_cast<std::size_t>(e)].channelIndex < ch)
+            ++e;
+        std::size_t count = 0;
+        for (; e < noteEventCount && noteEvents[static_cast<std::size_t>(e)].channelIndex == ch;
+             ++e)
+            if (count < channelEvents.size())
+                channelEvents[count++] = noteEvents[static_cast<std::size_t>(e)].event;
+
+        const auto& channel = current->channels[static_cast<std::size_t>(ch)];
+        if (!channel.instrument)
+            continue;
+        // Instruments run every block, with or without events, so releases and tails continue.
+        channel.instrument->process({channelEvents.data(), count}, left, right, numSamples);
+
+        const float gainLeft = channel.muted ? 0.0f : channel.gainLeft;
+        const float gainRight = channel.muted ? 0.0f : channel.gainRight;
+        const int track = channel.mixerTrack < numTracks ? channel.mixerTrack : 0;
+        float* outLeft = buses[static_cast<std::size_t>(2 * track)];
+        float* outRight = buses[static_cast<std::size_t>(2 * track + 1)];
+        for (int i = 0; i < numSamples; ++i)
+        {
+            outLeft[i] += left[i] * gainLeft;
+            outRight[i] += right[i] * gainRight;
+        }
+    }
+    noteEventCount = 0;
 }
 
 void Engine::process(float* const* channels, int numChannels, int numSamples)
@@ -104,6 +259,42 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
 
     if (current != nullptr)
     {
+        // Stopping, pausing or jumping (e.g. Stop + Play within one block) ends held notes.
+        noteEventCount = 0;
+        if (wasPlaying && (!block.playing || block.startBeat != lastEndBeat))
+            releaseAllNotes();
+        wasPlaying = block.playing;
+        lastEndBeat = block.endBeat;
+
+        const double t0 = block.startBeat * ticksPerBeat;
+        const double t1 = block.endBeat * ticksPerBeat;
+        const auto offsetOf = [&](double tick)
+        {
+            const double fraction = (tick - t0) / (t1 - t0);
+            return std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0,
+                              numSamples - 1);
+        };
+
+        // Held notes that end in this block.
+        if (block.playing)
+        {
+            for (int i = 0; i < heldCount;)
+            {
+                const auto& note = heldNotes[static_cast<std::size_t>(i)];
+                if (note.endTick < t1)
+                {
+                    addNoteEvent(note.channelIndex,
+                                 {NoteEvent::Kind::noteOff, offsetOf(note.endTick), note.pitch});
+                    heldNotes[static_cast<std::size_t>(i)] =
+                        heldNotes[static_cast<std::size_t>(--heldCount)];
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+        }
+
         const int count = collectTriggers(*current, block, numSamples, triggers);
 
         // Render in segments so each trigger starts on its exact sample.
@@ -111,11 +302,17 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
         for (int i = 0; i < count; ++i)
         {
             const auto& trigger = triggers[static_cast<std::size_t>(i)];
+            if (isInstrument(trigger.channelIndex))
+            {
+                startInstrumentNote(trigger, trigger.endTick < t1 ? offsetOf(trigger.endTick) : -1);
+                continue;
+            }
             sampler.render(*current, buses.data(), numTracks * 2, cursor, trigger.sampleOffset);
             sampler.trigger(*current, trigger.channelIndex, trigger.pitch, trigger.velocity);
             cursor = trigger.sampleOffset;
         }
         sampler.render(*current, buses.data(), numTracks * 2, cursor, numSamples);
+        renderInstruments(numTracks, numSamples);
     }
 
     // Inserts feed the Master.

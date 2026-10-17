@@ -114,6 +114,34 @@ ChannelId Project::addChannel(std::string name, std::shared_ptr<const engine::Sa
     return channels.back().id;
 }
 
+ChannelId Project::addInstrumentChannel(const std::string& pluginId, const std::string& pluginName)
+{
+    const auto id = addChannel(pluginName, nullptr);
+    findChannel(id)->setInstrument(pluginId, pluginName);
+    return id;
+}
+
+void Channel::setInstrument(std::string id, std::string name)
+{
+    pluginId = std::move(id);
+    pluginName = std::move(name);
+    pluginState.clear();
+    sample = nullptr;
+    samplePath.clear();
+    builtinSample.clear();
+}
+
+void Channel::setSample(std::shared_ptr<const engine::SampleBuffer> buffer, std::string path,
+                        std::string builtin)
+{
+    sample = std::move(buffer);
+    samplePath = std::move(path);
+    builtinSample = std::move(builtin);
+    pluginId.clear();
+    pluginName.clear();
+    pluginState.clear();
+}
+
 void Project::removeChannel(ChannelId id)
 {
     std::erase_if(channels, [id](const Channel& c) { return c.id == id; });
@@ -313,8 +341,17 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
     {
         engine::ChannelState cs;
         cs.id = channel.id;
-        cs.sample = channel.sample;
         cs.muted = channel.muted;
+        if (channel.isInstrument())
+        {
+            if (effects != nullptr)
+                cs.instrument =
+                    effects->getInstrument(channel.id, channel.pluginId, channel.pluginState);
+        }
+        else
+        {
+            cs.sample = channel.sample;
+        }
         // Balance pan: centre = full volume on both sides.
         const float pan = std::clamp(channel.pan, -1.0f, 1.0f);
         cs.gainLeft = channel.volume * std::min(1.0f, 1.0f - pan);
@@ -332,7 +369,8 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
         ps.notes.resize(project.channels.size());
         for (std::size_t ch = 0; ch < project.channels.size(); ++ch)
             for (const auto& note : pattern.notesFor(project.channels[ch].id))
-                ps.notes[ch].push_back({note.startTick, note.pitch, note.velocity});
+                ps.notes[ch].push_back(
+                    {note.startTick, note.lengthTicks, note.pitch, note.velocity});
         state->patterns.push_back(std::move(ps));
 
         if (pattern.id == project.current().id)

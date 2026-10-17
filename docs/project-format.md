@@ -16,7 +16,10 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
       "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 1 },
     { "id": 5, "name": "Vox", "sample": { "path": "/home/me/songs/samples/vox.wav",
                                           "relativePath": "samples/vox.wav" },
-      "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 5 }
+      "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 5 },
+    { "id": 6, "name": "Surge XT", "instrument": { "id": "VST3-Surge XT-...", "name": "Surge XT",
+                                                    "state": "VkMyIQ..." },
+      "volume": 0.8, "pan": 0.0, "muted": false, "mixerTrack": 6 }
   ],
   "patterns": [
     { "id": 1, "name": "Pattern 1", "minLength": 16,
@@ -30,7 +33,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
                      "params": { "Size": 0.6, "Damping": 0.4, "Width": 1.0, "Mix": 0.25 } } ] }
   ] },
   "view": { "currentPattern": 1, "selectedChannel": 1, "selectedMixerTrack": 1, "songMode": false },
-  "nextIds": { "channel": 6, "pattern": 2, "effect": 2 }
+  "nextIds": { "channel": 7, "pattern": 2, "effect": 2 }
 }
 ```
 
@@ -43,6 +46,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `beatsPerBar` | Time signature numerator (n/4), 1 to 16 |
 | `channels[]` | In Channel Rack order. `id` is referenced by patterns. `mixerTrack` is 0 for Master, otherwise an insert |
 | `channels[].sample` | `{"builtin": "kick"/"clap"/"hat"/"snare"}`, or `{"path": absolute, "relativePath": relative to the project file}`, or `null` |
+| `channels[].instrument` | Instead of `sample`, for a channel played by a plugin: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
 | `patterns[]` | In pattern-selector order. `minLength` is in steps; the pattern grows to fit its notes |
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
 | `playlist.clips[]` | `start` and `length` in steps; a clip longer than its pattern repeats it |

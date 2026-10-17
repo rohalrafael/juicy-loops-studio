@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace jls::engine
 {
@@ -23,8 +24,10 @@ class Collector
     }
 
     // Emits every note of `pattern` whose (looping) pattern-time lies in [from, to).
-    // A note at pattern time x happens at block time x + offset.
-    void emit(const PatternState& pattern, double from, double to, double offset)
+    // A note at pattern time x happens at block time x + offset. Notes end by the end of their
+    // pattern repeat and by `limit` (block time), e.g. the end of their clip.
+    void emit(const PatternState& pattern, double from, double to, double offset,
+              double limit = std::numeric_limits<double>::infinity())
     {
         const double length = pattern.lengthTicks;
         if (length <= 0.0)
@@ -43,7 +46,9 @@ class Collector
                     const double x = note.startTick + k * length;
                     if (x >= to)
                         break;
-                    add(static_cast<int>(ch), x + offset, note);
+                    const double end =
+                        std::min({x + note.lengthTicks, (k + 1.0) * length, limit - offset});
+                    add(static_cast<int>(ch), x + offset, end + offset, note);
                 }
             }
         }
@@ -57,14 +62,15 @@ class Collector
     }
 
   private:
-    void add(int channel, double tick, const NoteState& note)
+    void add(int channel, double tick, double endTick, const NoteState& note)
     {
         if (count == static_cast<int>(out.size()))
             return;
         const double fraction = (tick - startTick) / span;
         const int offset =
             std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
-        out[static_cast<std::size_t>(count++)] = {channel, offset, note.pitch, note.velocity};
+        out[static_cast<std::size_t>(count++)] = {channel, offset, note.pitch, note.velocity,
+                                                  endTick};
     }
 
     const EngineState& state;
@@ -115,7 +121,8 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
             const double b = std::min(to, clipStart + clip.lengthTicks);
             if (a < b)
                 collector.emit(state.patterns[static_cast<std::size_t>(clip.patternIndex)],
-                               a - clipStart, b - clipStart, clipStart);
+                               a - clipStart, b - clipStart, clipStart,
+                               clipStart + clip.lengthTicks);
         }
         from = to;
     }

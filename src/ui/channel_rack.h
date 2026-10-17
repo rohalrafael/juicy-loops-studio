@@ -1,11 +1,13 @@
 #pragma once
 
 // The Channel Rack: a floating panel with one row per channel (mute, pan, volume, mixer track,
-// name, steps or a note preview). Edits go through the Document so they are undoable.
+// name, steps or a note preview). A channel plays a sample or a plugin instrument. Edits go
+// through the Document so they are undoable.
 
 #include "engine/transport.h"
 #include "io/sample_loader.h"
 #include "model/document.h"
+#include "ui/plugin_menu.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -113,6 +115,7 @@ class ChannelRow final : public juce::Component
     juce::TextButton name;
     StepGrid steps;
     int knobGesture = 0;
+    bool isInstrument = false; // plays a plugin instead of a sample
 };
 
 // FL-style Channel Rack, a floating panel (drag its title bar): one row per channel with mute, pan,
@@ -138,9 +141,23 @@ class ChannelRack final : public juce::Component,
     void rename(model::ChannelId id);
     void select(model::ChannelId id);
     void openPianoRoll(model::ChannelId id);
+    // Menu ids firstInstrumentId + i pick listInstruments()[i]; see handleInstrumentMenu().
+    static constexpr int manageInstrumentsId = 999;
+    static constexpr int firstInstrumentId = 1000;
+    juce::PopupMenu instrumentMenu(std::vector<PluginItem>& items) const;
+    // Handles a result from instrumentMenu(): makes `id` play that plugin (0 = new channel),
+    // or opens Manage plugins. Returns false if `result` wasn't one of its items.
+    bool handleInstrumentMenu(int result, model::ChannelId id,
+                              const std::vector<PluginItem>& items);
+    void showAddMenu();
 
     // Set by the owner: show the Piano Roll for a channel.
     std::function<void(model::ChannelId)> onOpenPianoRoll;
+    // Set by the owner: known instrument plugins, the "Manage plugins" action, and showing a
+    // channel's plugin window (`toggle`: hide it if it's already open, as clicking does in FL).
+    std::function<std::vector<PluginItem>()> listInstruments;
+    std::function<void()> onManagePlugins;
+    std::function<void(model::ChannelId, bool toggle)> onShowInstrument;
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;

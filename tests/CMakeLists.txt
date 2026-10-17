@@ -6,6 +6,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(jls_tests
     metronome_tests.cpp
+    instrument_tests.cpp
     mixer_tests.cpp
     model_tests.cpp
     project_file_tests.cpp

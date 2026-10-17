@@ -4,6 +4,17 @@
 
 namespace jls::plugins
 {
+namespace
+{
+
+std::string saveStateOf(juce::AudioPluginInstance& plugin)
+{
+    juce::MemoryBlock data;
+    plugin.getStateInformation(data);
+    return data.toBase64Encoding().toStdString();
+}
+
+} // namespace
 
 // ----------------------------------------------------------------------------- PluginEffect
 
@@ -64,21 +75,111 @@ void PluginEffect::process(float* left, float* right, int numSamples, std::span<
 
 std::string PluginEffect::saveState() const
 {
-    juce::MemoryBlock data;
-    instance->getStateInformation(data);
-    return data.toBase64Encoding().toStdString();
+    return saveStateOf(*instance);
+}
+
+// ------------------------------------------------------------------------- PluginInstrument
+
+PluginInstrument::PluginInstrument(std::unique_ptr<juce::AudioPluginInstance> pluginInstance)
+    : instance(std::move(pluginInstance))
+{
+    // No audio input, stereo out. Plugins that insist on their own layout keep it; we use the
+    // first two output channels (or the only one, for mono synths).
+    juce::AudioProcessor::BusesLayout layout;
+    layout.outputBuses.add(juce::AudioChannelSet::stereo());
+    for (int i = 1; i < instance->getBusCount(false); ++i)
+        layout.outputBuses.add(juce::AudioChannelSet::disabled());
+    for (int i = 0; i < instance->getBusCount(true); ++i)
+        layout.inputBuses.add(juce::AudioChannelSet::disabled());
+    if (instance->checkBusesLayoutSupported(layout))
+        instance->setBusesLayout(layout);
+}
+
+PluginInstrument::~PluginInstrument()
+{
+    if (prepared)
+        instance->releaseResources();
+}
+
+void PluginInstrument::prepare(double sampleRate, int maxBlockSize)
+{
+    if (prepared)
+        instance->releaseResources();
+    instance->setRateAndBufferSizeDetails(sampleRate, maxBlockSize);
+    instance->prepareToPlay(sampleRate, maxBlockSize);
+    const int channels =
+        std::max({2, instance->getTotalNumInputChannels(), instance->getTotalNumOutputChannels()});
+    scratch.setSize(channels, maxBlockSize);
+    midi.ensureSize(8192); // room for a block's worth of events without allocating
+    prepared = true;
+}
+
+void PluginInstrument::reset()
+{
+    instance->reset();
+}
+
+void PluginInstrument::process(std::span<const engine::NoteEvent> events, float* left, float* right,
+                               int numSamples)
+{
+    if (!prepared || numSamples > scratch.getNumSamples())
+    {
+        std::fill_n(left, numSamples, 0.0f);
+        std::fill_n(right, numSamples, 0.0f);
+        return;
+    }
+
+    midi.clear();
+    for (const auto& e : events)
+    {
+        const int pitch = std::clamp(e.pitch, 0, 127);
+        switch (e.kind)
+        {
+        case engine::NoteEvent::Kind::noteOn:
+            // Velocity 0 would mean note-off in MIDI, so the softest note is 1.
+            midi.addEvent(juce::MidiMessage::noteOn(
+                              1, pitch,
+                              static_cast<juce::uint8>(std::clamp(
+                                  static_cast<int>(std::lround(e.velocity * 127.0f)), 1, 127))),
+                          e.sampleOffset);
+            break;
+        case engine::NoteEvent::Kind::noteOff:
+            midi.addEvent(juce::MidiMessage::noteOff(1, pitch), e.sampleOffset);
+            break;
+        case engine::NoteEvent::Kind::allNotesOff:
+            midi.addEvent(juce::MidiMessage::allNotesOff(1), e.sampleOffset);
+            break;
+        }
+    }
+
+    const int channels = scratch.getNumChannels();
+    scratch.clear(0, numSamples);
+    juce::AudioBuffer<float> view(scratch.getArrayOfWritePointers(), channels, numSamples);
+    instance->processBlock(view, midi);
+
+    const int outputs = instance->getTotalNumOutputChannels();
+    if (outputs <= 0)
+    {
+        std::fill_n(left, numSamples, 0.0f);
+        std::fill_n(right, numSamples, 0.0f);
+        return;
+    }
+    std::copy_n(view.getReadPointer(0), numSamples, left);
+    std::copy_n(view.getReadPointer(outputs == 1 ? 0 : 1), numSamples, right);
+}
+
+std::string PluginInstrument::saveState() const
+{
+    return saveStateOf(*instance);
 }
 
 // ----------------------------------------------------------------------------- PluginWindow
 
-PluginWindow::PluginWindow(std::shared_ptr<engine::EffectProcessor> processor,
+PluginWindow::PluginWindow(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
                            const juce::String& title)
     : juce::DocumentWindow(title, juce::Colours::black, juce::DocumentWindow::closeButton),
-      keepAlive(std::move(processor))
+      keepAlive(std::move(owner))
 {
-    auto* effect = dynamic_cast<PluginEffect*>(keepAlive.get());
-    jassert(effect != nullptr);
-    auto& plugin = effect->plugin();
     juce::AudioProcessorEditor* editor =
         plugin.hasEditor() ? plugin.createEditorAndMakeActive() : nullptr;
     if (editor == nullptr)
@@ -139,15 +240,26 @@ void PluginHost::changeListenerCallback(juce::ChangeBroadcaster*)
 
 std::vector<PluginHost::Entry> PluginHost::effects() const
 {
-    std::vector<Entry> list;
+    return list(false);
+}
+
+std::vector<PluginHost::Entry> PluginHost::instruments() const
+{
+    return list(true);
+}
+
+std::vector<PluginHost::Entry> PluginHost::list(bool instrumentPlugins) const
+{
+    std::vector<Entry> entries;
     for (const auto& d : known.getTypes())
     {
-        if (d.isInstrument)
+        if (d.isInstrument != instrumentPlugins)
             continue;
         // "Fx|Delay|Stereo" -> "Delay"; plain "Delay" stays; empty -> "Other".
         auto parts = juce::StringArray::fromTokens(d.category, "|", "");
         parts.removeEmptyStrings();
-        if (parts.size() > 1 && parts[0].equalsIgnoreCase("Fx"))
+        if (parts.size() > 1 &&
+            (parts[0].equalsIgnoreCase("Fx") || parts[0].equalsIgnoreCase("Instrument")))
             parts.remove(0);
         auto category = parts.isEmpty() ? juce::String("Other") : parts[0];
         category = category.trimCharactersAtEnd(" ").upToLastOccurrenceOf(" Plugin", false, false);
@@ -155,22 +267,39 @@ std::vector<PluginHost::Entry> PluginHost::effects() const
             category = parts[0];
         const auto maker =
             d.manufacturerName.isEmpty() ? juce::String("Unknown") : d.manufacturerName;
-        list.push_back({d.createIdentifierString().toStdString(), d.name.toStdString(),
-                        (maker + " (" + d.pluginFormatName + ")").toStdString(),
-                        category.toStdString()});
+        entries.push_back({d.createIdentifierString().toStdString(), d.name.toStdString(),
+                           (maker + " (" + d.pluginFormatName + ")").toStdString(),
+                           category.toStdString()});
     }
-    std::sort(list.begin(), list.end(),
+    std::sort(entries.begin(), entries.end(),
               [](const Entry& a, const Entry& b)
               {
                   return std::tie(a.manufacturer, a.category, a.name) <
                          std::tie(b.manufacturer, b.category, b.name);
               });
-    return list;
+    return entries;
 }
 
 std::unique_ptr<engine::EffectProcessor> PluginHost::createEffect(const std::string& id,
                                                                   const std::string& state,
                                                                   double sampleRate, int blockSize)
+{
+    auto instance = instantiate(id, state, sampleRate, blockSize);
+    return instance == nullptr ? nullptr : std::make_unique<PluginEffect>(std::move(instance));
+}
+
+std::unique_ptr<engine::InstrumentProcessor> PluginHost::createInstrument(const std::string& id,
+                                                                          const std::string& state,
+                                                                          double sampleRate,
+                                                                          int blockSize)
+{
+    auto instance = instantiate(id, state, sampleRate, blockSize);
+    return instance == nullptr ? nullptr : std::make_unique<PluginInstrument>(std::move(instance));
+}
+
+std::unique_ptr<juce::AudioPluginInstance> PluginHost::instantiate(const std::string& id,
+                                                                   const std::string& state,
+                                                                   double sampleRate, int blockSize)
 {
     const auto description = known.getTypeForIdentifierString(juce::String::fromUTF8(id.c_str()));
     if (description == nullptr)
@@ -189,7 +318,7 @@ std::unique_ptr<engine::EffectProcessor> PluginHost::createEffect(const std::str
         if (data.fromBase64Encoding(juce::String::fromUTF8(state.c_str())))
             instance->setStateInformation(data.getData(), static_cast<int>(data.getSize()));
     }
-    return std::make_unique<PluginEffect>(std::move(instance));
+    return instance;
 }
 
 void PluginHost::showManager()

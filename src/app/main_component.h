@@ -80,12 +80,13 @@ class MainComponent final : public juce::AudioAppComponent,
     void exportWav();
     void updateTitle();
     void openEffectEditor(model::EffectId id);
+    void showInstrumentEditor(model::ChannelId id, bool toggle);
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
 
     ui::ThemeManager& themes;
 
     engine::Engine engine;
-    engine::EffectPool effectPool; // effect processors live here between snapshots
+    engine::EffectPool effectPool; // effect processors and instruments live here between snapshots
     plugins::PluginHost pluginHost;
     model::Document document;
     io::SampleLoader sampleLoader;
@@ -109,6 +110,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::File projectFolder; // where file choosers start: the last project's folder
     std::unique_ptr<juce::FileChooser> fileChooser;
     std::map<model::EffectId, std::unique_ptr<plugins::PluginWindow>> pluginWindows;
+    std::map<model::ChannelId, std::unique_ptr<plugins::PluginWindow>> instrumentWindows;
     double formatRate = 0.0; // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;

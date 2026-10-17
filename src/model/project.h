@@ -38,6 +38,18 @@ struct Channel
     float pan = 0.0f;    // -1 (left) .. +1 (right)
     bool muted = false;
     int mixerTrack = 0; // 0 = Master, 1.. = inserts
+
+    // A hosted plugin instrument plays the channel instead of a sample (see setInstrument()).
+    std::string pluginId;    // the host's identifier string; empty = sampler channel
+    std::string pluginName;  // shown in the UI, also when the plugin isn't installed
+    std::string pluginState; // base64 of the plugin's own state, as of the last save
+
+    bool isInstrument() const { return !pluginId.empty(); }
+    // Makes this a plugin instrument channel (drops the sample) ...
+    void setInstrument(std::string id, std::string name);
+    // ... or a sampler channel again (drops the plugin).
+    void setSample(std::shared_ptr<const engine::SampleBuffer> buffer, std::string path,
+                   std::string builtin = {});
 };
 
 // An effect in a mixer track's slot. `type` is an engine::EffectType id, or
@@ -168,6 +180,8 @@ struct Project
 
     // New channels go to the first insert no other channel uses (Master if all are taken).
     ChannelId addChannel(std::string name, std::shared_ptr<const engine::SampleBuffer> sample);
+    // A channel played by a hosted plugin instrument, named after it.
+    ChannelId addInstrumentChannel(const std::string& pluginId, const std::string& pluginName);
     void removeChannel(ChannelId id); // also removes its notes from every pattern
     Channel* findChannel(ChannelId id);
     const Channel* findChannel(ChannelId id) const;
@@ -206,8 +220,9 @@ std::shared_ptr<const engine::SampleBuffer> builtinSample(const std::string& nam
 // Clipper on the Master. The Kick is selected.
 Project makeDefaultProject(double sampleRate = 44100.0);
 
-// Snapshot for the audio thread (allocates; UI thread only). Effect processors come from
-// `effects`, which keeps their state between snapshots; without a pool effects are left out.
+// Snapshot for the audio thread (allocates; UI thread only). Effect processors and plugin
+// instruments come from `effects`, which keeps their state between snapshots; without a pool
+// they are left out.
 std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
                                                    engine::EffectPool* effects = nullptr);
 

@@ -62,14 +62,24 @@ Details of the file format: [project-format.md](project-format.md).
 |---|---|
 | Left-click / drag over steps | Turn steps on (or off, if you started on a lit step) |
 | Right-click / drag over steps | Turn steps off |
-| Click a channel name | Select the channel (the Piano Roll edits it) |
-| Right-click a channel name | Piano roll, rename, replace sample, delete |
+| Click a channel name | Select the channel (the Piano Roll edits it). For a plugin instrument, also shows or hides its window |
+| Right-click a channel name | Piano roll, show plugin, rename, replace sample, use/replace an instrument plugin, delete |
 | Green light | Mute / unmute |
 | Pan and volume knobs | Drag up/down; double-click resets |
 | Mixer track box | Drag up/down or scroll to route the channel to an insert ("--" = Master) |
 | Drop audio files on a row | Replace that channel's sample |
-| Drop audio files below the rows, or click + | Add channels |
+| Drop audio files below the rows | Add channels |
+| Click + | Add a channel: **Sample…** or **Instrument ›** (a plugin synth) |
 | Click a note preview | Open the Piano Roll for that channel |
+
+**Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
+with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its
+window opens right away; click the channel name to show or hide it later. Instrument channels
+play their notes like any channel: steps play C5 for one step, and the Piano Roll sets pitch,
+length and velocity (note length matters here, unlike for samples). Volume, pan, mute and the
+mixer track apply after the plugin. Notes are always released: when a note ends, when its
+clip ends, and when you stop or pause. Settings are saved in the project; if the plugin isn't
+installed, the channel stays silent and keeps them.
 
 ## Playlist
 

@@ -95,13 +95,16 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
 
     json channels = json::array();
     for (const auto& c : project.channels)
-        channels.push_back({{"id", c.id},
-                            {"name", c.name},
-                            {"sample", sampleToJson(c, projectDir)},
-                            {"volume", tidy(c.volume)},
-                            {"pan", tidy(c.pan)},
-                            {"muted", c.muted},
-                            {"mixerTrack", c.mixerTrack}});
+    {
+        json channel = {{"id", c.id},         {"name", c.name},   {"volume", tidy(c.volume)},
+                        {"pan", tidy(c.pan)}, {"muted", c.muted}, {"mixerTrack", c.mixerTrack}};
+        if (c.isInstrument())
+            channel["instrument"] = {
+                {"id", c.pluginId}, {"name", c.pluginName}, {"state", c.pluginState}};
+        else
+            channel["sample"] = sampleToJson(c, projectDir);
+        channels.push_back(std::move(channel));
+    }
 
     json patterns = json::array();
     for (const auto& p : project.patterns)
@@ -220,8 +223,20 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         channel.muted = read.get<bool>(c, "muted", false);
         channel.mixerTrack = read.clamped<int>(c, "mixerTrack", 0, 0, Mixer::numInserts);
 
+        // A plugin instrument channel. Kept even if the plugin isn't installed here (it stays
+        // silent), so the project survives a round trip through another machine.
+        const auto instrument = c.find("instrument");
+        if (instrument != c.end() && instrument->is_object())
+        {
+            channel.pluginId = read.get<std::string>(*instrument, "id", "");
+            channel.pluginName = read.get<std::string>(*instrument, "name", channel.name);
+            channel.pluginState = read.get<std::string>(*instrument, "state", "");
+            if (channel.pluginId.empty())
+                read.warn("The instrument of \"" + channel.name + "\" has no plugin id.");
+        }
+
         const auto sample = c.find("sample");
-        if (sample != c.end() && sample->is_object())
+        if (!channel.isInstrument() && sample != c.end() && sample->is_object())
         {
             channel.builtinSample = read.get<std::string>(*sample, "builtin", "");
             channel.samplePath = read.get<std::string>(*sample, "path", "");

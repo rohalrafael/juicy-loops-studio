@@ -22,6 +22,9 @@ class PianoRollView;
 //   drag a note             move it in time and pitch (snapped)
 //   drag a note's right end resize it (new notes then use that length)
 //   right-click / drag      delete notes
+//   Ctrl + drag             select the notes in a rectangle; drag a selected note to move them
+//                           all (its right end resizes them all); Delete removes them, Ctrl+A
+//                           selects all, Esc deselects
 //   Ctrl + mouse wheel      zoom horizontally
 class NoteGrid final : public juce::Component
 {
@@ -42,11 +45,15 @@ class NoteGrid final : public juce::Component
         move,
         resize,
         erase,
+        select,          // Ctrl + drag: rubber band
+        moveSelection,   // dragging one of the selected notes moves them all
+        resizeSelection, // dragging a selected note's right end resizes them all
     };
 
     int noteAt(juce::Point<float> p) const; // index into the channel's notes, or -1
     bool onRightEdge(int index, float x) const;
     void eraseAt(juce::Point<float> p);
+    juce::Rectangle<float> noteBounds(const model::Note& note) const;
 
     PianoRollView& view;
     Drag drag = Drag::none;
@@ -54,6 +61,10 @@ class NoteGrid final : public juce::Component
     int grabOffsetTicks = 0;
     int grabPitch = 0;
     int gestureId = 0;
+    juce::Point<float> bandStart, bandEnd;
+    std::vector<model::Note> moveOriginals; // the selected notes when the drag started
+    int grabTick = 0;
+    int grabNotePitch = 0; // pitch of the note that was grabbed
 };
 
 // Piano Roll panel: header, keyboard, ruler, note grid and velocity lane. Edits the notes of
@@ -96,6 +107,14 @@ class PianoRollView final : public juce::Component, private juce::Timer
     void editNotes(const std::function<void(std::vector<model::Note>&)>& change, int gestureId);
 
     int newNoteLength = model::ticksPerStep; // the last length used, as in FL
+
+    // Selected notes (indices into notes()). View-only; cleared when the channel or pattern
+    // changes, and pruned when notes disappear (e.g. undo).
+    std::vector<int> selection;
+    bool isSelected(int note) const;
+    void clearSelection();
+    // Delete / Ctrl+A / Esc for the selection; returns true if the key was used.
+    bool keyCommand(const juce::KeyPress& key);
 
     // Audition: plays `pitch` on the channel until stopAudition() (or another pitch). Clicking
     // notes and keyboard keys uses it; the owner connects it to the engine.
@@ -145,6 +164,8 @@ class PianoRollView final : public juce::Component, private juce::Timer
     SyncedViewport viewport;
     NoteGrid grid;
     float lastPlayheadX = -1.0f;
+    model::ChannelId selectionChannel = 0; // what the selection belongs to
+    model::PatternId selectionPattern = 0;
     model::ChannelId scrolledFor = 0;
 };
 

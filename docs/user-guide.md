@@ -128,6 +128,9 @@ installed, the channel stays silent and keeps them.
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Bar, beat or step |
 | Click / drag the ruler | Move the playhead there (snapped); switches to SONG mode |
+| Ctrl + drag | Select the clips in a rectangle (outlined) |
+| Drag a selected clip | Move all selected clips together |
+| Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
 
 ## Piano Roll
 
@@ -141,9 +144,13 @@ installed, the channel stays silent and keeps them.
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Beat, step, ½ step, ⅓ step or none |
 | Click / drag the ruler | Move the playhead there (snapped); switches to PAT mode |
+| Ctrl + drag | Select the notes in a rectangle (outlined) |
+| Drag a selected note | Move all selected notes together (its right end resizes them all) |
+| Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
 | Click and hold a key on the left | Play that note (slide to play others) |
 | Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |
 
+With a selection, a click elsewhere only deselects (it doesn't add a note), as in FL.
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
 while you drag it up or down you hear the new pitch.
 

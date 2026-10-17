@@ -603,6 +603,9 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
     }
     if (liveInput.isNoteKey(key))
         return true; // played in keyStateChanged()
+    // Selection keys (Delete, Ctrl+A, Esc) go to the view in the main area.
+    if (pianoRoll.isVisible() ? pianoRoll.keyCommand(key) : playlist.keyCommand(key))
+        return true;
     if (key == KeyPress('l'))
         return setSongMode(!document.project().songMode), true;
     if (key == KeyPress(KeyPress::F4Key))

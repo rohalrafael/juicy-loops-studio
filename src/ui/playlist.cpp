@@ -156,6 +156,7 @@ void PlaylistGrid::eraseAt(juce::Point<float> p)
     const int index = clipAt(p);
     if (index < 0)
         return;
+    view.clearSelection(); // indices are about to shift
     view.document().apply(
         [index](model::Project& project)
         {
@@ -177,7 +178,32 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
+    if (e.mods.isCommandDown())
+    {
+        drag = Drag::select;
+        bandStart = bandEnd = e.position;
+        return;
+    }
+
     dragClip = clipAt(e.position);
+    if (dragClip >= 0 && view.isSelected(dragClip) && !onRightEdge(dragClip, e.position.x))
+    {
+        drag = Drag::moveSelection;
+        moveOriginals.clear();
+        for (int i : view.selection)
+            moveOriginals.push_back(doc.project().playlist.clips[static_cast<std::size_t>(i)]);
+        grabStep = view.stepAtX(e.position.x);
+        grabTrack = view.trackAtY(e.position.y);
+        return;
+    }
+    if (!view.selection.empty())
+    {
+        // A click outside the selection only deselects (FL does the same).
+        view.clearSelection();
+        drag = Drag::none;
+        dragClip = -1;
+        return;
+    }
     if (dragClip >= 0)
     {
         drag = onRightEdge(dragClip, e.position.x) ? Drag::resize : Drag::move;
@@ -217,6 +243,41 @@ void PlaylistGrid::mouseDrag(const juce::MouseEvent& e)
         eraseAt(e.position);
         return;
     }
+    if (drag == Drag::select)
+    {
+        bandEnd = e.position;
+        repaint();
+        return;
+    }
+    if (drag == Drag::moveSelection)
+    {
+        // One offset for all, limited so every clip stays on the grid.
+        const int snap = view.snapSteps();
+        int steps = static_cast<int>(std::lround(
+                        static_cast<double>(view.stepAtX(e.position.x) - grabStep) / snap)) *
+                    snap;
+        int tracks = view.trackAtY(e.position.y) - grabTrack;
+        const int numTracks = doc.project().playlist.numTracks;
+        for (const auto& clip : moveOriginals)
+        {
+            steps = std::max(steps, -clip.startStep);
+            tracks = std::clamp(tracks, -clip.track, numTracks - 1 - clip.track);
+        }
+        const auto selected = view.selection;
+        const auto originals = moveOriginals;
+        doc.apply(
+            [selected, originals, steps, tracks](model::Project& p)
+            {
+                for (std::size_t i = 0; i < selected.size(); ++i)
+                {
+                    auto& clip = p.playlist.clips[static_cast<std::size_t>(selected[i])];
+                    clip.startStep = originals[i].startStep + steps;
+                    clip.track = originals[i].track + tracks;
+                }
+            },
+            gestureId);
+        return;
+    }
     if (dragClip < 0 || dragClip >= static_cast<int>(doc.project().playlist.clips.size()))
         return;
 
@@ -247,6 +308,17 @@ void PlaylistGrid::mouseDrag(const juce::MouseEvent& e)
 
 void PlaylistGrid::mouseUp(const juce::MouseEvent&)
 {
+    if (drag == Drag::select)
+    {
+        // Every clip the rectangle touches.
+        const auto band = juce::Rectangle<float>(bandStart, bandEnd);
+        view.selection.clear();
+        const auto& clips = view.document().project().playlist.clips;
+        for (std::size_t i = 0; i < clips.size(); ++i)
+            if (band.intersects(clipBounds(clips[i])))
+                view.selection.push_back(static_cast<int>(i));
+        repaint();
+    }
     drag = Drag::none;
     dragClip = -1;
 }
@@ -289,8 +361,17 @@ void PlaylistGrid::paint(juce::Graphics& g)
         g.fillRect(view.xForStep(s), 0.0f, 1.0f, static_cast<float>(getHeight()));
     }
 
-    for (const auto& clip : project.playlist.clips)
-        paintClip(g, clip);
+    for (std::size_t i = 0; i < project.playlist.clips.size(); ++i)
+        paintClip(g, project.playlist.clips[i], view.isSelected(static_cast<int>(i)));
+
+    if (drag == Drag::select)
+    {
+        const auto band = juce::Rectangle<float>(bandStart, bandEnd);
+        g.setColour(colour(t.colours.accentAlt).withAlpha(0.15f));
+        g.fillRect(band);
+        g.setColour(colour(t.colours.accentAlt));
+        g.drawRect(band, 1.0f);
+    }
 
     if (project.playlist.clips.empty())
     {
@@ -310,7 +391,16 @@ void PlaylistGrid::paint(juce::Graphics& g)
     }
 }
 
-void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip) const
+juce::Rectangle<float> PlaylistGrid::clipBounds(const model::Clip& clip) const
+{
+    return juce::Rectangle<float>(view.xForStep(clip.startStep),
+                                  static_cast<float>(clip.track * PlaylistView::trackHeight) + 2.0f,
+                                  view.xForStep(clip.lengthInSteps),
+                                  PlaylistView::trackHeight - 5.0f)
+        .reduced(0.5f, 0.0f);
+}
+
+void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool selected) const
 {
     const auto& t = currentTheme();
     const auto& project = view.document().project();
@@ -318,17 +408,18 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip) const
     if (pattern == nullptr)
         return;
 
-    const auto bounds =
-        juce::Rectangle<float>(view.xForStep(clip.startStep),
-                               static_cast<float>(clip.track * PlaylistView::trackHeight) + 2.0f,
-                               view.xForStep(clip.lengthInSteps), PlaylistView::trackHeight - 5.0f)
-            .reduced(0.5f, 0.0f);
+    const auto bounds = clipBounds(clip);
     if (!g.getClipBounds().toFloat().intersects(bounds))
         return;
 
     const float radius = std::min(t.shape.cornerRadius, 6.0f);
     g.setColour(colour(t.colours.clip));
     g.fillRoundedRectangle(bounds, radius);
+    if (selected)
+    {
+        g.setColour(colour(t.colours.accentAlt));
+        g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
+    }
 
     juce::Graphics::ScopedSaveState state(g);
     g.reduceClipRegion(bounds.toNearestInt());
@@ -462,8 +553,59 @@ double PlaylistView::playheadStep() const
     return songLength > 0 ? std::fmod(position, static_cast<double>(songLength)) : position;
 }
 
+bool PlaylistView::isSelected(int clip) const
+{
+    return std::find(selection.begin(), selection.end(), clip) != selection.end();
+}
+
+void PlaylistView::clearSelection()
+{
+    if (!selection.empty())
+    {
+        selection.clear();
+        grid.repaint();
+    }
+}
+
+bool PlaylistView::keyCommand(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress('a', juce::ModifierKeys::commandModifier, 0))
+    {
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(doc.project().playlist.clips.size()); ++i)
+            selection.push_back(i);
+        grid.repaint();
+        return true;
+    }
+    if (selection.empty())
+        return false;
+    if (key == juce::KeyPress::escapeKey)
+    {
+        clearSelection();
+        return true;
+    }
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    {
+        auto doomed = selection;
+        std::sort(doomed.begin(), doomed.end(), std::greater<>());
+        selection.clear();
+        doc.apply(
+            [doomed](model::Project& p)
+            {
+                for (int i : doomed)
+                    if (i < static_cast<int>(p.playlist.clips.size()))
+                        p.playlist.clips.erase(p.playlist.clips.begin() + i);
+            });
+        return true;
+    }
+    return false;
+}
+
 void PlaylistView::refresh()
 {
+    // Undo/redo or other edits may have removed clips: forget what no longer exists.
+    const int count = static_cast<int>(doc.project().playlist.clips.size());
+    std::erase_if(selection, [count](int i) { return i >= count; });
     updateGridSize();
     grid.repaint();
     ruler->repaint();

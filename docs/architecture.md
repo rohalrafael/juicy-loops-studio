@@ -187,6 +187,12 @@ for each chunk:
   vice versa). The engine sees the block start somewhere else and releases held notes, as for
   any jump. The Playlist ruler seeks in song time (and switches to SONG), the Piano Roll ruler
   in pattern time (and switches to PAT).
+- **Selection** (Piano Roll notes, Playlist clips) is view state inside the views: a list of
+  indices (`PianoRollView::selection`, `PlaylistView::selection`), never in the model or undo.
+  It's pruned in `refresh()` when items disappear, and the Piano Roll's is dropped when the
+  channel or pattern changes. Moving a selection applies one offset to all, clamped so every
+  item stays on the grid. Selection keys reach the views through `keyCommand()`, called from
+  `MainComponent::keyPressed()` for whichever view fills the main area.
 - **Audition:** the Piano Roll calls `audition(pitch)` / `stopAudition()`; MainComponent sends
   them as live events (`Engine::sendLive()`) to the selected channel, so they play instruments
   and samples exactly like the typing keyboard.

@@ -20,6 +20,8 @@ class PlaylistView;
 //   drag a clip             move it (snapped), also to other tracks
 //   drag a clip's right end resize it (a longer clip repeats its pattern)
 //   right-click / drag      delete clips
+//   Ctrl + drag             select the clips in a rectangle; drag a selected clip to move them
+//                           all; Delete removes them, Ctrl+A selects all, Esc deselects
 //   Ctrl + mouse wheel      zoom horizontally
 class PlaylistGrid final : public juce::Component
 {
@@ -40,18 +42,25 @@ class PlaylistGrid final : public juce::Component
         move,
         resize,
         erase,
+        select,        // Ctrl + drag: rubber band
+        moveSelection, // dragging one of several selected clips moves them all
     };
 
     int clipAt(juce::Point<float> p) const; // index into playlist.clips, or -1
     bool onRightEdge(int clipIndex, float x) const;
     void eraseAt(juce::Point<float> p);
-    void paintClip(juce::Graphics& g, const model::Clip& clip) const;
+    juce::Rectangle<float> clipBounds(const model::Clip& clip) const;
+    void paintClip(juce::Graphics& g, const model::Clip& clip, bool selected) const;
 
     PlaylistView& view;
     Drag drag = Drag::none;
     int dragClip = -1;
     int grabOffsetSteps = 0;
     int gestureId = 0;
+    juce::Point<float> bandStart, bandEnd;
+    std::vector<model::Clip> moveOriginals; // the selected clips when the drag started
+    int grabStep = 0;
+    int grabTrack = 0;
 };
 
 // Playlist panel: header with snap setting, bar ruler, track names and the grid.
@@ -74,6 +83,13 @@ class PlaylistView final : public juce::Component, private juce::Timer
     int snapSteps() const;
     // Moves the playhead to ruler position x (snapped) and switches to song mode.
     void seekToX(float x);
+
+    // Selected clips (indices into playlist.clips). View-only; cleared when it can't be valid.
+    std::vector<int> selection;
+    bool isSelected(int clip) const;
+    void clearSelection();
+    // Delete / Ctrl+A / Esc for the selection; returns true if the key was used.
+    bool keyCommand(const juce::KeyPress& key);
     int stepAtX(float x) const; // grid coordinates
     float xForStep(double step) const { return static_cast<float>(step) * zoom; }
     int trackAtY(float y) const;

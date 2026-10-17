@@ -146,8 +146,6 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
-- **Selection by Ctrl + drag** in the Piano Roll and the Playlist: a rectangle selects notes /
-  clips (then move, delete, copy...).
 - **Note slicer (Piano Roll), like FL's:** with notes selected, a shortcut (and a context-menu
   entry) splits each into consecutive notes of a chosen granularity (e.g. 1/4, 1/8, 1/16 step
   values), keeping pitch and velocity. For hi-hat rolls. Depends on selection.
@@ -333,6 +331,11 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   state (kept through undo, saved in `view`), `isInScale()`. Rows: in-scale lighter, others
   darker, root tinted with the accent; colours derived from `lane`/`accent` (no new theme keys).
   Every key labelled (not just C).
+
+- 2026-10-17: Selection (backlog 2): Ctrl+drag rubber band in the Piano Roll and the Playlist
+  (accentAlt outline), drag a selected item = move all (Piano Roll: right end = resize all),
+  Delete / Ctrl+A / Esc via `keyCommand()`. Selection = indices kept in the view (not model/undo).
+  A click outside a selection only deselects, as in FL. No copy/paste yet.
 
 ## Dev environment notes
 

@@ -293,9 +293,18 @@ void NoteGrid::mouseMove(const juce::MouseEvent& e)
                        : juce::MouseCursor::NormalCursor);
 }
 
+juce::Rectangle<float> NoteGrid::noteBounds(const model::Note& note) const
+{
+    return juce::Rectangle<float>(view.xForTick(note.startTick), view.yForPitch(note.pitch),
+                                  view.xForTick(note.lengthTicks), PianoRollView::rowHeight)
+        .reduced(0.5f, 1.0f);
+}
+
 void NoteGrid::eraseAt(juce::Point<float> p)
 {
     const int index = noteAt(p);
+    if (index >= 0)
+        view.clearSelection(); // indices are about to shift
     if (index >= 0)
         view.editNotes([index](std::vector<model::Note>& list)
                        { list.erase(list.begin() + index); }, gestureId);
@@ -314,7 +323,35 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
+    if (e.mods.isCommandDown())
+    {
+        drag = Drag::select;
+        bandStart = bandEnd = e.position;
+        return;
+    }
+
     dragNote = noteAt(e.position);
+    if (dragNote >= 0 && view.isSelected(dragNote))
+    {
+        const auto& note = view.notes()[static_cast<std::size_t>(dragNote)];
+        drag = onRightEdge(dragNote, e.position.x) ? Drag::resizeSelection : Drag::moveSelection;
+        moveOriginals.clear();
+        for (int i : view.selection)
+            moveOriginals.push_back(view.notes()[static_cast<std::size_t>(i)]);
+        grabTick = view.tickAtX(e.position.x);
+        grabPitch = view.pitchAtY(e.position.y);
+        grabNotePitch = note.pitch;
+        view.audition(note.pitch, note.velocity);
+        return;
+    }
+    if (!view.selection.empty())
+    {
+        // A click outside the selection only deselects (FL does the same).
+        view.clearSelection();
+        drag = Drag::none;
+        dragNote = -1;
+        return;
+    }
     if (dragNote >= 0)
     {
         const auto& note = view.notes()[static_cast<std::size_t>(dragNote)];
@@ -343,6 +380,53 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
     if (drag == Drag::erase)
     {
         eraseAt(e.position);
+        return;
+    }
+    if (drag == Drag::select)
+    {
+        bandEnd = e.position;
+        repaint();
+        return;
+    }
+    if (drag == Drag::moveSelection || drag == Drag::resizeSelection)
+    {
+        const int snapTicks = std::max(1, view.snapTicks());
+        const int ticks =
+            static_cast<int>(std::lround(
+                static_cast<double>(view.tickAtX(e.position.x) - grabTick) / snapTicks)) *
+            snapTicks;
+        auto moved = moveOriginals;
+        if (drag == Drag::moveSelection)
+        {
+            // One offset for all, limited so every note stays on the grid.
+            int dt = ticks;
+            int dp = view.pitchAtY(e.position.y) - grabPitch;
+            for (const auto& n : moveOriginals)
+            {
+                dt = std::max(dt, -n.startTick);
+                dp = std::clamp(dp, -n.pitch, PianoRollView::numPitches - 1 - n.pitch);
+            }
+            for (auto& n : moved)
+            {
+                n.startTick += dt;
+                n.pitch += dp;
+            }
+            view.audition(grabNotePitch + dp, moveOriginals.front().velocity);
+        }
+        else
+        {
+            for (auto& n : moved)
+                n.lengthTicks = std::max(snapTicks, n.lengthTicks + ticks);
+        }
+        const auto selected = view.selection;
+        view.editNotes(
+            [selected, moved](std::vector<model::Note>& list)
+            {
+                for (std::size_t i = 0; i < selected.size(); ++i)
+                    if (selected[i] < static_cast<int>(list.size()))
+                        list[static_cast<std::size_t>(selected[i])] = moved[i];
+            },
+            gestureId);
         return;
     }
     const auto& notes = view.notes();
@@ -374,6 +458,17 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
 
 void NoteGrid::mouseUp(const juce::MouseEvent&)
 {
+    if (drag == Drag::select)
+    {
+        // Every note the rectangle touches.
+        const auto band = juce::Rectangle<float>(bandStart, bandEnd);
+        view.selection.clear();
+        const auto& notes = view.notes();
+        for (std::size_t i = 0; i < notes.size(); ++i)
+            if (band.intersects(noteBounds(notes[i])))
+                view.selection.push_back(static_cast<int>(i));
+        repaint();
+    }
     drag = Drag::none;
     dragNote = -1;
     view.stopAudition();
@@ -457,24 +552,34 @@ void NoteGrid::paint(juce::Graphics& g)
     // Notes: brighter for higher velocity.
     const float radius = std::min(3.0f, t.shape.cornerRadius);
     g.setFont(juce::FontOptions(10.0f));
-    for (const auto& note : view.notes())
+    const auto& notes = view.notes();
+    for (std::size_t i = 0; i < notes.size(); ++i)
     {
-        const auto r =
-            juce::Rectangle<float>(view.xForTick(note.startTick), view.yForPitch(note.pitch),
-                                   view.xForTick(note.lengthTicks), PianoRollView::rowHeight)
-                .reduced(0.5f, 1.0f);
+        const auto& note = notes[i];
+        const auto r = noteBounds(note);
         if (!clip.toFloat().intersects(r))
             continue;
+        const bool selected = view.isSelected(static_cast<int>(i));
         g.setColour(colour(t.colours.stepOn).withMultipliedBrightness(0.6f + 0.4f * note.velocity));
         g.fillRoundedRectangle(r, radius);
-        g.setColour(colour(t.colours.outline).withAlpha(0.8f));
-        g.drawRoundedRectangle(r, radius, 1.0f);
+        g.setColour(selected ? colour(t.colours.accentAlt)
+                             : colour(t.colours.outline).withAlpha(0.8f));
+        g.drawRoundedRectangle(selected ? r.reduced(0.5f) : r, radius, selected ? 2.0f : 1.0f);
         if (r.getWidth() > 28.0f)
         {
             g.setColour(colour(t.colours.clipText));
             g.drawText(noteName(note.pitch), r.reduced(3.0f, 0.0f),
                        juce::Justification::centredLeft, false);
         }
+    }
+
+    if (drag == Drag::select)
+    {
+        const auto band = juce::Rectangle<float>(bandStart, bandEnd);
+        g.setColour(colour(t.colours.accentAlt).withAlpha(0.15f));
+        g.fillRect(band);
+        g.setColour(colour(t.colours.accentAlt));
+        g.drawRect(band, 1.0f);
     }
 
     if (view.channel() == 0)
@@ -647,9 +752,69 @@ void PianoRollView::stopAudition()
     keyboard->repaint();
 }
 
+bool PianoRollView::isSelected(int note) const
+{
+    return std::find(selection.begin(), selection.end(), note) != selection.end();
+}
+
+void PianoRollView::clearSelection()
+{
+    if (!selection.empty())
+    {
+        selection.clear();
+        grid.repaint();
+    }
+}
+
+bool PianoRollView::keyCommand(const juce::KeyPress& key)
+{
+    if (channel() == 0)
+        return false;
+    if (key == juce::KeyPress('a', juce::ModifierKeys::commandModifier, 0))
+    {
+        selection.clear();
+        for (int i = 0; i < static_cast<int>(notes().size()); ++i)
+            selection.push_back(i);
+        grid.repaint();
+        return true;
+    }
+    if (selection.empty())
+        return false;
+    if (key == juce::KeyPress::escapeKey)
+    {
+        clearSelection();
+        return true;
+    }
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    {
+        auto doomed = selection;
+        std::sort(doomed.begin(), doomed.end(), std::greater<>());
+        selection.clear();
+        editNotes(
+            [doomed](std::vector<model::Note>& list)
+            {
+                for (int i : doomed)
+                    if (i < static_cast<int>(list.size()))
+                        list.erase(list.begin() + i);
+            },
+            0);
+        return true;
+    }
+    return false;
+}
+
 void PianoRollView::refresh()
 {
     const auto& project = doc.project();
+    // The selection belongs to one channel's notes in one pattern.
+    if (selectionChannel != channel() || selectionPattern != project.currentPattern)
+    {
+        selection.clear();
+        selectionChannel = channel();
+        selectionPattern = project.currentPattern;
+    }
+    const int count = static_cast<int>(notes().size());
+    std::erase_if(selection, [count](int i) { return i >= count; });
     const auto* ch = project.findChannel(channel());
     juce::String text("Piano roll");
     if (ch != nullptr)

@@ -44,7 +44,9 @@ comments with the details. This page covers how the pieces fit together.
    └──────────────────────────────────────────────────────────┘
 ```
 
-Dependencies only point downwards. `jls_engine`, `jls_model` and `jls_theme` are static
+Dependencies only point downwards. Third-party code comes in through CMake FetchContent (JUCE,
+Catch2, nlohmann/json). Fixes we need in it live in `patches/` and are applied automatically
+at configure time ([patches/README.md](../patches/README.md)). `jls_engine`, `jls_model` and `jls_theme` are static
 libraries without JUCE. The `JuicyLoopsStudio` app target compiles `src/app`, `src/ui` and
 `src/io` together with JUCE. `jls_tests` links only the JUCE-free libraries.
 

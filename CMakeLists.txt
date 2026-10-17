@@ -26,7 +26,12 @@ if(JLS_BUILD_APP)
     FetchContent_Declare(JUCE
         GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
         GIT_TAG 9.0.4
-        GIT_SHALLOW TRUE)
+        GIT_SHALLOW TRUE
+        # Our fixes to JUCE (see patches/README.md).
+        PATCH_COMMAND ${CMAKE_COMMAND}
+            -DPATCH_FILE=${CMAKE_CURRENT_SOURCE_DIR}/patches/juce-xembed-use-after-free.patch
+            -DSOURCE_DIR=<SOURCE_DIR>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/apply_patch.cmake)
     FetchContent_MakeAvailable(JUCE)
     add_subdirectory(src/app)
 endif()

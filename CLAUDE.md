@@ -249,10 +249,16 @@ and run it before milestones or after platform-specific changes.
 - 2026-10-17: Tested with LSP plugins (`lsp-plugins-vst3/-lv2`, 198 each): scanning both
   formats, adding via grouped menu (manufacturer > category > plugin; LV2's " Plugin"
   category suffix stripped), VST3 editor window, processing (export peak matched the
-  plugin's -39 dB output), state through save/reopen/export. **Open question:** the LV2
-  editor window stayed blank on Xvfb (JUCE's XEmbed host window never got mapped; mapping
-  it by hand showed the UI). VST3 uses the same mechanism and worked, so it may be an Xvfb
-  artifact; needs checking on the real desktop. Message boxes use NoIcon (JUCE's icons
+  plugin's -39 dB output), state through save/reopen/export. The LV2 editor stayed blank
+  on Xvfb only; on the user's Hyprland desktop it shows (an Xvfb artifact).
+- 2026-10-17: **Crash fixed in JUCE:** closing an LV2 plugin window segfaulted (user report,
+  core dump via `coredumpctl debug`). JUCE 9.0.4 `XEmbedComponent` queues `callAsync([this]
+  ...)` on ConfigureNotify; the window was deleted before it ran. Fixed by
+  `patches/juce-xembed-use-after-free.patch` (SafePointer check), applied idempotently by
+  `cmake/apply_patch.cmake` as JUCE's FetchContent PATCH_COMMAND. Patches keep JUCE's CRLF
+  line endings (`.gitattributes: *.patch -text`). Report upstream and drop the patch when
+  JUCE ships a fix. Debug crashes with `coredumpctl debug <pid> --debugger-arguments="-batch
+  -ex 'thread 1' -ex 'bt 40'"`. Message boxes use NoIcon (JUCE's icons
   are huge and off-theme).
 
 ## Dev environment notes

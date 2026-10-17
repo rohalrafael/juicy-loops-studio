@@ -1,0 +1,19 @@
+diff --git a/modules/juce_gui_extra/native/juce_XEmbedComponent_linux.cpp b/modules/juce_gui_extra/native/juce_XEmbedComponent_linux.cpp
+index 82d0c3228..92d4c7c95 100644
+--- a/modules/juce_gui_extra/native/juce_XEmbedComponent_linux.cpp
++++ b/modules/juce_gui_extra/native/juce_XEmbedComponent_linux.cpp
+@@ -621,7 +621,13 @@ private:
+                     if (options.getAllowForeignWidgetToResizeComponent())
+                         configureNotify();
+                     else
+-                        MessageManager::callAsync ([this] { componentMovedOrResized (owner, true, true); });
++                        MessageManager::callAsync ([this, safeOwner = Component::SafePointer<Component> (&owner)]
++                        {
++                            // The component (and this Pimpl) may be gone by now, e.g. when a
++                            // plugin window is closed right after the client was resized.
++                            if (safeOwner != nullptr)
++                                componentMovedOrResized (owner, true, true);
++                        });
+ 
+                     return true;
+ 

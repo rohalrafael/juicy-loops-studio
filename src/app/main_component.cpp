@@ -84,7 +84,16 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     stopButton.onClick = [&transport] { transport.stop(); };
 
     tempoSlider.setSliderStyle(juce::Slider::IncDecButtons);
-    tempoSlider.setRange(engine::Transport::minTempo, engine::Transport::maxTempo, 0.001);
+    // The -/+ buttons step by the range's interval (1 BPM), while typed values keep three
+    // decimals: the snapping function rounds to 0.001 instead of to the interval.
+    juce::NormalisableRange<double> tempoRange(
+        engine::Transport::minTempo, engine::Transport::maxTempo,
+        [](double start, double end, double proportion)
+        { return start + proportion * (end - start); }, [](double start, double end, double value)
+        { return (value - start) / (end - start); }, [](double start, double end, double value)
+        { return std::clamp(std::round(value * 1000.0) / 1000.0, start, end); });
+    tempoRange.interval = 1.0;
+    tempoSlider.setNormalisableRange(tempoRange);
     tempoSlider.setNumDecimalPlacesToDisplay(3);
     tempoSlider.setTextValueSuffix(" BPM");
     tempoSlider.onValueChange = [this]

@@ -63,7 +63,8 @@ Details of the file format: [project-format.md](project-format.md).
 - **PAT / SONG:** PAT loops the selected pattern; SONG plays the Playlist and loops at its end.
 - **Pattern selector and +:** picks the pattern you're editing and placing; **+** adds one.
 - **Play:** play/pause (keeps the position). **Stop** rewinds to the start.
-- **Tempo:** click the arrows, or click the number and type a value.
+- **Tempo:** - / + change it by 1 BPM; click the number to type an exact value (up to three
+  decimals).
 - **Position:** bar:beat:step within whatever is looping.
 - **Clock** (below the position): current time / total time, as minutes:seconds.milliseconds.
   In SONG mode that's the song (the Playlist); in PAT mode, the selected pattern.

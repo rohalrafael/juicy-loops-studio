@@ -301,7 +301,7 @@ and run it before milestones or after platform-specific changes.
   Position is within what loops (pattern/song), reported as a loop from 0. Verified with LSP
   Artistic Delay's SYNC: showed 130 then 100 BPM (LSP latches the value until SYNC is re-pressed).
   Clock under bar:beat:step: `model::formatTime` "M:SS.mmm", current / total of what loops.
-  Found: the tempo +/- buttons step by 0.001 BPM (slider interval); to fix.
+  Tempo -/+ buttons step 1 BPM (range interval 1, custom snap keeps typed values to 0.001).
 
 ## Dev environment notes
 

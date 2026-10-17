@@ -134,6 +134,14 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
     playlist.loadSample = [this](const juce::File& file) { return sampleLoader.load(file); };
     playlist.onOpenAudioChannel = [this](model::ChannelId id) { showSampler(id, false); };
+    playlist.onOpenPattern = [this](model::PatternId id)
+    {
+        // As in FL: select the pattern and bring the Channel Rack to the front with it.
+        selectPattern(id);
+        channelRack.setVisible(true);
+        setFocusArea(Area::channelRack);
+        menuItemsChanged();
+    };
     channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)
     { showSampler(id, toggle); };
     stretchCache.onReady = [this] { publishState(); };

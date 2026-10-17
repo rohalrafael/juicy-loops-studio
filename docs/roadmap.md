@@ -19,6 +19,9 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Split by channel (2026-10-18): FL's Playlist / pattern action that splits a pattern into one
+  pattern per channel (each with only that channel's notes), placed on separate tracks in
+  place of the original clips.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

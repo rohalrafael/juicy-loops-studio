@@ -192,6 +192,8 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
 
     if (e.mods.isPopupMenu())
     {
+        // Right-click deselects (and deletes the clip under the mouse, as always).
+        view.clearSelection();
         drag = Drag::erase;
         eraseAt(e.position);
         return;
@@ -370,6 +372,8 @@ void PlaylistGrid::mouseDoubleClick(const juce::MouseEvent& e)
     const auto& clip = view.document().project().playlist.clips[static_cast<std::size_t>(index)];
     if (clip.isAudio() && view.onOpenAudioChannel)
         view.onOpenAudioChannel(clip.audio);
+    else if (!clip.isAudio() && view.onOpenPattern)
+        view.onOpenPattern(clip.pattern);
 }
 
 void PlaylistGrid::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w)
@@ -712,6 +716,17 @@ class PlaylistView::Picker final : public juce::Component
     }
 
     void mouseDown(const juce::MouseEvent& e) override { pressed = itemAt(e.y); }
+
+    // Double-click: a pattern opens in the Channel Rack, an audio clip in its Sampler.
+    void mouseDoubleClick(const juce::MouseEvent& e) override
+    {
+        const auto item = itemAt(e.y);
+        const auto id = item.fromFirstOccurrenceOf(":", false, false).getLargeIntValue();
+        if (item.startsWith("pattern:") && view.onOpenPattern)
+            view.onOpenPattern(static_cast<model::PatternId>(id));
+        else if (item.startsWith("audio:") && view.onOpenAudioChannel)
+            view.onOpenAudioChannel(static_cast<model::ChannelId>(id));
+    }
 
     void mouseDrag(const juce::MouseEvent& e) override
     {

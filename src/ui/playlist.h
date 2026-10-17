@@ -24,7 +24,8 @@ class PlaylistView;
 //   left-click empty space  place the selected pattern (snapped), then drag to move it
 //   drag a clip             move it (snapped), also to other tracks
 //   drag a clip's right end resize it (a longer clip repeats its pattern)
-//   right-click / drag      delete clips
+//   double-click a clip     a pattern opens in the Channel Rack, an audio clip in its Sampler
+//   right-click / drag      deselect and delete clips
 //   Ctrl + drag             select the clips in a rectangle; drag a selected clip to move them
 //                           all; Delete removes them, Ctrl+A selects all, Esc deselects;
 //                           Ctrl+C / X copy / cut, Ctrl+V pastes after the copied bars
@@ -41,7 +42,7 @@ class PlaylistGrid final : public juce::Component,
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
-    void mouseDoubleClick(const juce::MouseEvent& e) override; // audio clip: its Sampler
+    void mouseDoubleClick(const juce::MouseEvent& e) override; // see onOpenPattern / AudioChannel
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override;
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
@@ -137,6 +138,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
     model::ChannelId brushAudio = 0;
     // Set by the owner: open an audio clip's channel (its Sampler window).
     std::function<void(model::ChannelId)> onOpenAudioChannel;
+    // Set by the owner: open a pattern in the Channel Rack (double-click on a clip or picker row).
+    std::function<void(model::PatternId)> onOpenPattern;
     void setPickerVisible(bool shouldShow);
     bool isPickerVisible() const;
 

@@ -198,13 +198,15 @@ installed, the channel stays silent and keeps them.
 | Left-click empty space | Place the selected pattern (snapped), and keep dragging to move it |
 | Drag a clip | Move it in time or to another track |
 | Drag a clip's right end | Make it longer (the pattern repeats) or shorter |
-| Right-click / drag | Delete clips |
+| Right-click / drag | Deselect, and delete the clips under the mouse |
+| Double-click a pattern clip | Open that pattern in the Channel Rack (brought to the front) |
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Bar, beat or step |
 | Click / drag the ruler | Move the playhead there (snapped); switches to SONG mode |
 | Drop a sample (from the Browser or your desktop) | Place it as an audio clip, as long as the sample |
 | **Picker** (title bar) | Show / hide the picker: all patterns and audio clips |
 | Click an item in the picker | Make it what clicking empty space places |
+| Double-click an item in the picker | A pattern: open it in the Channel Rack; an audio clip: its Sampler |
 | Drag an item from the picker | Place it where you drop it |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |

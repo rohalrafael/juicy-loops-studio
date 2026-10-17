@@ -257,3 +257,8 @@ not). Older entries describe the project as it was then; later entries may super
   `mouseDownPosition` is relative to the component's *current* position, so after moving up the
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
+
+- 2026-10-18: Playlist: right-click also deselects (like the Piano Roll); double-clicking a
+  pattern clip (or a pattern in the picker) selects it and brings the Channel Rack to the front
+  (FL); double-clicking an audio clip in the picker opens its Sampler. "Split by channel" is in
+  the backlog.

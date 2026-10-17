@@ -16,8 +16,11 @@ cmake -B "$BUILD" -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DJLS_BUILD_TESTS=O
 cmake --build "$BUILD"
 
 mkdir -p "$ROOT/dist"
+# Copy next to the target, then rename over it: the binary may be running on the host ("text
+# file busy" for a direct copy); the running app keeps the old file, the next start gets the new.
 cp "$BUILD/src/app/JuicyLoopsStudio_artefacts/RelWithDebInfo/Juicy Loops Studio" \
-    "$ROOT/dist/juicy-loops-studio"
+    "$ROOT/dist/.juicy-loops-studio.new"
+mv -f "$ROOT/dist/.juicy-loops-studio.new" "$ROOT/dist/juicy-loops-studio"
 {
     echo "Juicy Loops Studio $(sed -n 's/^project(JuicyLoopsStudio VERSION \([^ ]*\).*/\1/p' CMakeLists.txt)"
     echo "commit:   $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- src || echo ' + local changes')"

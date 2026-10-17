@@ -17,10 +17,14 @@ inline constexpr double defaultTempoStep = 5.0; // BPM, Tempo up/down
 inline constexpr double defaultTempoStepFine = 1.0;
 inline constexpr const char* previewSecondsKey = "previewSeconds";
 inline constexpr double defaultPreviewSeconds = 5.0; // Browser: length of a click preview
+// Ctrl+Tab order: "fixed" (Browser, Channel Rack, Playlist, Mixer) or "recent" (last used first,
+// like Alt+Tab).
+inline constexpr const char* focusOrderKey = "focusOrder";
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
 double previewSeconds(juce::PropertiesFile& file);
+bool focusOrderRecent(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

@@ -1031,11 +1031,15 @@ void ChannelRack::replaceSample(model::ChannelId id, const juce::File& file)
     if (sample == nullptr)
         return;
     const auto path = file.getFullPathName().toStdString();
+    const auto name = file.getFileNameWithoutExtension().toStdString();
     edit(
-        [id, sample, path](model::Project& p)
+        [id, sample, path, name](model::Project& p)
         {
             if (auto* c = p.findChannel(id))
+            {
                 c->setSample(sample, path); // also turns an instrument channel into a sampler
+                c->name = name;             // named after its sample, as in FL
+            }
         });
 }
 

@@ -92,6 +92,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::Component* areaComponent(Area area);
     void setFocusArea(Area area);
     void cycleFocus(int direction);
+    void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
     void navigate(juce::CommandID command);
     void publishState();
     void showAudioSettings();
@@ -149,6 +150,10 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::MixerView mixer;         // docked below them (F9)
     ui::BrowserPanel browser;    // docked at the left or right (Alt+F8)
     Area focusArea = Area::mainView;
+    // "Last used first" focus order: most recent first; while cycling (modifier held), the order
+    // is frozen and `cycleStep` says how far back we are.
+    std::vector<Area> recentAreas{Area::mainView, Area::channelRack, Area::browser, Area::mixer};
+    int cycleStep = 0; // 0 = not cycling
     ui::EffectPanel effectPanel;
     bool effectPanelPlaced = false;
     juce::File currentFile;   // where the project was last saved/opened; empty if never

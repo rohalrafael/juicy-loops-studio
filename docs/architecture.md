@@ -322,7 +322,9 @@ which gives:
 - **Focus areas:** `MainComponent::Area` (Browser, Channel Rack, main view, Mixer) says where
   the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on the window. A click
   in an area focuses it (`mouseDown`), Ctrl+Tab cycles (`cycleFocus`), `paintOverChildren`
-  outlines the focused one, and `navigate()` dispatches.
+  outlines the focused one, and `navigate()` dispatches. With Settings › Ctrl+Tab order = "Last
+  used first", `recentAreas` keeps the areas most-recent-first; while the modifier is held the
+  order is frozen and `cycleStep` walks it, and `modifierKeysChanged` commits on release.
 - **Note keys vs commands:** the typing keyboard only claims plain character keys (codes below
   128); special keys' codes can end in a letter's byte (Down = ...'T').
 - **Settings** used by commands (tempo steps) live in the settings file; Options › Settings

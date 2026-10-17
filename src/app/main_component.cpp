@@ -499,6 +499,10 @@ juce::Component* MainComponent::areaComponent(Area area)
 
 void MainComponent::setFocusArea(Area area)
 {
+    // A deliberate choice (click, focus command): it becomes the most recent area.
+    cycleStep = 0;
+    std::erase(recentAreas, area);
+    recentAreas.insert(recentAreas.begin(), area);
     if (area != focusArea)
     {
         focusArea = area;
@@ -506,8 +510,36 @@ void MainComponent::setFocusArea(Area area)
     }
 }
 
+void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
+{
+    // Releasing the modifiers ends a "last used first" cycle on the area reached.
+    if (cycleStep != 0 && !modifiers.isAnyModifierKeyDown())
+        setFocusArea(focusArea);
+    juce::Component::modifierKeysChanged(modifiers);
+}
+
 void MainComponent::cycleFocus(int direction)
 {
+    if (ui::settings::focusOrderRecent(themes.settingsFile()))
+    {
+        // Like Alt+Tab: step back through the areas in last-used order while the modifier is
+        // held; the order only changes once it's released (modifierKeysChanged).
+        std::vector<Area> showing;
+        for (auto area : recentAreas)
+            if (auto* c = areaComponent(area); c != nullptr && c->isVisible())
+                showing.push_back(area);
+        if (showing.size() < 2)
+            return;
+        // The current area is first in `showing` until it changes.
+        const int n = static_cast<int>(showing.size());
+        cycleStep = ((cycleStep + direction) % n + n) % n;
+        focusArea = showing[static_cast<std::size_t>(cycleStep)];
+        repaint();
+        if (!juce::ModifierKeys::currentModifiers.isAnyModifierKeyDown())
+            setFocusArea(focusArea); // invoked without a held modifier: commit right away
+        return;
+    }
+
     // Like Alt+Tab, through the areas that are showing.
     const std::array order{Area::browser, Area::channelRack, Area::mainView, Area::mixer};
     const auto current = std::find(order.begin(), order.end(), focusArea) - order.begin();
@@ -532,6 +564,8 @@ void MainComponent::navigate(juce::CommandID command)
     case Area::browser:
         if (command == navUp || command == navDown)
             browser.moveSelection(command == navUp ? -1 : 1);
+        else if (command == navUpLoad || command == navDownLoad)
+            browser.moveSelection(command == navUpLoad ? -1 : 1, true);
         else if (command == navLeft || command == navRight)
             browser.openSelected(command == navRight);
         else if (command == navConfirm)
@@ -1018,6 +1052,8 @@ bool MainComponent::perform(const InvocationInfo& info)
     case navLeft:
     case navRight:
     case navConfirm:
+    case navUpLoad:
+    case navDownLoad:
         navigate(static_cast<juce::CommandID>(info.commandID));
         break;
     case browserAddFolder:

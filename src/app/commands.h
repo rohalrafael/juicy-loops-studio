@@ -89,6 +89,8 @@ enum ID : juce::CommandID
     navLeft,
     navRight,
     navConfirm,
+    navUpLoad,
+    navDownLoad,
 
     // Options / Help
     showSettings = 0x1801,

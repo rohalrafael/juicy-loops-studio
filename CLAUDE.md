@@ -373,6 +373,12 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   Fixed on the way: plain arrow keys were swallowed as typing-keyboard notes (key code truncated
   to a char); the settings file now saves within 1 s (was only on clean exit).
 
+- 2026-10-17: Replacing a channel's sample renames the channel after it (FL). Browser Ctrl+Up/Down =
+  move + load into the selected channel + preview (FL); so **tempo moved to Shift+Up/Down** (fine
+  stays Ctrl+Shift+Up/Down). Focus order setting: Fixed or Last used first (Alt+Tab-like, commits
+  on modifier release). Fixed: the Settings window's Browser section wasn't shown (an unmatched
+  edit); it and a Focus section are there now.
+
 ## Dev environment notes
 
 - **Sandbox first** (`tools/sandbox.sh`, docs/sandbox.md): a Docker container with all tools

@@ -268,7 +268,7 @@ void BrowserPanel::setOnRight(bool shouldBeOnRight)
         onSideChanged();
 }
 
-void BrowserPanel::moveSelection(int delta)
+void BrowserPanel::moveSelection(int delta, bool load)
 {
     const int rows = tree.getNumRowsInTree();
     if (rows == 0)
@@ -283,7 +283,11 @@ void BrowserPanel::moveSelection(int delta)
     // Landing on a sample previews it, as clicking would.
     if (auto* entry = dynamic_cast<Item*>(item);
         entry != nullptr && !entry->getFile().isDirectory())
+    {
         select(entry->getFile(), false);
+        if (load && onUseSample)
+            onUseSample(entry->getFile());
+    }
 }
 
 void BrowserPanel::openSelected(bool open)

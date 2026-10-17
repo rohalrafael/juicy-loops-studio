@@ -19,6 +19,11 @@ double tempoStepFine(juce::PropertiesFile& file)
     return file.getDoubleValue(tempoStepFineKey, defaultTempoStepFine);
 }
 
+bool focusOrderRecent(juce::PropertiesFile& file)
+{
+    return file.getValue(focusOrderKey, "fixed") == "recent";
+}
+
 double previewSeconds(juce::PropertiesFile& file)
 {
     return file.getDoubleValue(previewSecondsKey, defaultPreviewSeconds);
@@ -76,6 +81,38 @@ class NumberSetting final : public juce::Component
     juce::Slider box;
 };
 
+// One row: a label and a choice, saved to the settings file as one of `values`.
+class ChoiceSetting final : public juce::Component
+{
+  public:
+    ChoiceSetting(juce::PropertiesFile& f, const char* k, const juce::String& text,
+                  const juce::StringArray& labels, const juce::StringArray& v)
+        : file(f), key(k), values(v)
+    {
+        label.setText(text, juce::dontSendNotification);
+        addAndMakeVisible(label);
+        box.addItemList(labels, 1);
+        box.setSelectedItemIndex(std::max(0, values.indexOf(file.getValue(key, values[0]))),
+                                 juce::dontSendNotification);
+        box.onChange = [this] { file.setValue(key, values[box.getSelectedItemIndex()]); };
+        addAndMakeVisible(box);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds();
+        box.setBounds(area.removeFromRight(170).reduced(0, 3));
+        label.setBounds(area);
+    }
+
+  private:
+    juce::PropertiesFile& file;
+    const char* key;
+    juce::StringArray values;
+    juce::Label label;
+    juce::ComboBox box;
+};
+
 class SettingsPanel final : public juce::Component
 {
   public:
@@ -84,8 +121,16 @@ class SettingsPanel final : public juce::Component
           tempoStepFine(file, settings::tempoStepFineKey, "Fine tempo step",
                         settings::tempoStepFine(file)),
           previewLength(file, settings::previewSecondsKey, "Click preview length",
-                        settings::previewSeconds(file), " s")
+                        settings::previewSeconds(file), " s"),
+          focusOrder(file, settings::focusOrderKey, "Ctrl+Tab order", {"Fixed", "Last used first"},
+                     {"fixed", "recent"})
     {
+        focusHeading.setText("Focus", juce::dontSendNotification);
+        focusHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+        focusNote.setText("Last used first works like Alt+Tab: press once to go back to the "
+                          "previous area, keep the modifier held to go further back.",
+                          juce::dontSendNotification);
+        focusNote.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
         browserHeading.setText("Browser", juce::dontSendNotification);
         browserHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
         browserNote.setText("Clicking a sample plays this much of it; Shift+click plays it all.",
@@ -97,10 +142,11 @@ class SettingsPanel final : public juce::Component
                      "tempo (see Options > Keyboard shortcuts).",
                      juce::dontSendNotification);
         note.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
-        for (auto* c :
-             std::initializer_list<juce::Component*>{&heading, &tempoStep, &tempoStepFine, &note})
+        for (auto* c : std::initializer_list<juce::Component*>{
+                 &heading, &tempoStep, &tempoStepFine, &note, &browserHeading, &previewLength,
+                 &browserNote, &focusHeading, &focusOrder, &focusNote})
             addAndMakeVisible(c);
-        setSize(420, 150);
+        setSize(420, 380);
     }
 
     void resized() override
@@ -113,7 +159,11 @@ class SettingsPanel final : public juce::Component
         area.removeFromTop(8);
         browserHeading.setBounds(area.removeFromTop(24));
         previewLength.setBounds(area.removeFromTop(32));
-        browserNote.setBounds(area);
+        browserNote.setBounds(area.removeFromTop(36));
+        area.removeFromTop(8);
+        focusHeading.setBounds(area.removeFromTop(24));
+        focusOrder.setBounds(area.removeFromTop(32));
+        focusNote.setBounds(area);
     }
 
   private:
@@ -124,6 +174,9 @@ class SettingsPanel final : public juce::Component
     juce::Label browserHeading;
     NumberSetting previewLength;
     juce::Label browserNote;
+    juce::Label focusHeading;
+    ChoiceSetting focusOrder;
+    juce::Label focusNote;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

@@ -35,9 +35,11 @@ class BrowserPanel final : public juce::Component, private juce::Timer
     void playPause();
 
     // Keyboard (from the owner's commands while the Browser has the focus).
-    void moveSelection(int delta); // up / down through the visible items; previews samples
-    void openSelected(bool open);  // folders: open (true) or close (false)
-    void confirmSelected();        // Enter: toggle a folder, or use the sample (onUseSample)
+    // Up / down through the visible items; previews samples, and with `load` also puts them into
+    // the selected channel (onUseSample), FL's Ctrl+Up / Down.
+    void moveSelection(int delta, bool load = false);
+    void openSelected(bool open); // folders: open (true) or close (false)
+    void confirmSelected();       // Enter: toggle a folder, or use the sample (onUseSample)
 
     std::function<double()> previewSeconds;             // length of a click preview
     std::function<void(const juce::File&)> onUseSample; // load into the selected channel

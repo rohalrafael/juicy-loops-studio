@@ -18,8 +18,10 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 
 **Focus.** The arrow keys and Enter act on the focused area, which has an orange outline:
 the Browser, the Channel Rack, the Playlist / Piano Roll, or the Mixer. Click an area to focus
-it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** (like Alt+Tab, through the areas that are
-showing). In the Channel Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / →
+it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** through the areas that are showing. In
+Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack, Playlist, Mixer) or **Last used
+first**, which works like Alt+Tab: one press goes back to the area you came from (twice: back
+again), and keeping Ctrl held while pressing Tab again goes further back. In the Channel Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / →
 select the previous / next track. The selected channel's row is highlighted: that's where the
 Browser loads samples.
 
@@ -37,7 +39,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Space / Shift+Space | Play-stop (stop rewinds) / play-pause |
 | L | Switch between pattern (PAT) and song (SONG) mode |
 | Ctrl+M | Metronome on/off |
-| Ctrl+↑ / Ctrl+↓ | Tempo up / down by the tempo step (5 BPM) |
+| Shift+↑ / Shift+↓ | Tempo up / down by the tempo step (5 BPM) |
 | Ctrl+Shift+↑ / ↓ | Tempo up / down by the fine step (1 BPM) |
 | F4 / Ctrl+Shift+C / F2 | New / clone / rename pattern |
 | Numpad + / − | Next / previous pattern |
@@ -127,6 +129,9 @@ are remembered.
 | ↑ / ↓ (Browser focused) | Move through the list; samples preview as you land on them |
 | → / ← | Open / close a folder (← on a file goes to its folder) |
 | Enter | Open or close a folder; on a sample: load it into the selected channel |
+| Ctrl+↑ / Ctrl+↓ | Previous / next sample, loaded into the selected channel right away (and previewed): audition samples in the song as it plays |
+
+Loading a sample into a channel renames the channel after the sample, as in FL.
 
 Previews go straight to your speakers, past the mixer and the song, so they're heard while the
 song plays or not. Samples load in the background, so long files don't freeze the app; files

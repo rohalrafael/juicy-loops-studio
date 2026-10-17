@@ -7,6 +7,8 @@
 #include "engine/preview_player.h"
 #include "io/sample_loader.h"
 
+#include "ui/controls.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <atomic>
@@ -72,13 +74,13 @@ class BrowserPanel final : public juce::Component, private juce::Timer
     bool right = false;
     juce::StringArray folders;
 
-    juce::TextButton addButton{"+"};
-    juce::TextButton sideButton;
-    juce::TextButton closeButton{juce::String::fromUTF8("\xc3\x97")};
+    IconButton addButton{Icon::addFolder};
+    IconButton sideButton{Icon::dockSide};
+    IconButton closeButton{Icon::close};
     juce::TreeView tree;
     std::unique_ptr<juce::TreeViewItem> treeRoot;
     std::unique_ptr<Waveform> waveform;
-    juce::TextButton playButton{"Play"};
+    IconButton playButton{Icon::play, "Play"};
     juce::Label nameLabel;
     std::unique_ptr<juce::FileChooser> chooser;
 

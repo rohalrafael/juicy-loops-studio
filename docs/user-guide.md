@@ -107,12 +107,17 @@ Details of the file format: [project-format.md](project-format.md).
 
 - **PAT / SONG:** PAT loops the selected pattern; SONG plays the Playlist and loops at its end.
 - **Pattern selector and +:** picks the pattern you're editing and placing; **+** adds one.
-- **Play:** play/pause (keeps the position). **Stop** rewinds to the start.
-- **Tempo:** - / + change it by 1 BPM; click the number to type an exact value (up to three
-  decimals).
+- **Play** (▶, ❚❚ while playing): play/pause (keeps the position). **Stop** (■) rewinds to
+  the start.
+- **Tempo:** − / + or the mouse wheel change it by 1 BPM; click the number to type an exact
+  value (up to three decimals).
 - **Position:** bar:beat:step within whatever is looping.
-- **Clock** (below the position): current time / total time, as minutes:seconds.milliseconds.
-  In SONG mode that's the song (the Playlist); in PAT mode, the selected pattern.
+- **Clock** (next to the position): current time / total time, as
+  minutes:seconds.milliseconds. In SONG mode that's the song (the Playlist); in PAT mode, the
+  selected pattern.
+
+In a narrow window, Metronome and Keys show only their icons, then the clock's time and the
+time signature are hidden.
 - **Time signature:** beats per bar (n/4).
 - **Metronome:** on/off.
 - **Keys:** typing keyboard to piano on/off (Ctrl+T).
@@ -310,5 +315,5 @@ and MIDI devices are in **Options › Audio settings…**.
 
 ## Themes
 
-**Options › Theme…** offers Juicy, Citrus, Watermelon and Blueberry, and can import or export
+**Options › Theme…** offers Juicy, Citrus, Watermelon, Blueberry and Blackberry, and can import or export
 your own theme files. See [themes.md](themes.md).

@@ -58,7 +58,7 @@ folders (`jls::engine`, `jls::model`, ...).
    reuse one. Controls that run a command show its current keys in their tooltip.
 5. **Themes, not hard-coded looks.** Colours, radii and fonts come from the active theme
    (`ui::currentTheme()`), read in `paint()` since themes switch at runtime. New themeable
-   properties go into `theme::Theme`, its parse/serialize tables, all four built-in themes and
+   properties go into `theme::Theme`, its parse/serialize tables, every built-in theme and
    `docs/themes.md`.
 6. **Tests are the gate.** Engine and model changes come with Catch2 tests; timing is tested to
    the sample. UI changes are checked visually on Xvfb (see `docs/development.md`); sound by

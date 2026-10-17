@@ -808,9 +808,6 @@ PlaylistView::PlaylistView(model::Document& document, engine::Transport& transpo
     : doc(document), transport(transportToShow), ruler(std::make_unique<Ruler>(*this)),
       trackNames(std::make_unique<TrackNames>(*this)), grid(*this)
 {
-    title.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    addAndMakeVisible(title);
-    addAndMakeVisible(snapLabel);
 
     snapBox.addItem("Bar", snapBar);
     snapBox.addItem("Beat", snapBeat);
@@ -1131,22 +1128,23 @@ void PlaylistView::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
-    auto header = getLocalBounds().removeFromTop(headerHeight);
-    g.setColour(colour(t.colours.header));
-    g.fillRect(header);
+    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Playlist", {},
+                     pickerButton.getX() - metrics::controlGap);
+    paintHeaderLabel(g, "Snap", snapLabelArea);
     g.setColour(colour(t.colours.outline));
-    g.fillRect(header.removeFromBottom(1));
     g.fillRect(0, headerHeight + rulerHeight - 1, trackNameWidth, 1);
 }
 
 void PlaylistView::resized()
 {
     auto area = getLocalBounds();
-    auto header = area.removeFromTop(headerHeight).reduced(10, 4);
-    title.setBounds(header.removeFromLeft(100));
-    pickerButton.setBounds(header.removeFromLeft(64).reduced(0, 1));
-    snapBox.setBounds(header.removeFromRight(80));
-    snapLabel.setBounds(header.removeFromRight(44));
+    HeaderLayout header(area.removeFromTop(headerHeight));
+    snapBox.setBounds(header.fromRight(metrics::comboWidth));
+    snapLabelArea = header.fromRight(headerLabelWidth("Snap"));
+    // Right after the title.
+    header.fromLeft(textWidth(juce::FontOptions(13.0f, juce::Font::bold), "Playlist") +
+                    metrics::controlGap);
+    pickerButton.setBounds(header.fromLeft(pickerButton.preferredWidth(metrics::controlHeight)));
 
     if (picker->isVisible())
         picker->setBounds(area.removeFromLeft(Picker::width));

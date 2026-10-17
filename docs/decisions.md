@@ -258,6 +258,16 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: UI polish, maintainer picked mockup **option A (compact)**: one control height
+  per area (panel headers 36 px with 26 px controls; transport 32 px), drawn icons instead of
+  typed symbols, segmented PAT | SONG and 16 | 32 | 64, drop-downs styled like buttons,
+  recessed display boxes for tempo and clock (IBM Plex Mono, bundled, OFL), one shared panel
+  header (`ui/controls`). The transport bar sheds labels, then the clock's time, then the time
+  signature when narrow. New built-in theme **Blackberry** (near-black, pastel lavender / mint
+  / pink, Outfit). Titles are drawn twice half a pixel apart for a semibold look, since the
+  bundled fonts are Regular only. Fixed on the way: the effect panel had the same stuck-drag
+  bug as the Channel Rack.
+
 - 2026-10-18: Playlist: clicking a clip selects it, Shift+click toggles, right-click also
   deselects (all like the Piano Roll); double-clicking a
   pattern clip (or a pattern in the picker) selects it and brings the Channel Rack to the front

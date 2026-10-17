@@ -42,14 +42,15 @@ TEST_CASE("Colours format back to text")
         CHECK(formatColour(*parseColour(text)) == text);
 }
 
-TEST_CASE("The four built-in themes load, Juicy first and default")
+TEST_CASE("The five built-in themes load, Juicy first and default")
 {
     const auto& themes = builtInThemes();
-    REQUIRE(themes.size() == 4);
+    REQUIRE(themes.size() == 5);
     CHECK(themes[0].id == "juicy");
     CHECK(themes[1].id == "citrus");
     CHECK(themes[2].id == "watermelon");
     CHECK(themes[3].id == "blueberry");
+    CHECK(themes[4].id == "blackberry");
     CHECK(defaultTheme().id == "juicy");
 
     CHECK(themes[1].font == "Bricolage Grotesque");

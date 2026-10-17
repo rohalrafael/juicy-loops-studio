@@ -10,6 +10,8 @@
 #include "ui/plugin_menu.h"
 #include "ui/theme.h"
 
+#include "ui/controls.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <array>
@@ -260,13 +262,13 @@ class ChannelRack final : public juce::Component,
     io::SampleLoader& loader;
 
     std::vector<std::unique_ptr<ChannelRow>> rows;
-    juce::TextButton addButton{"+"};
-    juce::TextButton loopButton{"Loop"}; // Project::loopChannels
+    IconButton addButton{Icon::add};
+    IconButton loopButton{Icon::loop, "Loop"}; // Project::loopChannels
     // Steps shown: 16 | 32 | 64 (none lit after dragging the handle to another length).
     std::array<juce::TextButton, 3> lengthButtons{juce::TextButton{"16"}, juce::TextButton{"32"},
                                                   juce::TextButton{"64"}};
     LengthHandle lengthHandle;
-    juce::TextButton closeButton{juce::String::fromUTF8("\xc3\x97")}; // multiplication sign
+    IconButton closeButton{Icon::close};
     juce::ComponentDragger dragger;
     juce::Rectangle<int> movableArea;
     bool movingRack = false; // the current mouse press started on the title bar

@@ -29,6 +29,17 @@ inline constexpr int nameWidth = 110;
 inline constexpr int stepWidth = 20;
 inline constexpr int stepGap = 3;
 inline constexpr int beatGap = 6; // extra space between groups of 4 steps
+
+// Controls (ui/controls): every panel header and the transport bar use these, so buttons,
+// drop-downs and icons line up everywhere.
+inline constexpr int panelHeaderHeight = 36;
+inline constexpr int controlHeight = 26;          // buttons and drop-downs in panel headers
+inline constexpr int transportControlHeight = 32; // the transport bar's controls
+inline constexpr int iconSize = 14;
+inline constexpr int controlGap = 6;
+inline constexpr int controlPadding = 10; // inside buttons; panel headers' left inset
+inline constexpr int comboWidth = 76;
+inline constexpr int narrowComboWidth = 52;
 } // namespace metrics
 
 inline juce::Colour colour(theme::Argb argb)
@@ -48,6 +59,25 @@ class LookAndFeel final : public juce::LookAndFeel_V4
                               bool highlighted, bool down) override;
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height, float position,
                           float startAngle, float endAngle, juce::Slider&) override;
+
+    // Text buttons: the control font for their height (ui/controls).
+    juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) override;
+    // Drop-downs look like the buttons next to them, with a drawn chevron.
+    void drawComboBox(juce::Graphics&, int width, int height, bool isButtonDown, int buttonX,
+                      int buttonY, int buttonW, int buttonH, juce::ComboBox&) override;
+    juce::Font getComboBoxFont(juce::ComboBox&) override;
+    void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
+    // Slim rounded scrollbars and rounded tooltips.
+    void drawScrollbar(juce::Graphics&, juce::ScrollBar&, int x, int y, int width, int height,
+                       bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
+                       bool isMouseOver, bool isMouseDown) override;
+    void drawTooltip(juce::Graphics&, const juce::String& text, int width, int height) override;
+    // Tree open/close arrows (the Browser) as chevrons in the dim text colour.
+    void drawTreeviewPlusMinusBox(juce::Graphics&, const juce::Rectangle<float>& area,
+                                  juce::Colour backgroundColour, bool isOpen,
+                                  bool isMouseOver) override;
+    juce::Rectangle<int> getTooltipBounds(const juce::String& tipText, juce::Point<int> screenPos,
+                                          juce::Rectangle<int> parentArea) override;
 };
 
 class ThemeManager final : public juce::ChangeBroadcaster

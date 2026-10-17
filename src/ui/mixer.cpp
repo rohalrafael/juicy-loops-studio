@@ -10,7 +10,7 @@ namespace jls::ui
 namespace
 {
 
-constexpr int headerHeight = 28;
+constexpr int headerHeight = metrics::panelHeaderHeight;
 constexpr int slotsWidth = 230;
 constexpr int slotHeight = 26;
 constexpr float meterFloorDb = -60.0f;
@@ -393,8 +393,6 @@ class MixerView::Slots final : public juce::Component
 MixerView::MixerView(model::Document& document)
     : doc(document), slots(std::make_unique<Slots>(*this))
 {
-    title.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    addAndMakeVisible(title);
 
     for (int i = 0; i <= model::Mixer::numInserts; ++i)
     {
@@ -417,6 +415,7 @@ void MixerView::refresh()
         strips[i]->update(project.mixer.tracks[i],
                           static_cast<int>(i) == project.selectedMixerTrack);
     slots->repaint();
+    repaint(0, 0, getWidth(), headerHeight); // the subtitle names the selected track
 }
 
 void MixerView::updateMeters(const std::function<float(int, int)>& peak)
@@ -442,11 +441,10 @@ void MixerView::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
-    auto header = getLocalBounds().removeFromTop(headerHeight);
-    g.setColour(colour(t.colours.header));
-    g.fillRect(header);
+    const int selected = doc.project().selectedMixerTrack;
+    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Mixer",
+                     selected == 0 ? juce::String("Master") : "Insert " + juce::String(selected));
     g.setColour(colour(t.colours.outline));
-    g.fillRect(header.removeFromBottom(1));
     g.fillRect(0, 0, getWidth(), 1);
     g.fillRect(getWidth() - slotsWidth, headerHeight, 1, getHeight() - headerHeight);
 }
@@ -454,7 +452,7 @@ void MixerView::paint(juce::Graphics& g)
 void MixerView::resized()
 {
     auto area = getLocalBounds();
-    title.setBounds(area.removeFromTop(headerHeight).reduced(10, 2));
+    area.removeFromTop(headerHeight);
     slots->setBounds(area.removeFromRight(slotsWidth).withTrimmedTop(4));
     viewport.setBounds(area.reduced(4, 4));
     const int stripHeight = viewport.getHeight() - viewport.getScrollBarThickness();
@@ -468,14 +466,13 @@ void MixerView::resized()
 
 namespace
 {
-constexpr int panelHeaderHeight = 30;
+constexpr int panelHeaderHeight = metrics::panelHeaderHeight;
 constexpr int controlWidth = 84;
 constexpr int controlHeight = 96;
 } // namespace
 
 EffectPanel::EffectPanel(model::Document& document) : doc(document)
 {
-    closeButton.setButtonText(juce::String::fromUTF8("\xc3\x97"));
     closeButton.setTooltip("Close");
     closeButton.onClick = [this] { setVisible(false); };
     enabled.setTooltip("Turn the effect on or off (bypass)");
@@ -494,7 +491,8 @@ EffectPanel::EffectPanel(model::Document& document) : doc(document)
         noFocus(*c);
         addAndMakeVisible(c);
     }
-    dragBounds.setMinimumOnscreenAmounts(panelHeaderHeight, 80, 40, 80);
+    // The title bar never leaves the top, or the panel couldn't be grabbed again.
+    dragBounds.setMinimumOnscreenAmounts(0x10000, 80, 40, 80);
 }
 
 void EffectPanel::show(model::EffectId id)
@@ -613,26 +611,17 @@ void EffectPanel::paint(juce::Graphics& g)
     g.setColour(colour(t.colours.panel));
     g.fillRoundedRectangle(bounds, radius);
 
-    juce::Path top;
-    top.addRoundedRectangle(0.0f, 0.0f, bounds.getWidth(), static_cast<float>(panelHeaderHeight),
-                            radius, radius, true, true, false, false);
-    g.setColour(colour(t.colours.header));
-    g.fillPath(top);
+    paintPanelHeader(g, getLocalBounds().removeFromTop(panelHeaderHeight), heading, {},
+                     enabled.getX() - metrics::controlGap, radius);
     g.setColour(colour(t.colours.outline));
-    g.fillRect(0.0f, panelHeaderHeight - 1.0f, bounds.getWidth(), 1.0f);
     g.drawRoundedRectangle(bounds.reduced(0.5f), radius, std::max(1.0f, t.shape.borderWidth));
-
-    g.setColour(colour(t.colours.text));
-    g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    g.drawText(heading, juce::Rectangle<int>(12, 0, getWidth() - 120, panelHeaderHeight),
-               juce::Justification::centredLeft, true);
 }
 
 void EffectPanel::resized()
 {
-    auto header = getLocalBounds().removeFromTop(panelHeaderHeight);
-    closeButton.setBounds(header.removeFromRight(panelHeaderHeight).reduced(5));
-    enabled.setBounds(header.removeFromRight(56).reduced(2, 4));
+    HeaderLayout header(getLocalBounds().removeFromTop(panelHeaderHeight));
+    closeButton.setBounds(header.fromRight(metrics::controlHeight));
+    enabled.setBounds(header.fromRight(enabled.preferredWidth(metrics::controlHeight)));
 
     const int columns = std::max(1, std::min(static_cast<int>(controls.size()), 5));
     for (std::size_t i = 0; i < controls.size(); ++i)
@@ -652,13 +641,15 @@ void EffectPanel::resized()
 
 void EffectPanel::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.y < panelHeaderHeight)
+    // Remembered: e.mouseDownPosition is relative to where the panel is now (see ChannelRack).
+    movingPanel = e.y < panelHeaderHeight;
+    if (movingPanel)
         dragger.startDraggingComponent(this, e);
 }
 
 void EffectPanel::mouseDrag(const juce::MouseEvent& e)
 {
-    if (e.mouseDownPosition.y < panelHeaderHeight)
+    if (movingPanel)
         dragger.dragComponent(this, e, &dragBounds);
 }
 

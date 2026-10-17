@@ -12,9 +12,9 @@ namespace jls::ui
 namespace
 {
 
-constexpr int headerHeight = 30;
+constexpr int headerHeight = metrics::panelHeaderHeight;
 constexpr int waveformHeight = 84;
-constexpr int footerHeight = 30;
+constexpr int footerHeight = metrics::panelHeaderHeight;
 const juce::String audioWildcard = "*.wav;*.aif;*.aiff;*.flac;*.ogg;*.mp3";
 
 bool isAudioFile(const juce::File& f)
@@ -210,7 +210,6 @@ BrowserPanel::BrowserPanel(engine::PreviewPlayer& p, juce::PropertiesFile& s)
         b->setMouseClickGrabsKeyboardFocus(false);
         addAndMakeVisible(b);
     }
-    sideButton.setButtonText(right ? "<" : ">");
 
     tree.setRootItemVisible(false);
     tree.setDefaultOpenness(false);
@@ -245,7 +244,6 @@ void BrowserPanel::setOnRight(bool shouldBeOnRight)
 {
     right = shouldBeOnRight;
     settings.setValue("browserOnRight", right);
-    sideButton.setButtonText(right ? "<" : ">");
     if (onSideChanged)
         onSideChanged();
 }
@@ -442,6 +440,7 @@ void BrowserPanel::timerCallback()
 
     const bool playing = preview.isPlaying() && current != nullptr;
     playButton.setButtonText(playing ? "Pause" : "Play");
+    playButton.setIcon(playing ? Icon::pause : Icon::play);
     waveform->setPosition(playing ? preview.position() : (pausedAt > 0.0 ? pausedAt : -1.0));
 }
 
@@ -449,12 +448,8 @@ void BrowserPanel::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
-    auto header = getLocalBounds().removeFromTop(headerHeight);
-    g.setColour(colour(t.colours.header));
-    g.fillRect(header);
-    g.setColour(colour(t.colours.text));
-    g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    g.drawText("Browser", header.reduced(10, 0), juce::Justification::centredLeft);
+    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Browser", {},
+                     addButton.getX() - metrics::controlGap);
     if (folders.isEmpty())
     {
         g.setColour(colour(t.colours.textDim));
@@ -470,17 +465,16 @@ void BrowserPanel::paint(juce::Graphics& g)
 void BrowserPanel::resized()
 {
     auto area = getLocalBounds();
-    auto header = area.removeFromTop(headerHeight).reduced(4);
-    closeButton.setBounds(header.removeFromRight(24));
-    header.removeFromRight(2);
-    sideButton.setBounds(header.removeFromRight(24));
-    header.removeFromRight(2);
-    addButton.setBounds(header.removeFromRight(24));
+    HeaderLayout header(area.removeFromTop(headerHeight));
+    closeButton.setBounds(header.fromRight(metrics::controlHeight));
+    sideButton.setBounds(header.fromRight(metrics::controlHeight));
+    addButton.setBounds(header.fromRight(metrics::controlHeight));
 
-    auto footer = area.removeFromBottom(footerHeight).reduced(6, 3);
-    playButton.setBounds(footer.removeFromLeft(56));
-    footer.removeFromLeft(6);
-    nameLabel.setBounds(footer);
+    // Wide enough for "Pause" too, so the button doesn't change size while playing.
+    HeaderLayout footer(area.removeFromBottom(footerHeight));
+    playButton.setBounds(
+        footer.fromLeft(IconButton(Icon::pause, "Pause").preferredWidth(metrics::controlHeight)));
+    nameLabel.setBounds(footer.remaining());
     waveform->setBounds(area.removeFromBottom(waveformHeight));
     tree.setBounds(area.reduced(2));
 }

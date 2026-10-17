@@ -11,6 +11,9 @@
 
 #include "engine/sample_buffer.h"
 
+#include "ui/controls.h"
+#include "ui/theme.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -94,7 +97,7 @@ class PlaylistView final : public juce::Component, private juce::Timer
   public:
     static constexpr int trackHeight = 34;
     static constexpr int rulerHeight = 22;
-    static constexpr int headerHeight = 32;
+    static constexpr int headerHeight = metrics::panelHeaderHeight;
     static constexpr int trackNameWidth = 110;
 
     PlaylistView(model::Document& document, engine::Transport& transport);
@@ -173,11 +176,10 @@ class PlaylistView final : public juce::Component, private juce::Timer
     model::ClipClipboard clipboard;                         // Ctrl+C / Ctrl+V
     std::map<const engine::SampleBuffer*, Peaks> peakCache; // audio clips' waveforms
     std::unique_ptr<Picker> picker;
-    juce::TextButton pickerButton{"Picker"};
+    IconButton pickerButton{Icon::list, "Picker"};
     float zoom = 4.0f; // pixels per step: a 4/4 bar is 64 px
 
-    juce::Label title{{}, "Playlist"};
-    juce::Label snapLabel{{}, "Snap"};
+    juce::Rectangle<int> snapLabelArea; // "Snap", painted
     juce::ComboBox snapBox;
     std::unique_ptr<Ruler> ruler;
     std::unique_ptr<TrackNames> trackNames;

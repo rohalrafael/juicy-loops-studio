@@ -16,6 +16,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../plugins/plugin_host.cpp
     ../ui/browser.cpp
     ../ui/channel_rack.cpp
+    ../ui/controls.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp
     ../ui/plugin_menu.cpp
@@ -31,7 +32,8 @@ juce_add_binary_data(JlsFonts SOURCES
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/bricolagegrotesque/BricolageGrotesque.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/sora/Sora.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit.ttf)
+    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexmono/IBMPlexMono-Medium.ttf)
 
 target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_WEB_BROWSER=0

@@ -8,6 +8,9 @@
 #include "model/document.h"
 #include "ui/edit_action.h"
 
+#include "ui/controls.h"
+#include "ui/theme.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -79,7 +82,7 @@ class PianoRollView final : public juce::Component, private juce::Timer
   public:
     static constexpr int rowHeight = 14;
     static constexpr int numPitches = 128;
-    static constexpr int headerHeight = 32;
+    static constexpr int headerHeight = metrics::panelHeaderHeight;
     static constexpr int rulerHeight = 22;
     static constexpr int keyboardWidth = 64;
     static constexpr int velocityHeight = 72;
@@ -171,12 +174,12 @@ class PianoRollView final : public juce::Component, private juce::Timer
     engine::Transport& transport;
     float zoom = 16.0f / model::ticksPerStep; // a step is 16 px
 
-    juce::Label title{{}, "Piano roll"};
-    juce::Label snapLabel{{}, "Snap"};
+    juce::String subtitle;              // the channel and pattern, after the title
+    juce::Rectangle<int> snapLabelArea; // "Snap" and "Scale", painted
+    juce::Rectangle<int> scaleLabelArea;
     juce::ComboBox snapBox;
-    juce::TextButton sliceButton{"Slice"};
+    IconButton sliceButton{Icon::slice, "Slice"};
     juce::ComboBox sliceBox; // piece size, as an id in ticks
-    juce::Label scaleLabel{{}, "Scale"};
     juce::ComboBox rootBox;  // C .. B
     juce::ComboBox scaleBox; // Off / Major / Minor
     std::unique_ptr<Keyboard> keyboard;

@@ -6,6 +6,8 @@
 #include "model/document.h"
 #include "ui/plugin_menu.h"
 
+#include "ui/controls.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <array>
@@ -80,7 +82,6 @@ class MixerView final : public juce::Component
     class Slots;
 
     model::Document& doc;
-    juce::Label title{{}, "Mixer"};
     juce::Viewport viewport;
     juce::Component stripHolder;
     std::vector<std::unique_ptr<MixerStrip>> strips;
@@ -111,12 +112,13 @@ class EffectPanel final : public juce::Component
     model::EffectId effectId = 0;
     std::string builtFor; // effect type the controls were built for
     juce::String heading;
-    juce::TextButton closeButton;
-    juce::ToggleButton enabled{"On"};
+    IconButton closeButton{Icon::close};
+    IconButton enabled{Icon::none, "On"};                   // lit while the effect isn't bypassed
     std::vector<std::unique_ptr<juce::Component>> controls; // Slider or ComboBox per param
     std::vector<std::unique_ptr<juce::Label>> labels;
     juce::ComponentDragger dragger;
     juce::ComponentBoundsConstrainer dragBounds;
+    bool movingPanel = false; // the current press started on the title bar
     int gesture = 0;
 };
 

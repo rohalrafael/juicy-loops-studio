@@ -21,7 +21,7 @@ namespace
 {
 
 constexpr int menuBarHeight = 24;
-constexpr int transportHeight = 40;
+constexpr int transportHeight = ui::metrics::transportControlHeight + 16; // the bar around them
 constexpr int margin = 12;
 
 // Keep keyboard focus on the main component so shortcuts always work.
@@ -61,26 +61,15 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 
     playButton.setTooltip("Play / pause");
     stopButton.setTooltip("Stop and go back to the start");
-    tempoSlider.setTooltip("Tempo: -/+ change it by 1 BPM, click the number to type one");
+    tempoDisplay.setTooltip("Tempo: -/+ or the mouse wheel change it by 1 BPM, click the number "
+                            "to type one");
     playButton.onClick = [&transport] { transport.togglePause(); };
     stopButton.onClick = [&transport] { transport.stop(); };
 
-    tempoSlider.setSliderStyle(juce::Slider::IncDecButtons);
-    // The -/+ buttons step by the range's interval (1 BPM), while typed values keep three
-    // decimals: the snapping function rounds to 0.001 instead of to the interval.
-    juce::NormalisableRange<double> tempoRange(
-        engine::Transport::minTempo, engine::Transport::maxTempo,
-        [](double start, double end, double proportion)
-        { return start + proportion * (end - start); }, [](double start, double end, double value)
-        { return (value - start) / (end - start); }, [](double start, double end, double value)
-        { return std::clamp(std::round(value * 1000.0) / 1000.0, start, end); });
-    tempoRange.interval = 1.0;
-    tempoSlider.setNormalisableRange(tempoRange);
-    tempoSlider.setNumDecimalPlacesToDisplay(3);
-    tempoSlider.setTextValueSuffix(" BPM");
-    tempoSlider.onValueChange = [this]
+    // The -/+ buttons step 1 BPM; typed values keep three decimals.
+    tempoDisplay.setRange(engine::Transport::minTempo, engine::Transport::maxTempo);
+    tempoDisplay.onChange = [this](double bpm)
     {
-        const double bpm = tempoSlider.getValue();
         if (std::abs(bpm - document.project().tempo) > 1.0e-6)
             document.apply([bpm](model::Project& p) { p.tempo = bpm; });
     };
@@ -106,11 +95,12 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
                             "channel. MIDI keyboards always play it.");
     typingButton.onClick = [this] { setTypingKeyboard(typingButton.getToggleState()); };
 
+    ui::joinSegments({&patButton, &songButton});
     positionLabel.setJustificationType(juce::Justification::centred);
-    positionLabel.setFont(juce::FontOptions(18.0f));
+    positionLabel.setFont(ui::displayFont(16.0f));
     positionLabel.setBorderSize({});
-    timeLabel.setJustificationType(juce::Justification::centred);
-    timeLabel.setFont(juce::FontOptions(12.5f));
+    timeLabel.setJustificationType(juce::Justification::centredLeft);
+    timeLabel.setFont(ui::displayFont(12.0f));
     timeLabel.setBorderSize({});
     timeLabel.setTooltip("Time: current / total. The song in SONG mode, the pattern in PAT mode.");
 
@@ -121,7 +111,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
-             &tempoSlider, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
+             &tempoDisplay, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
              &timeLabel, &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
@@ -197,6 +187,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         commandManager.getKeyMappings()->restoreFromXml(*xml);
     commandManager.getKeyMappings()->addChangeListener(this);
     setApplicationCommandManagerToWatch(&commandManager);
+    lookAndFeelChanged();
     updateShortcutHints();
 
     document.onChange = [this] { documentChanged(); };
@@ -423,7 +414,7 @@ void MainComponent::refreshTransportBar()
     }
 
     timeSignatureBox.setSelectedId(project.beatsPerBar, juce::dontSendNotification);
-    tempoSlider.setValue(project.tempo, juce::dontSendNotification);
+    tempoDisplay.setValue(project.tempo);
 }
 
 void MainComponent::setSongMode(bool song)
@@ -709,9 +700,110 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
 void MainComponent::releaseResources() {}
 
+void MainComponent::layoutTransportBar(juce::Rectangle<int> bar)
+{
+    // Groups: mode and pattern | play, stop | tempo, clock | time signature, metronome, keys.
+    // When the window is narrow, the last group loses its labels, then the clock its time, then
+    // the time signature and finally the toggles.
+    constexpr int h = ui::metrics::transportControlHeight;
+    constexpr int gap = ui::metrics::controlGap;
+    constexpr int dividerSpace = 2 * gap + 1;
+    const int playWidth = h * 7 / 5;
+    const int positionWidth = ui::textWidth(ui::displayFont(16.0f), "000:4:4") + 12;
+    const int timeWidth = ui::textWidth(ui::displayFont(12.0f), "00:00.000 / 00:00.000") + 10;
+    metronomeButton.setButtonText("Metronome");
+    typingButton.setButtonText("Keys");
+
+    const auto widths = [&](int stage)
+    {
+        int w = ui::buttonWidth("PAT", h) + ui::buttonWidth("SONG", h) + gap + 150 + gap + h +
+                dividerSpace + 2 * playWidth + gap + dividerSpace + tempoDisplay.preferredWidth(h) +
+                gap + positionWidth + (stage < 2 ? timeWidth : 0);
+        if (stage < 4)
+            w += dividerSpace + (stage < 3 ? ui::metrics::comboWidth - 4 + gap : 0) +
+                 (stage < 1 ? metronomeButton.preferredWidth(h) + typingButton.preferredWidth(h)
+                            : 2 * h) +
+                 gap;
+        return w;
+    };
+    int stage = 0;
+    while (stage < 4 && widths(stage) > bar.getWidth())
+        ++stage;
+    if (stage >= 1)
+    {
+        metronomeButton.setButtonText({});
+        typingButton.setButtonText({});
+    }
+
+    transportDividers.clear();
+    const auto take = [&bar](int width)
+    {
+        auto r = bar.removeFromLeft(width).withSizeKeepingCentre(width, h);
+        bar.removeFromLeft(gap);
+        return r;
+    };
+    const auto divider = [&]
+    {
+        transportDividers.push_back(bar.getX());
+        bar.removeFromLeft(gap + 1);
+    };
+
+    patButton.setBounds(bar.removeFromLeft(ui::buttonWidth("PAT", h))
+                            .withSizeKeepingCentre(ui::buttonWidth("PAT", h), h));
+    songButton.setBounds(take(ui::buttonWidth("SONG", h)));
+    patternBox.setBounds(take(150));
+    newPatternButton.setBounds(take(h));
+    divider();
+    playButton.setBounds(take(playWidth));
+    stopButton.setBounds(take(playWidth));
+    divider();
+    tempoDisplay.setBounds(take(tempoDisplay.preferredWidth(h)));
+    clockBounds = take(positionWidth + (stage < 2 ? timeWidth : 0));
+    {
+        auto clock = clockBounds;
+        positionLabel.setBounds(clock.removeFromLeft(positionWidth));
+        timeLabel.setVisible(stage < 2);
+        timeLabel.setBounds(clock);
+    }
+    timeSignatureBox.setVisible(stage < 3);
+    metronomeButton.setVisible(stage < 4);
+    typingButton.setVisible(stage < 4);
+    if (stage < 4)
+    {
+        divider();
+        if (stage < 3)
+            timeSignatureBox.setBounds(take(ui::metrics::comboWidth - 4));
+        metronomeButton.setBounds(take(metronomeButton.preferredWidth(h)));
+        typingButton.setBounds(take(typingButton.preferredWidth(h)));
+    }
+}
+
+void MainComponent::lookAndFeelChanged()
+{
+    const auto& c = ui::currentTheme().colours;
+    positionLabel.setColour(juce::Label::textColourId, ui::colour(c.displayText));
+    timeLabel.setColour(juce::Label::textColourId, ui::colour(c.displayDim));
+}
+
 void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+
+    // The transport bar: a header-coloured strip, dividers between its groups, the clock's box.
+    const auto& t = ui::currentTheme();
+    const auto bar = transportBarBounds.toFloat().reduced(t.shape.borderWidth / 2.0f);
+    g.setColour(ui::colour(t.colours.header));
+    g.fillRoundedRectangle(bar, t.shape.windowRadius);
+    if (t.shape.borderWidth > 0.0f)
+    {
+        g.setColour(ui::colour(t.colours.outline));
+        g.drawRoundedRectangle(bar, t.shape.windowRadius, t.shape.borderWidth);
+    }
+    g.setColour(ui::colour(t.colours.ledOff));
+    for (int x : transportDividers)
+        g.fillRect(static_cast<float>(x), bar.getCentreY() - 12.0f, 1.0f, 24.0f);
+    if (!clockBounds.isEmpty())
+        ui::paintDisplayBox(g, clockBounds.toFloat());
 }
 
 void MainComponent::resized()
@@ -721,37 +813,8 @@ void MainComponent::resized()
         menuBar->setBounds(bounds.removeFromTop(menuBarHeight));
 
     auto area = bounds.reduced(margin);
-    auto bar = area.removeFromTop(transportHeight);
-
-    // Fits from ~890 px wide; below that the least important controls drop out.
-    patButton.setBounds(bar.removeFromLeft(50));
-    songButton.setBounds(bar.removeFromLeft(58));
-    bar.removeFromLeft(6);
-    patternBox.setBounds(bar.removeFromLeft(130).reduced(0, 4));
-    newPatternButton.setBounds(bar.removeFromLeft(32).reduced(2, 4));
-    bar.removeFromLeft(10);
-    playButton.setBounds(bar.removeFromLeft(64));
-    bar.removeFromLeft(4);
-    stopButton.setBounds(bar.removeFromLeft(64));
-    bar.removeFromLeft(10);
-    tempoSlider.setBounds(bar.removeFromLeft(170));
-    bar.removeFromLeft(6);
-    {
-        // Bar:beat:step with the clock below it.
-        auto clock = bar.removeFromLeft(140);
-        positionLabel.setBounds(clock.removeFromTop(clock.getHeight() * 3 / 5));
-        timeLabel.setBounds(clock);
-    }
-    bar.removeFromLeft(6);
-    const bool roomForRest = bar.getWidth() >= 64 + 4 + 96;
-    timeSignatureBox.setVisible(roomForRest);
-    metronomeButton.setVisible(roomForRest);
-    timeSignatureBox.setBounds(bar.removeFromLeft(64).reduced(0, 4));
-    bar.removeFromLeft(4);
-    metronomeButton.setBounds(bar.removeFromLeft(96));
-    bar.removeFromLeft(4);
-    typingButton.setVisible(roomForRest && bar.getWidth() >= 60);
-    typingButton.setBounds(bar.removeFromLeft(60));
+    transportBarBounds = area.removeFromTop(transportHeight);
+    layoutTransportBar(transportBarBounds.reduced(8, 0));
 
     area.removeFromTop(margin);
     const auto panelsArea = area; // everything below the transport bar
@@ -1328,7 +1391,7 @@ void MainComponent::updateShortcutHints()
         const auto base = props["baseTooltip"].toString();
         const auto text = parts.isEmpty() ? base : base + " (" + parts.joinIntoString(", ") + ")";
         client->setTooltip(text);
-        // Sliders keep a copy in their number box (made when it was created): update it too.
+        // Composite controls (the tempo display) show it on their parts too.
         for (auto* child : component.getChildren())
             if (auto* childClient = dynamic_cast<juce::SettableTooltipClient*>(child))
                 childClient->setTooltip(text);
@@ -1338,10 +1401,10 @@ void MainComponent::updateShortcutHints()
     hint(newPatternButton, {{"", jls::commands::newPattern}});
     hint(playButton, {{"", playPause}});
     hint(stopButton, {{"play/stop", playStop}});
-    hint(tempoSlider, {{"up", tempoUp},
-                       {"down", tempoDown},
-                       {"fine up", tempoUpFine},
-                       {"fine down", tempoDownFine}});
+    hint(tempoDisplay, {{"up", tempoUp},
+                        {"down", tempoDown},
+                        {"fine up", tempoUpFine},
+                        {"fine down", tempoDownFine}});
     hint(metronomeButton, {{"", toggleMetronome}});
     hint(typingButton, {{"", toggleTypingKeyboard}});
     hint(channelRack.loopSwitch(), {{"", toggleRackLoop}});
@@ -1647,7 +1710,7 @@ void MainComponent::timerCallback()
     positionLabel.setText(juce::String(bar) + ":" + juce::String(beat) + ":" + juce::String(step),
                           juce::dontSendNotification);
 
-    playButton.setButtonText(transport.isPlaying() ? "Pause" : "Play");
+    playButton.setIcon(transport.isPlaying() ? ui::Icon::pause : ui::Icon::play);
     metronomeButton.setToggleState(engine.metronome().isEnabled(), juce::dontSendNotification);
 }
 

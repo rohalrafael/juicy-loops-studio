@@ -21,10 +21,10 @@ void noFocus(juce::Component& c)
 
 constexpr int padding = 8;
 constexpr int hardShadowOffset = 5; // themes with a hard shadow draw it in this margin
-constexpr int headerHeight = 30;    // title bar; drag it to move the rack
-constexpr int loopWidth = 20;       // a row's loop switch, between the name and the steps
-constexpr int handleWidth = 12;     // the length handle after the last step column
-constexpr int minStepWidth = 8;     // steps shrink down to this to fit long patterns
+constexpr int headerHeight = metrics::panelHeaderHeight; // title bar; drag it to move the rack
+constexpr int loopWidth = 20;   // a row's loop switch, between the name and the steps
+constexpr int handleWidth = 12; // the length handle after the last step column
+constexpr int minStepWidth = 8; // steps shrink down to this to fit long patterns
 // Everything in a row except the steps.
 constexpr int rowFixedWidth = metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
                               metrics::insertWidth + 4 + metrics::nameWidth + loopWidth;
@@ -919,25 +919,9 @@ void ChannelRack::paint(juce::Graphics& g)
     g.fillRoundedRectangle(panel, radius);
 
     // Title bar: "Channel rack" and the pattern being edited.
-    auto header = panel.removeFromTop(static_cast<float>(headerHeight));
-    {
-        juce::Path top;
-        top.addRoundedRectangle(header.getX(), header.getY(), header.getWidth(), header.getHeight(),
-                                radius, radius, true, true, false, false);
-        g.setColour(colour(t.colours.header));
-        g.fillPath(top);
-        g.setColour(colour(t.colours.outline));
-        g.fillRect(header.removeFromBottom(std::max(1.0f, t.shape.borderWidth)));
-    }
-    auto text = header.reduced(12.0f, 0.0f);
-    g.setColour(colour(t.colours.text));
-    g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    g.drawText("Channel rack", text.removeFromLeft(110.0f), juce::Justification::centredLeft);
-    g.setColour(colour(t.colours.textDim));
-    g.setFont(juce::FontOptions(13.0f));
-    g.drawText(juce::String::fromUTF8(doc.project().current().name.c_str()),
-               text.withTrimmedRight(30.0f + 90.0f + 6.0f + 52.0f),
-               juce::Justification::centredLeft, true);
+    paintPanelHeader(g, panel.removeFromTop(static_cast<float>(headerHeight)).toNearestInt(),
+                     "Channel rack", juce::String::fromUTF8(doc.project().current().name.c_str()),
+                     loopButton.getX() - metrics::controlGap, radius);
 
     panel = getLocalBounds().toFloat();
     if (t.effects.hardShadow)
@@ -964,15 +948,14 @@ void ChannelRack::paintOverChildren(juce::Graphics& g)
 void ChannelRack::resized()
 {
     auto bounds = getLocalBounds();
-    auto header = bounds.removeFromTop(headerHeight);
-    closeButton.setBounds(header.removeFromRight(headerHeight + hardShadowOffset)
-                              .withTrimmedRight(hardShadowOffset)
-                              .reduced(5));
-    auto lengths = header.removeFromRight(3 * 30).reduced(0, 4);
+    HeaderLayout header(bounds.removeFromTop(headerHeight).withTrimmedRight(hardShadowOffset));
+    closeButton.setBounds(header.fromRight(metrics::controlHeight));
+    // 16 | 32 | 64 as one segmented control: the segments touch.
+    const int segment = buttonWidth("64", metrics::controlHeight);
+    auto lengths = header.fromRight(3 * segment);
     for (auto& button : lengthButtons)
-        button.setBounds(lengths.removeFromLeft(30));
-    header.removeFromRight(6);
-    loopButton.setBounds(header.removeFromRight(52).reduced(2, 4));
+        button.setBounds(lengths.removeFromLeft(segment));
+    loopButton.setBounds(header.fromRight(loopButton.preferredWidth(metrics::controlHeight)));
 
     auto area = bounds.reduced(padding);
     area.removeFromRight(hardShadowOffset);

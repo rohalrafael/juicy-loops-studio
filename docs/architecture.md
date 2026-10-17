@@ -406,6 +406,19 @@ listener on all children) and by a timer while the window is active.
 Only layout sizes are fixed (`ui::metrics`). The theme file format is in
 [themes.md](themes.md).
 
+**Controls.** `ui/controls` holds the shared pieces, so every panel lines up:
+- sizes in `ui::metrics`: panel headers 36 px with 26 px controls, the transport bar's 32 px
+  controls, 14 px icons, a 6 px gap
+- `drawIcon()`: vector icons (add, close, play, loop, metronome...), no image files
+- `IconButton`: icon, icon + label or label; toggles show the active colours
+- `joinSegments()`: buttons drawn as one segmented control (PAT | SONG, 16 | 32 | 64)
+- `paintPanelHeader()` + `HeaderLayout`: every panel's header (title, dim subtitle, controls
+  from the right)
+- `paintDisplayBox()` and `TempoDisplay`: the transport's recessed number boxes, with the
+  bundled IBM Plex Mono so digits keep their width
+The `LookAndFeel` draws the rest to match: drop-downs, segment edges, scrollbars, tooltips and
+tree arrows. Mockups of the layout are on the design canvas (option A, "Compact").
+
 **Projects and export.**
 - **Files:** `model::saveProject()` / `loadProject()` convert between `Project` and JSON
   ([project-format.md](project-format.md)). The app does the file I/O and decodes sample files
@@ -461,7 +474,7 @@ shortcuts), `plugins.xml` (scanned plugins). Projects are saved wherever the use
 **Add a themeable property**
 1. Add it to `theme::Theme` (`src/theme/theme.h`) with Juicy's value as the default.
 2. Add it to the parse/serialize tables in `src/theme/theme.cpp`, and to the known-keys list.
-3. Add it to all four built-in theme JSONs (`builtin_themes.cpp`). The tests check that each
+3. Add it to every built-in theme JSON (`builtin_themes.cpp`). The tests check that each
    loads without warnings and that Juicy equals the defaults.
 4. Document it in `docs/themes.md`, then read it via `ui::currentTheme()` in `paint()`.
 

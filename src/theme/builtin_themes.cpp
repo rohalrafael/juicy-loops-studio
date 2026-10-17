@@ -154,6 +154,42 @@ constexpr const char* blueberryJson = R"({
   "effects": { "stepGlow": "#ff4fa366", "ledGlow": false, "hardShadow": false }
 })";
 
+constexpr const char* blackberryJson = R"({
+  "name": "Blackberry",
+  "author": "Juicy Loops Studio",
+  "description": "Sleek near-black with pastel lavender, mint and pink",
+  "formatVersion": 1,
+  "font": "Outfit",
+  "colours": {
+    "background": "#0a0a0d",
+    "panel": "#121216",
+    "panelRaised": "#1b1b21",
+    "header": "#0e0e12",
+    "outline": "#24242c",
+    "text": "#ececf2",
+    "textDim": "#8e8e9c",
+    "accent": "#b9a7ff",
+    "accentAlt": "#9fe8c8",
+    "display": "#070709",
+    "displayText": "#9fe8c8",
+    "displayDim": "#6c6c7a",
+    "stepOff": ["#23232c", "#2b2634"],
+    "stepOn": "#b9a7ff",
+    "playhead": "#f4f2ff",
+    "led": "#9fe8c8",
+    "ledOff": "#26262e",
+    "activeBackground": "#252135",
+    "activeText": "#b9a7ff",
+    "shadow": "#000000a6",
+    "lane": "#0e0e12",
+    "grid": "#1b1b22",
+    "clip": "#f2b5c6",
+    "clipText": "#1b1218"
+  },
+  "shape": { "cornerRadius": 6, "windowRadius": 10, "stepRadius": 4, "borderWidth": 1, "stepOutline": 0 },
+  "effects": { "stepGlow": "#b9a7ff40", "ledGlow": "#9fe8c880", "hardShadow": false }
+})";
+
 Theme load(const char* id, const char* json)
 {
     auto result = parseTheme(json);
@@ -168,10 +204,9 @@ Theme load(const char* id, const char* json)
 const std::vector<Theme>& builtInThemes()
 {
     static const std::vector<Theme> themes{
-        load("juicy", juicyJson),
-        load("citrus", citrusJson),
-        load("watermelon", watermelonJson),
-        load("blueberry", blueberryJson),
+        load("juicy", juicyJson),           load("citrus", citrusJson),
+        load("watermelon", watermelonJson), load("blueberry", blueberryJson),
+        load("blackberry", blackberryJson),
     };
     return themes;
 }

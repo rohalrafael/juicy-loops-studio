@@ -14,6 +14,7 @@
 #include "plugins/plugin_host.h"
 #include "ui/browser.h"
 #include "ui/channel_rack.h"
+#include "ui/controls.h"
 #include "ui/mixer.h"
 #include "ui/piano_roll.h"
 #include "ui/playlist.h"
@@ -46,6 +47,7 @@ class MainComponent final : public juce::AudioAppComponent,
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override; // outline of the focused area
     void resized() override;
+    void lookAndFeelChanged() override; // display colours of the clock
     bool keyPressed(const juce::KeyPress& key) override;
     bool keyStateChanged(bool isKeyDown) override;
     void focusLost(FocusChangeType cause) override;
@@ -94,6 +96,7 @@ class MainComponent final : public juce::AudioAppComponent,
     };
     juce::Component* areaComponent(Area area);
     void setFocusArea(Area area);
+    void layoutTransportBar(juce::Rectangle<int> bar);
     void raiseFocusedArea(); // stacking of the floating Channel Rack follows the focus
     void cycleFocus(int direction);
     void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
@@ -140,15 +143,18 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::TextButton patButton{"PAT"};
     juce::TextButton songButton{"SONG"};
     juce::ComboBox patternBox;
-    juce::TextButton newPatternButton{"+"};
-    juce::TextButton playButton{"Play"};
-    juce::TextButton stopButton{"Stop"};
-    juce::Slider tempoSlider;
+    ui::IconButton newPatternButton{ui::Icon::add};
+    ui::IconButton playButton{ui::Icon::play}; // shows pause while playing
+    ui::IconButton stopButton{ui::Icon::stop};
+    ui::TempoDisplay tempoDisplay;
     juce::ComboBox timeSignatureBox;
-    juce::TextButton metronomeButton{"Metronome"};
-    juce::TextButton typingButton{"Keys"}; // typing keyboard to piano (Ctrl+T)
-    juce::Label positionLabel;
-    juce::Label timeLabel; // clock under the position: current / total time of what's looping
+    ui::IconButton metronomeButton{ui::Icon::metronome, "Metronome"};
+    ui::IconButton typingButton{ui::Icon::keys, "Keys"}; // typing keyboard to piano (Ctrl+T)
+    juce::Label positionLabel;                           // bar:beat:step, in the clock display
+    juce::Label timeLabel; // next to it: current / total time of what's looping
+    // Painted by paint(): the transport bar's background, its dividers and the clock's box.
+    juce::Rectangle<int> transportBarBounds, clockBounds;
+    std::vector<int> transportDividers; // x positions
     ui::PlaylistView playlist;
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
     ui::MixerView mixer;         // docked below them (F9)

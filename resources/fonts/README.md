@@ -9,7 +9,8 @@ licence text is in the `OFL.txt` next to each font.
 | IBM Plex Sans       | Juicy      | Google Fonts, static Regular (400)      |
 | Bricolage Grotesque | Citrus     | Google Fonts, static Regular (400)      |
 | Sora                | Watermelon | Google Fonts, static Regular (400)      |
-| Outfit              | Blueberry  | Google Fonts, static Regular (400)      |
+| Outfit              | Blueberry, Blackberry | Google Fonts, static Regular (400) |
+| IBM Plex Mono       | Displays (tempo, clock) in every theme | Google Fonts, static Medium (500) |
 
 Static instances are used on purpose. The variable versions (as in the google/fonts
 repo) load at their default axis values, which for some families is Thin, and that made

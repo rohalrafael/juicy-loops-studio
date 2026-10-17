@@ -617,9 +617,6 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
       ruler(std::make_unique<Ruler>(*this)), velocityLane(std::make_unique<VelocityLane>(*this)),
       grid(*this)
 {
-    title.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    addAndMakeVisible(title);
-    addAndMakeVisible(snapLabel);
 
     snapBox.addItem("Beat", snapBeat);
     snapBox.addItem("Step", snapStep);
@@ -652,7 +649,6 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     addAndMakeVisible(sliceBox);
 
     // Scale highlight: Off / Major / Minor, on a root note.
-    addAndMakeVisible(scaleLabel);
     scaleBox.addItem("Off", 1);
     scaleBox.addItem("Major", 2);
     scaleBox.addItem("Minor", 3);
@@ -985,12 +981,15 @@ void PianoRollView::refresh()
     const int count = static_cast<int>(notes().size());
     std::erase_if(selection, [count](int i) { return i >= count; });
     const auto* ch = project.findChannel(channel());
-    juce::String text("Piano roll");
+    juce::String text;
     if (ch != nullptr)
-        text << juce::String::fromUTF8(" \xe2\x80\x93 ") << juce::String::fromUTF8(ch->name.c_str())
-             << juce::String::fromUTF8(" \xc2\xb7 ")
+        text << juce::String::fromUTF8(ch->name.c_str()) << juce::String::fromUTF8(" \xc2\xb7 ")
              << juce::String::fromUTF8(project.current().name.c_str());
-    title.setText(text, juce::dontSendNotification);
+    if (text != subtitle)
+    {
+        subtitle = text;
+        repaint(0, 0, getWidth(), headerHeight);
+    }
     scaleBox.setSelectedId(static_cast<int>(project.scale) + 1, juce::dontSendNotification);
     rootBox.setSelectedId(project.scaleRoot + 1, juce::dontSendNotification);
     rootBox.setEnabled(project.scale != model::Scale::none);
@@ -1049,27 +1048,26 @@ void PianoRollView::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
-    auto header = getLocalBounds().removeFromTop(headerHeight);
-    g.setColour(colour(t.colours.header));
-    g.fillRect(header);
-    g.setColour(colour(t.colours.outline));
-    g.fillRect(header.removeFromBottom(1));
+    juce::ignoreUnused(t);
+    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Piano roll", subtitle,
+                     sliceButton.getX() - metrics::controlGap);
+    paintHeaderLabel(g, "Snap", snapLabelArea);
+    paintHeaderLabel(g, "Scale", scaleLabelArea);
 }
 
 void PianoRollView::resized()
 {
     auto area = getLocalBounds();
-    auto header = area.removeFromTop(headerHeight).reduced(10, 4);
-    snapBox.setBounds(header.removeFromRight(90));
-    snapLabel.setBounds(header.removeFromRight(44));
-    header.removeFromRight(12);
-    scaleBox.setBounds(header.removeFromRight(84));
-    rootBox.setBounds(header.removeFromRight(58));
-    scaleLabel.setBounds(header.removeFromRight(46));
-    header.removeFromRight(12);
-    sliceBox.setBounds(header.removeFromRight(78));
-    sliceButton.setBounds(header.removeFromRight(52).reduced(2, 0));
-    title.setBounds(header);
+    HeaderLayout header(area.removeFromTop(headerHeight));
+    snapBox.setBounds(header.fromRight(metrics::comboWidth));
+    snapLabelArea = header.fromRight(headerLabelWidth("Snap"));
+    header.space(metrics::controlGap);
+    scaleBox.setBounds(header.fromRight(metrics::comboWidth));
+    rootBox.setBounds(header.fromRight(metrics::narrowComboWidth));
+    scaleLabelArea = header.fromRight(headerLabelWidth("Scale"));
+    header.space(metrics::controlGap);
+    sliceBox.setBounds(header.fromRight(metrics::comboWidth));
+    sliceButton.setBounds(header.fromRight(sliceButton.preferredWidth(metrics::controlHeight)));
 
     auto top = area.removeFromTop(rulerHeight);
     top.removeFromLeft(keyboardWidth);

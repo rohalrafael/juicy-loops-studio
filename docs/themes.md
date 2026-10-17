@@ -1,7 +1,7 @@
 # Themes
 
-Juicy Loops Studio ships with four themes: **Juicy** (the default), **Citrus**,
-**Watermelon** and **Blueberry**. Pick one under **Options › Theme…**. The choice is
+Juicy Loops Studio ships with five themes: **Juicy** (the default), **Citrus**,
+**Watermelon**, **Blueberry** and **Blackberry** (near-black with pastels). Pick one under **Options › Theme…**. The choice is
 saved in your settings, not in the project.
 
 You can also make your own. A theme is a small JSON file. The quickest start is

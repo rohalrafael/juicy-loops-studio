@@ -1,6 +1,7 @@
 #include "ui/theme.h"
 
 #include "BinaryData.h"
+#include "ui/controls.h"
 
 namespace jls::ui
 {
@@ -97,7 +98,7 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
                                        const juce::Colour& background, bool highlighted, bool down)
 {
     const auto& shape = currentTheme().shape;
-    const auto bounds = button.getLocalBounds().toFloat().reduced(shape.borderWidth / 2.0f);
+    auto bounds = button.getLocalBounds().toFloat().reduced(shape.borderWidth / 2.0f);
 
     auto fill = background;
     if (down)
@@ -105,13 +106,128 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
     else if (highlighted)
         fill = fill.contrasting(0.07f);
 
+    // Segments of a joined control (ui::joinSegments) are square where they meet and share
+    // one border line there.
+    const bool left = button.isConnectedOnLeft();
+    const bool right = button.isConnectedOnRight();
+    if (left)
+        bounds.setLeft(bounds.getX() - shape.borderWidth / 2.0f);
+    juce::Path box;
+    box.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
+                            shape.cornerRadius, shape.cornerRadius, !left, !right, !left, !right);
     g.setColour(fill);
-    g.fillRoundedRectangle(bounds, shape.cornerRadius);
+    g.fillPath(box);
     if (shape.borderWidth > 0.0f)
     {
         g.setColour(colour(currentTheme().colours.outline));
-        g.drawRoundedRectangle(bounds, shape.cornerRadius, shape.borderWidth);
+        g.strokePath(box, juce::PathStrokeType(shape.borderWidth));
     }
+}
+
+juce::Font LookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight)
+{
+    return juce::Font(controlFont(buttonHeight));
+}
+
+void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool, int, int, int, int,
+                               juce::ComboBox& box)
+{
+    const auto& t = currentTheme();
+    const auto bounds =
+        juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
+            .reduced(t.shape.borderWidth / 2.0f);
+    auto fill = colour(t.colours.panelRaised);
+    if (box.isMouseOver(true) && box.isEnabled())
+        fill = fill.contrasting(0.07f);
+    g.setColour(fill);
+    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    if (t.shape.borderWidth > 0.0f)
+    {
+        g.setColour(colour(t.colours.outline));
+        g.drawRoundedRectangle(bounds, t.shape.cornerRadius, t.shape.borderWidth);
+    }
+    const float icon = static_cast<float>(metrics::iconSize);
+    const auto chevron =
+        juce::Rectangle<float>(static_cast<float>(width) - icon - 6.0f,
+                               (static_cast<float>(height) - icon) / 2.0f, icon, icon);
+    drawIcon(g, Icon::chevronDown, chevron,
+             colour(t.colours.textDim).withMultipliedAlpha(box.isEnabled() ? 1.0f : 0.5f));
+}
+
+juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& box)
+{
+    return juce::Font(controlFont(box.getHeight()));
+}
+
+void LookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
+{
+    label.setBounds(metrics::controlPadding - 2, 1,
+                    box.getWidth() - metrics::controlPadding - metrics::iconSize - 6,
+                    box.getHeight() - 2);
+    label.setBorderSize({});
+    label.setFont(getComboBoxFont(box));
+}
+
+void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar&, int x, int y, int width,
+                                int height, bool vertical, int thumbStart, int thumbSize,
+                                bool isMouseOver, bool isMouseDown)
+{
+    const auto& c = currentTheme().colours;
+    auto thumb = vertical ? juce::Rectangle<int>(x, thumbStart, width, thumbSize)
+                          : juce::Rectangle<int>(thumbStart, y, thumbSize, height);
+    const float thickness = isMouseOver || isMouseDown ? 6.0f : 4.0f;
+    auto bar = thumb.toFloat();
+    bar = vertical ? bar.withSizeKeepingCentre(thickness, bar.getHeight() - 4.0f)
+                   : bar.withSizeKeepingCentre(bar.getWidth() - 4.0f, thickness);
+    g.setColour(
+        colour(isMouseDown ? c.textDim : c.panelRaised).brighter(isMouseOver ? 0.25f : 0.1f));
+    g.fillRoundedRectangle(bar, thickness / 2.0f);
+}
+
+void LookAndFeel::drawTreeviewPlusMinusBox(juce::Graphics& g, const juce::Rectangle<float>& area,
+                                           juce::Colour, bool isOpen, bool isMouseOver)
+{
+    const auto& c = currentTheme().colours;
+    const float size = std::min(static_cast<float>(metrics::iconSize), area.getHeight());
+    auto box = area.withSizeKeepingCentre(size, size);
+    juce::Graphics::ScopedSaveState state(g);
+    if (!isOpen) // the chevron points down when open, right when closed
+        g.addTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi,
+                                                       box.getCentreX(), box.getCentreY()));
+    drawIcon(g, Icon::chevronDown, box, colour(isMouseOver ? c.text : c.textDim));
+}
+
+void LookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text, int width, int height)
+{
+    const auto& t = currentTheme();
+    const auto bounds =
+        juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
+            .reduced(0.5f);
+    g.setColour(colour(t.colours.panelRaised));
+    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    g.setColour(colour(t.colours.outline));
+    g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
+    g.setColour(colour(t.colours.text));
+    g.setFont(juce::FontOptions(12.0f));
+    g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4),
+                     juce::Justification::centredLeft, 6);
+}
+
+juce::Rectangle<int> LookAndFeel::getTooltipBounds(const juce::String& tipText,
+                                                   juce::Point<int> screenPos,
+                                                   juce::Rectangle<int> parentArea)
+{
+    juce::TextLayout layout;
+    juce::AttributedString text(tipText);
+    text.setFont(juce::FontOptions(12.0f));
+    layout.createLayoutWithBalancedLineLengths(text, 360.0f);
+    const int w = static_cast<int>(std::ceil(layout.getWidth())) + 18;
+    const int h = static_cast<int>(std::ceil(layout.getHeight())) + 10;
+    return juce::Rectangle<int>(
+               screenPos.x > parentArea.getCentreX() ? screenPos.x - (w + 12) : screenPos.x + 24,
+               screenPos.y > parentArea.getCentreY() ? screenPos.y - (h + 6) : screenPos.y + 6, w,
+               h)
+        .constrainedWithin(parentArea);
 }
 
 void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,

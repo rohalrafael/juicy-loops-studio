@@ -196,6 +196,8 @@ class ChannelRack final : public juce::Component,
     void chooseSampleFor(model::ChannelId id);
     void rename(model::ChannelId id);
     void select(model::ChannelId id);
+    // The channels shown as rows: all but audio-clip channels, unless "Show audio clips" is on.
+    std::vector<const model::Channel*> shownChannels() const;
     // Selects the channel `offset` rows below (negative: above) the selected one.
     void selectOffset(int offset);
     // Loads an audio file into the selected channel (a new channel if none is selected).

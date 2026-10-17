@@ -7,6 +7,9 @@
 #include "model/clipboard.h"
 #include "model/document.h"
 #include "ui/edit_action.h"
+#include "ui/waveform.h"
+
+#include "engine/sample_buffer.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -26,7 +29,9 @@ class PlaylistView;
 //                           all; Delete removes them, Ctrl+A selects all, Esc deselects;
 //                           Ctrl+C / X copy / cut, Ctrl+V pastes after the copied bars
 //   Ctrl + mouse wheel      zoom horizontally
-class PlaylistGrid final : public juce::Component
+class PlaylistGrid final : public juce::Component,
+                           public juce::FileDragAndDropTarget, // samples from the desktop
+                           public juce::DragAndDropTarget      // Browser samples, picker items
 {
   public:
     explicit PlaylistGrid(PlaylistView& owner);
@@ -38,7 +43,17 @@ class PlaylistGrid final : public juce::Component
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override;
 
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void fileDragMove(const juce::StringArray& files, int x, int y) override;
+    void fileDragExit(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
+    bool isInterestedInDragSource(const SourceDetails& details) override;
+    void itemDragMove(const SourceDetails& details) override;
+    void itemDragExit(const SourceDetails& details) override;
+    void itemDropped(const SourceDetails& details) override;
+
   private:
+    void setDropPoint(juce::Point<int> point); // where a drag would land; (-1, -1) = none
     enum class Drag
     {
         none,
@@ -64,6 +79,7 @@ class PlaylistGrid final : public juce::Component
     std::vector<model::Clip> moveOriginals; // the selected clips when the drag started
     int grabStep = 0;
     int grabTrack = 0;
+    juce::Point<int> dropPoint{-1, -1};
 };
 
 // Playlist panel: header with snap setting, bar ruler, track names and the grid.
@@ -106,6 +122,19 @@ class PlaylistView final : public juce::Component, private juce::Timer
 
     model::Document& document() { return doc; }
 
+    // Audio clips. `loadSample` (set by the owner) decodes a file.
+    std::function<std::shared_ptr<const engine::SampleBuffer>(const juce::File&)> loadSample;
+    // Places something at grid position (x, y): "file:<path>" (a sample: becomes an audio clip),
+    // "pattern:<id>" or "audio:<channel id>" (from the picker).
+    void placeAt(const juce::String& what, float x, float y);
+    // Steps an audio clip needs to hold all of its channel's sample at the current tempo.
+    int stepsFor(const model::Channel& channel) const;
+    const Peaks& peaksFor(const engine::SampleBuffer& sample);
+    // What clicking empty space places: an audio-clip channel, or 0 = the selected pattern.
+    model::ChannelId brushAudio = 0;
+    void setPickerVisible(bool shouldShow);
+    bool isPickerVisible() const;
+
     void paint(juce::Graphics& g) override;
     void resized() override;
 
@@ -114,6 +143,7 @@ class PlaylistView final : public juce::Component, private juce::Timer
   private:
     class Ruler;
     class TrackNames;
+    class Picker;
     class SyncedViewport : public juce::Viewport
     {
       public:
@@ -130,8 +160,11 @@ class PlaylistView final : public juce::Component, private juce::Timer
 
     model::Document& doc;
     engine::Transport& transport;
-    model::ClipClipboard clipboard; // Ctrl+C / Ctrl+V
-    float zoom = 4.0f;              // pixels per step: a 4/4 bar is 64 px
+    model::ClipClipboard clipboard;                         // Ctrl+C / Ctrl+V
+    std::map<const engine::SampleBuffer*, Peaks> peakCache; // audio clips' waveforms
+    std::unique_ptr<Picker> picker;
+    juce::TextButton pickerButton{"Picker"};
+    float zoom = 4.0f; // pixels per step: a 4/4 bar is 64 px
 
     juce::Label title{{}, "Playlist"};
     juce::Label snapLabel{{}, "Snap"};

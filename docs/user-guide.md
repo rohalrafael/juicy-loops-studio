@@ -125,6 +125,7 @@ are remembered.
 | Click in the waveform | Play from there to the end |
 | Play / Pause (bottom) | Play the whole sample, pause, and resume where it paused |
 | Drag a sample onto the Channel Rack | Add it as a channel (or onto a row: replace that channel's sample) |
+| Drag a sample onto the Playlist | Place it as an audio clip |
 | Ctrl+click a sample | Load it into the selected channel (the highlighted row in the Channel Rack) |
 | ↑ / ↓ (Browser focused) | Move through the list; samples preview as you land on them |
 | → / ← | Open / close a folder (← on a file goes to its folder) |
@@ -189,10 +190,22 @@ installed, the channel stays silent and keeps them.
 | Ctrl + mouse wheel | Zoom |
 | Snap (top right) | Bar, beat or step |
 | Click / drag the ruler | Move the playhead there (snapped); switches to SONG mode |
+| Drop a sample (from the Browser or your desktop) | Place it as an audio clip, as long as the sample |
+| **Picker** (title bar) | Show / hide the picker: all patterns and audio clips |
+| Click an item in the picker | Make it what clicking empty space places |
+| Drag an item from the picker | Place it where you drop it |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |
 | Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
+
+**Audio clips.** Dropping a sample on the Playlist makes an audio clip: the sample plays at that
+point in the song, shown with its waveform. Move, resize (shorter clips cut the sample off),
+select, copy, paste and delete them like pattern clips. Each sample becomes one audio-clip
+channel, used by all its clips: its volume, pan, mute and mixer track (a new insert) apply to
+all of them. These channels are hidden from the Channel Rack; **View › Channel rack options ›
+Show audio clips** lists them there. Pressing Play (or jumping with the ruler) inside a clip
+plays it from that point; stopping fades it out. Audio clips play in SONG mode only.
 
 ## Piano Roll
 

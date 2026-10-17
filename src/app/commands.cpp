@@ -183,6 +183,11 @@ const std::vector<Definition>& all()
          "Channel rack",
          "Show 64 steps in the Channel Rack",
          {key('3', alt)}},
+        {rackShowAudioClips,
+         "Show audio clips",
+         "Channel rack",
+         "List audio-clip channels in the Channel Rack too (hidden by default)",
+         {}},
 
         {toggleTypingKeyboard,
          "Typing keyboard to piano",

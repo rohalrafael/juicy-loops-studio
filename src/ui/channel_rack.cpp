@@ -725,17 +725,27 @@ void ChannelRack::select(model::ChannelId id)
         doc.setViewState([id](model::Project& p) { p.selectedChannel = id; });
 }
 
+std::vector<const model::Channel*> ChannelRack::shownChannels() const
+{
+    const auto& project = doc.project();
+    std::vector<const model::Channel*> shown;
+    for (const auto& channel : project.channels)
+        if (!channel.audioClip || project.showAudioClips)
+            shown.push_back(&channel);
+    return shown;
+}
+
 void ChannelRack::selectOffset(int offset)
 {
-    const auto& channels = doc.project().channels;
+    const auto channels = shownChannels();
     if (channels.empty())
         return;
-    const auto it = std::find_if(channels.begin(), channels.end(), [this](const model::Channel& c)
-                                 { return c.id == doc.project().selectedChannel; });
+    const auto it = std::find_if(channels.begin(), channels.end(), [this](const model::Channel* c)
+                                 { return c->id == doc.project().selectedChannel; });
     const int index = it == channels.end() ? (offset > 0 ? -1 : static_cast<int>(channels.size()))
                                            : static_cast<int>(it - channels.begin());
     const int next = std::clamp(index + offset, 0, static_cast<int>(channels.size()) - 1);
-    select(channels[static_cast<std::size_t>(next)].id);
+    select(channels[static_cast<std::size_t>(next)]->id);
 }
 
 void ChannelRack::loadIntoSelected(const juce::File& file)
@@ -819,16 +829,17 @@ void ChannelRack::refresh()
 
     // Rebuild rows only if the set or order of channels changed; otherwise update in place
     // (so a knob being dragged isn't destroyed under the mouse).
-    bool sameChannels = rows.size() == project.channels.size();
+    const auto shown = shownChannels();
+    bool sameChannels = rows.size() == shown.size();
     for (std::size_t i = 0; sameChannels && i < rows.size(); ++i)
-        sameChannels = rows[i]->channelId() == project.channels[i].id;
+        sameChannels = rows[i]->channelId() == shown[i]->id;
 
     if (!sameChannels)
     {
         rows.clear();
-        for (const auto& channel : project.channels)
+        for (const auto* channel : shown)
         {
-            rows.push_back(std::make_unique<ChannelRow>(*this, channel.id));
+            rows.push_back(std::make_unique<ChannelRow>(*this, channel->id));
             addAndMakeVisible(*rows.back());
         }
         lastPlayingStep = -2;
@@ -838,7 +849,7 @@ void ChannelRack::refresh()
     const int width = stepWidth();
     for (std::size_t i = 0; i < rows.size(); ++i)
     {
-        rows[i]->update(project.channels[i], project);
+        rows[i]->update(*shown[i], project);
         rows[i]->setStepWidth(width);
     }
 
@@ -876,7 +887,7 @@ int ChannelRack::preferredWidth() const
 
 int ChannelRack::preferredHeight() const
 {
-    const int n = static_cast<int>(doc.project().channels.size());
+    const int n = static_cast<int>(shownChannels().size());
     return hardShadowOffset + headerHeight + padding * 2 +
            n * (metrics::rowHeight + metrics::rowGap) + metrics::rowHeight;
 }

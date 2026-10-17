@@ -146,13 +146,6 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
-- **Audio clips in the Playlist:** dropping a sample on the Playlist places a clip showing its
-  waveform. **Decided (user, 2026-10-17): option (b)** — each audio source is a channel internally
-  (reuses mixer routing, knobs, mute, live audition, later automation and a channel settings
-  window) but **hidden from the Channel Rack by default**, with a "Show audio clips" filter.
-  (Rejected: a separate source list.) An FL-style **picker panel** in the Playlist lists all
-  patterns and audio clips to drag from. The engine must start a clip part-way in (play/seek into
-  the middle of a clip), not only from its beginning.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log
@@ -378,6 +371,14 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   stays Ctrl+Shift+Up/Down). Focus order setting: Fixed or Last used first (Alt+Tab-like, commits
   on modifier release). Fixed: the Settings window's Browser section wasn't shown (an unmatched
   edit); it and a Focus section are there now.
+
+- 2026-10-17: Audio clips (backlog, option b). Engine: song-time sample clips, mid-clip start on
+  play/jump (`collectClipsUnderPlayhead`), cut at clip end and on stop/jump with a 128-sample fade
+  (`Sampler::triggerClip/stopClips`). Model: `Channel::audioClip`, `Clip::audio`, one channel per
+  file (`audioClipChannel`), hidden in the rack (View > Channel rack options > Show audio clips).
+  Playlist: drop files / Browser samples, waveform drawing, picker panel (patterns + audio
+  clips; click = brush, drag = place). Song mode only; no time-stretching (tempo changes move the
+  clip's grid position, not the sample's speed); no left-edge trim/offset yet.
 
 ## Dev environment notes
 

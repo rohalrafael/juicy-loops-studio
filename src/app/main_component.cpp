@@ -132,6 +132,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.onSideChanged = [this] { resized(); };
     browser.onClose = [this] { toggleBrowser(); };
     browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
+    playlist.loadSample = [this](const juce::File& file) { return sampleLoader.load(file); };
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
     addChildComponent(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
@@ -773,8 +774,9 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
              jls::commands::showPianoRoll, jls::commands::toggleMixer, jls::commands::toggleBrowser,
              jls::commands::browserSwitchSide, jls::commands::browserAddFolder, 0});
         juce::PopupMenu rack;
-        for (int id : {jls::commands::toggleRackLoop, jls::commands::rackShow16,
-                       jls::commands::rackShow32, jls::commands::rackShow64})
+        for (int id :
+             {jls::commands::toggleRackLoop, jls::commands::rackShow16, jls::commands::rackShow32,
+              jls::commands::rackShow64, jls::commands::rackShowAudioClips})
             rack.addCommandItem(&commandManager, id);
         menu.addSubMenu("Channel rack options", rack);
         break;
@@ -905,6 +907,9 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
         break;
     case toggleTypingKeyboard:
         info.setTicked(liveInput.isTypingEnabled());
+        break;
+    case rackShowAudioClips:
+        info.setTicked(project.showAudioClips);
         break;
     default:
         break;
@@ -1098,6 +1103,9 @@ bool MainComponent::perform(const InvocationInfo& info)
 
     case toggleTypingKeyboard:
         setTypingKeyboard(!liveInput.isTypingEnabled());
+        break;
+    case rackShowAudioClips:
+        document.setViewState([](model::Project& p) { p.showAudioClips = !p.showAudioClips; });
         break;
 
     case showSettings:

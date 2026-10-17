@@ -203,6 +203,23 @@ for each chunk:
   them as live events (`Engine::sendLive()`) to the selected channel, so they play instruments
   and samples exactly like the typing keyboard.
 
+### Audio clips
+
+- **Model:** an audio clip is a `Clip` with `audio` set to a `Channel` whose `audioClip` flag is
+  on (`Project::audioClipChannel()` makes or reuses one per file). The channel brings the mixer
+  routing, volume, pan and mute; the Channel Rack hides it unless `Project::showAudioClips`.
+- **Snapshot:** `ClipState::audioChannel` (index) instead of `patternIndex`.
+- **Timing:** `collectTriggers` emits one `Trigger` (`audioClip`, `lengthTicks`) when a clip
+  starts. When playback starts or jumps, `collectClipsUnderPlayhead()` finds clips already
+  running at the playhead and `clipOffsetTicks` says how far in. The engine converts ticks to
+  seconds at the current tempo and calls `Sampler::triggerClip()` (start frame, maximum length).
+- **Ending:** clip voices count down `remaining` output samples and fade out over the last
+  128; `Sampler::stopClips()` (on stop or a jump) shortens every clip voice to that fade.
+  Ordinary sample triggers still ring out.
+- **UI:** the Playlist grid is a drop target for files (desktop or Browser) and for picker
+  items (`"pattern:<id>"`, `"audio:<id>"`); `PlaylistView::placeAt()` handles all of them. The
+  waveform peaks come from `ui/waveform.h`, cached per sample.
+
 ### Instruments and note-offs
 
 A channel can be played by a plugin instrument (`Channel::pluginId` set) instead of a sample.

@@ -73,6 +73,7 @@ enum ID : juce::CommandID
     rackShow16,
     rackShow32,
     rackShow64,
+    rackShowAudioClips,
 
     // Input
     toggleTypingKeyboard = 0x1701,

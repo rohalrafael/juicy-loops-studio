@@ -5,6 +5,7 @@
 #include "ui/browser.h"
 
 #include "ui/theme.h"
+#include "ui/waveform.h"
 
 namespace jls::ui
 {
@@ -124,27 +125,8 @@ class BrowserPanel::Waveform final : public juce::Component, public juce::Settab
     void setSample(const engine::SampleBuffer* sample)
     {
         // Min/max per bucket, computed once, so drawing stays cheap for long files.
-        peaks.clear();
         frames = sample != nullptr ? sample->numFrames() : 0;
-        if (frames > 0)
-        {
-            constexpr int buckets = 1024;
-            peaks.resize(buckets);
-            for (int b = 0; b < buckets; ++b)
-            {
-                const int from = static_cast<int>(static_cast<long long>(frames) * b / buckets);
-                const int to = std::max(
-                    from + 1, static_cast<int>(static_cast<long long>(frames) * (b + 1) / buckets));
-                float low = 0.0f, high = 0.0f;
-                for (const auto& channel : sample->channels)
-                    for (int i = from; i < to && i < frames; ++i)
-                    {
-                        low = std::min(low, channel[static_cast<std::size_t>(i)]);
-                        high = std::max(high, channel[static_cast<std::size_t>(i)]);
-                    }
-                peaks[static_cast<std::size_t>(b)] = {low, high};
-            }
-        }
+        peaks = sample != nullptr ? computePeaks(*sample) : Peaks{};
         position = -1.0;
         repaint();
     }
@@ -198,7 +180,7 @@ class BrowserPanel::Waveform final : public juce::Component, public juce::Settab
     }
 
   private:
-    std::vector<std::pair<float, float>> peaks;
+    Peaks peaks;
     int frames = 0;
     double position = -1.0;
 };

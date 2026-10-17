@@ -20,6 +20,12 @@ enum SnapId
     snapStep,
 };
 
+// Audio clips: the pattern-clip colour leaning towards the second accent, so they stand out.
+juce::Colour audioClipColour(const theme::Theme& t)
+{
+    return colour(t.colours.clip).interpolatedWith(colour(t.colours.accentAlt), 0.35f);
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------- Ruler / names
@@ -213,20 +219,25 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
-    // Empty space: place the selected pattern here, then keep dragging it.
+    // Empty space: place the selected pattern (or the audio clip chosen in the picker) here,
+    // then keep dragging it.
     const int track = view.trackAtY(e.position.y);
     if (track < 0 || track >= doc.project().playlist.numTracks)
         return;
     const int snap = view.snapSteps();
     const int start = view.stepAtX(e.position.x) / snap * snap;
+    const auto* audio = doc.project().findChannel(view.brushAudio);
+    const auto audioId = audio != nullptr && audio->audioClip ? audio->id : 0;
+    const int audioSteps = audioId != 0 ? view.stepsFor(*audio) : 0;
     doc.apply(
-        [track, start](model::Project& p)
+        [track, start, audioId, audioSteps](model::Project& p)
         {
             model::Clip clip;
             clip.pattern = p.current().id;
             clip.track = track;
             clip.startStep = start;
-            clip.lengthInSteps = p.lengthInSteps(p.current());
+            clip.lengthInSteps = audioId != 0 ? audioSteps : p.lengthInSteps(p.current());
+            clip.audio = audioId;
             p.playlist.clips.push_back(clip);
         },
         gestureId);
@@ -373,6 +384,18 @@ void PlaylistGrid::paint(juce::Graphics& g)
         g.drawRect(band, 1.0f);
     }
 
+    // Where a dragged sample or picker item would land.
+    if (dropPoint.x >= 0)
+    {
+        const int snap = view.snapSteps();
+        const int step = view.stepAtX(static_cast<float>(dropPoint.x)) / snap * snap;
+        const int track = view.trackAtY(static_cast<float>(dropPoint.y));
+        g.setColour(colour(t.colours.accentAlt).withAlpha(0.35f));
+        g.fillRect(view.xForStep(step),
+                   static_cast<float>(track * PlaylistView::trackHeight) + 2.0f,
+                   view.xForStep(project.stepsPerBar()), PlaylistView::trackHeight - 5.0f);
+    }
+
     if (project.playlist.clips.empty())
     {
         g.setColour(colour(t.colours.textDim));
@@ -391,6 +414,68 @@ void PlaylistGrid::paint(juce::Graphics& g)
     }
 }
 
+// Dropping samples (from the desktop or the Browser) and picker items onto the grid.
+bool PlaylistGrid::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    for (const auto& f : files)
+        if (juce::File(f).hasFileExtension("wav;aif;aiff;flac;ogg;mp3"))
+            return true;
+    return false;
+}
+
+void PlaylistGrid::fileDragMove(const juce::StringArray&, int x, int y)
+{
+    setDropPoint({x, y});
+}
+
+void PlaylistGrid::fileDragExit(const juce::StringArray&)
+{
+    setDropPoint({-1, -1});
+}
+
+void PlaylistGrid::filesDropped(const juce::StringArray& files, int x, int y)
+{
+    setDropPoint({-1, -1});
+    // Several files go onto consecutive tracks.
+    int track = 0;
+    for (const auto& f : files)
+        if (juce::File(f).hasFileExtension("wav;aif;aiff;flac;ogg;mp3"))
+            view.placeAt("file:" + f, static_cast<float>(x),
+                         static_cast<float>(y + PlaylistView::trackHeight * track++));
+}
+
+bool PlaylistGrid::isInterestedInDragSource(const SourceDetails& details)
+{
+    const auto what = details.description.toString();
+    return what.startsWith("file:") || what.startsWith("pattern:") || what.startsWith("audio:");
+}
+
+void PlaylistGrid::itemDragMove(const SourceDetails& details)
+{
+    setDropPoint(details.localPosition);
+}
+
+void PlaylistGrid::itemDragExit(const SourceDetails&)
+{
+    setDropPoint({-1, -1});
+}
+
+void PlaylistGrid::itemDropped(const SourceDetails& details)
+{
+    setDropPoint({-1, -1});
+    view.placeAt(details.description.toString(), static_cast<float>(details.localPosition.x),
+                 static_cast<float>(details.localPosition.y));
+}
+
+void PlaylistGrid::setDropPoint(juce::Point<int> point)
+{
+    if (point != dropPoint)
+    {
+        dropPoint = point;
+        repaint();
+    }
+}
+
 juce::Rectangle<float> PlaylistGrid::clipBounds(const model::Clip& clip) const
 {
     return juce::Rectangle<float>(view.xForStep(clip.startStep),
@@ -404,6 +489,54 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
 {
     const auto& t = currentTheme();
     const auto& project = view.document().project();
+    if (clip.isAudio())
+    {
+        // An audio clip: its channel's name and the sample's waveform, at the sample's real
+        // length for the current tempo (silence after it if the clip is longer).
+        const auto* channel = project.findChannel(clip.audio);
+        if (channel == nullptr)
+            return;
+        const auto bounds = clipBounds(clip);
+        if (!g.getClipBounds().toFloat().intersects(bounds))
+            return;
+        const float radius = std::min(t.shape.cornerRadius, 6.0f);
+        g.setColour(audioClipColour(t));
+        g.fillRoundedRectangle(bounds, radius);
+        if (selected)
+        {
+            g.setColour(colour(t.colours.accentAlt));
+            g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
+        }
+        juce::Graphics::ScopedSaveState state(g);
+        g.reduceClipRegion(bounds.toNearestInt());
+        auto body = bounds;
+        const auto strip = body.removeFromTop(13.0f);
+        g.setColour(juce::Colours::black.withAlpha(0.18f));
+        g.fillRect(strip);
+        g.setColour(colour(t.colours.clipText));
+        g.setFont(juce::FontOptions(11.0f));
+        g.drawText(juce::String::fromUTF8(channel->name.c_str()), strip.reduced(4.0f, 0.0f),
+                   juce::Justification::centredLeft, true);
+        if (channel->sample != nullptr && channel->sample->numFrames() > 0)
+        {
+            const auto& peaks = const_cast<PlaylistView&>(view).peaksFor(*channel->sample);
+            const double seconds = channel->sample->numFrames() / channel->sample->sampleRate;
+            const float width = view.xForStep(seconds / project.secondsPerStep());
+            const float mid = body.getCentreY();
+            const float half = body.getHeight() / 2.0f - 1.0f;
+            g.setColour(colour(t.colours.clipText).withAlpha(0.8f));
+            const int columns = static_cast<int>(std::min(width, bounds.getWidth()));
+            for (int x = 0; x < columns; ++x)
+            {
+                const auto& [low, high] = peaks[static_cast<std::size_t>(
+                    std::min<long long>(static_cast<long long>(peaks.size()) - 1,
+                                        static_cast<long long>(x / width * peaks.size())))];
+                g.fillRect(bounds.getX() + x, mid - high * half, 1.0f,
+                           std::max(1.0f, (high - low) * half));
+            }
+        }
+        return;
+    }
     const auto* pattern = project.findPattern(clip.pattern);
     if (pattern == nullptr)
         return;
@@ -472,6 +605,125 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
     }
 }
 
+// ------------------------------------------------------------------------------------ Picker
+
+// FL's picker panel: every pattern and audio clip. Click one to make it what clicking in the
+// grid places; drag one into the grid to place it there.
+class PlaylistView::Picker final : public juce::Component
+{
+  public:
+    static constexpr int width = 130;
+    static constexpr int rowHeight = 22;
+
+    explicit Picker(PlaylistView& v) : view(v) {}
+
+    void paint(juce::Graphics& g) override
+    {
+        const auto& t = currentTheme();
+        g.fillAll(colour(t.colours.panel));
+        g.setColour(colour(t.colours.outline));
+        g.fillRect(getWidth() - 1, 0, 1, getHeight());
+        const auto& project = view.doc.project();
+        int y = 0;
+        const auto heading = [&](const char* text)
+        {
+            g.setColour(colour(t.colours.textDim));
+            g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            g.drawText(text, 8, y, getWidth() - 12, rowHeight, juce::Justification::centredLeft);
+            y += rowHeight;
+        };
+        const auto row = [&](const std::string& name, bool chosen, juce::Colour swatch)
+        {
+            if (chosen)
+            {
+                g.setColour(colour(t.colours.activeBackground));
+                g.fillRect(2, y + 1, getWidth() - 5, rowHeight - 2);
+            }
+            g.setColour(swatch);
+            g.fillRoundedRectangle(8.0f, y + 6.0f, 8.0f, rowHeight - 12.0f, 2.0f);
+            g.setColour(colour(chosen ? t.colours.activeText : t.colours.text));
+            g.setFont(juce::FontOptions(12.5f));
+            g.drawText(juce::String::fromUTF8(name.c_str()), 22, y, getWidth() - 26, rowHeight,
+                       juce::Justification::centredLeft, true);
+            y += rowHeight;
+        };
+        heading("PATTERNS");
+        for (const auto& pattern : project.patterns)
+            row(pattern.name, view.brushAudio == 0 && pattern.id == project.currentPattern,
+                colour(t.colours.clip));
+        y += 6;
+        heading("AUDIO CLIPS");
+        bool any = false;
+        for (const auto& channel : project.channels)
+            if (channel.audioClip)
+            {
+                row(channel.name, view.brushAudio == channel.id, audioClipColour(t));
+                any = true;
+            }
+        if (!any)
+        {
+            g.setColour(colour(t.colours.textDim));
+            g.setFont(juce::FontOptions(11.5f));
+            g.drawFittedText("Drop samples on the Playlist", 8, y, getWidth() - 12, rowHeight * 2,
+                             juce::Justification::topLeft, 2);
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override { pressed = itemAt(e.y); }
+
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        if (pressed.isEmpty() || e.getDistanceFromDragStart() < 6 || dragging)
+            return;
+        if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor(this))
+        {
+            dragging = true;
+            container->startDragging(pressed, this);
+        }
+    }
+
+    void mouseUp(const juce::MouseEvent&) override
+    {
+        if (!dragging && pressed.isNotEmpty())
+        {
+            // Choose what clicking in the grid places.
+            if (pressed.startsWith("audio:"))
+                view.brushAudio = static_cast<model::ChannelId>(
+                    pressed.fromFirstOccurrenceOf(":", false, false).getLargeIntValue());
+            else
+            {
+                view.brushAudio = 0;
+                const auto id = static_cast<model::PatternId>(
+                    pressed.fromFirstOccurrenceOf(":", false, false).getLargeIntValue());
+                if (view.doc.project().currentPattern != id)
+                    view.doc.setViewState([id](model::Project& p) { p.currentPattern = id; });
+            }
+            repaint();
+        }
+        pressed.clear();
+        dragging = false;
+    }
+
+  private:
+    // "pattern:<id>" / "audio:<id>" for the row at y, or empty.
+    juce::String itemAt(int y) const
+    {
+        const auto& project = view.doc.project();
+        int row = y / rowHeight - 1; // after the PATTERNS heading
+        if (row >= 0 && row < static_cast<int>(project.patterns.size()))
+            return "pattern:" + juce::String(project.patterns[static_cast<std::size_t>(row)].id);
+        row = (y - 6) / rowHeight - static_cast<int>(project.patterns.size()) - 2;
+        for (const auto& channel : project.channels)
+            if (channel.audioClip && row-- == 0)
+                return "audio:" + juce::String(channel.id);
+        return {};
+    }
+
+    PlaylistView& view;
+    juce::String pressed;
+    bool dragging = false;
+};
+
 // ------------------------------------------------------------------------------ PlaylistView
 
 PlaylistView::PlaylistView(model::Document& document, engine::Transport& transportToShow)
@@ -500,6 +752,16 @@ PlaylistView::PlaylistView(model::Document& document, engine::Transport& transpo
     addAndMakeVisible(viewport);
     addAndMakeVisible(*ruler);
     addAndMakeVisible(*trackNames);
+
+    picker = std::make_unique<Picker>(*this);
+    addAndMakeVisible(*picker);
+    pickerButton.setClickingTogglesState(true);
+    pickerButton.setToggleState(true, juce::dontSendNotification);
+    pickerButton.setTooltip("Show the picker: all patterns and audio clips");
+    pickerButton.onClick = [this] { setPickerVisible(pickerButton.getToggleState()); };
+    pickerButton.setWantsKeyboardFocus(false);
+    pickerButton.setMouseClickGrabsKeyboardFocus(false);
+    addAndMakeVisible(pickerButton);
 
     refresh();
     startTimerHz(30);
@@ -554,6 +816,90 @@ double PlaylistView::playheadStep() const
     return songLength > 0 ? std::fmod(position, static_cast<double>(songLength)) : position;
 }
 
+void PlaylistView::setPickerVisible(bool shouldShow)
+{
+    picker->setVisible(shouldShow);
+    pickerButton.setToggleState(shouldShow, juce::dontSendNotification);
+    resized();
+}
+
+bool PlaylistView::isPickerVisible() const
+{
+    return picker->isVisible();
+}
+
+int PlaylistView::stepsFor(const model::Channel& channel) const
+{
+    if (channel.sample == nullptr || channel.sample->numFrames() == 0)
+        return doc.project().stepsPerBar();
+    const double seconds = channel.sample->numFrames() / channel.sample->sampleRate;
+    return std::max(1,
+                    static_cast<int>(std::ceil(seconds / doc.project().secondsPerStep() - 1e-6)));
+}
+
+const Peaks& PlaylistView::peaksFor(const engine::SampleBuffer& sample)
+{
+    auto it = peakCache.find(&sample);
+    if (it == peakCache.end())
+        it = peakCache.emplace(&sample, computePeaks(sample)).first;
+    return it->second;
+}
+
+void PlaylistView::placeAt(const juce::String& what, float x, float y)
+{
+    const int track = trackAtY(y);
+    if (track < 0 || track >= doc.project().playlist.numTracks)
+        return;
+    const int snap = std::max(1, snapSteps());
+    const int start = std::max(0, stepAtX(x) / snap * snap);
+    const auto id = what.fromFirstOccurrenceOf(":", false, false);
+
+    model::Clip clip;
+    clip.track = track;
+    clip.startStep = start;
+    if (what.startsWith("pattern:"))
+    {
+        const auto* pattern =
+            doc.project().findPattern(static_cast<model::PatternId>(id.getLargeIntValue()));
+        if (pattern == nullptr)
+            return;
+        clip.pattern = pattern->id;
+        clip.lengthInSteps = doc.project().lengthInSteps(*pattern);
+        doc.apply([clip](model::Project& p) { p.playlist.clips.push_back(clip); });
+        return;
+    }
+    if (what.startsWith("audio:"))
+    {
+        const auto* channel =
+            doc.project().findChannel(static_cast<model::ChannelId>(id.getLargeIntValue()));
+        if (channel == nullptr)
+            return;
+        clip.audio = channel->id;
+        clip.lengthInSteps = stepsFor(*channel);
+        doc.apply([clip](model::Project& p) { p.playlist.clips.push_back(clip); });
+        return;
+    }
+    if (what.startsWith("file:") && loadSample)
+    {
+        // A sample: its audio-clip channel (one per file), and a clip as long as the sample.
+        const juce::File file(id);
+        auto sample = loadSample(file);
+        if (sample == nullptr)
+            return;
+        const auto path = file.getFullPathName().toStdString();
+        const auto name = file.getFileNameWithoutExtension().toStdString();
+        doc.apply(
+            [&, sample](model::Project& p)
+            {
+                clip.audio = p.audioClipChannel(path, name, sample);
+                clip.lengthInSteps = stepsFor(*p.findChannel(clip.audio));
+                p.playlist.clips.push_back(clip);
+            });
+        brushAudio = clip.audio; // clicking places more of it, as in FL
+        picker->repaint();
+    }
+}
+
 bool PlaylistView::isSelected(int clip) const
 {
     return std::find(selection.begin(), selection.end(), clip) != selection.end();
@@ -584,8 +930,12 @@ bool PlaylistView::edit(EditAction action)
             return true;
         // Right after the copied bars (or the last paste); the pasted clips get selected.
         auto pasted = model::nextPaste(clipboard);
-        std::erase_if(pasted, [this](const model::Clip& c)
-                      { return doc.project().findPattern(c.pattern) == nullptr; });
+        std::erase_if(pasted,
+                      [this](const model::Clip& c)
+                      {
+                          return c.isAudio() ? doc.project().findChannel(c.audio) == nullptr
+                                             : doc.project().findPattern(c.pattern) == nullptr;
+                      });
         const int first = static_cast<int>(doc.project().playlist.clips.size());
         doc.apply(
             [pasted](model::Project& p)
@@ -648,6 +998,9 @@ void PlaylistView::refresh()
     // Undo/redo or other edits may have removed clips: forget what no longer exists.
     const int count = static_cast<int>(doc.project().playlist.clips.size());
     std::erase_if(selection, [count](int i) { return i >= count; });
+    if (doc.project().findChannel(brushAudio) == nullptr)
+        brushAudio = 0;
+    picker->repaint();
     updateGridSize();
     grid.repaint();
     ruler->repaint();
@@ -696,9 +1049,12 @@ void PlaylistView::resized()
     auto area = getLocalBounds();
     auto header = area.removeFromTop(headerHeight).reduced(10, 4);
     title.setBounds(header.removeFromLeft(100));
+    pickerButton.setBounds(header.removeFromLeft(64).reduced(0, 1));
     snapBox.setBounds(header.removeFromRight(80));
     snapLabel.setBounds(header.removeFromRight(44));
 
+    if (picker->isVisible())
+        picker->setBounds(area.removeFromLeft(Picker::width));
     auto top = area.removeFromTop(rulerHeight);
     top.removeFromLeft(trackNameWidth);
     ruler->setBounds(top);

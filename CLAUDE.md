@@ -148,17 +148,18 @@ Requested by the user, not started yet (newest first). Ask before starting one u
 
 - **Browser panel (file explorer), like FL's:** dockable on the left or the right; add folders
   to it and drag samples from it onto the Channel Rack (new channel / replace sample), the
-  Playlist, etc. Previews (user's design): **click = short preview** (first few seconds, e.g. 5 s,
+  Playlist, etc. Previews (user's design): **click = short preview** (first **5 s**, user-confirmed default,
   adjustable in Settings) so very long files don't play for ages; **Shift+click = play the whole
   sample** (a command, so rebindable); a **play/pause button** by the waveform at the bottom of
   the panel; selecting a sample shows its waveform, clicking in it plays from there.
 - **Audio clips in the Playlist:** dropping a sample on the Playlist places a clip showing its
-  waveform. Proposed (user prefers it over FL's audio-clip channels; awaiting go-ahead): audio
-  **sources** are their own list in the project, *not* Channel Rack channels; each source keeps
-  what a channel would give it (mixer track, volume, pan; edited from the clip's menu); an
-  FL-style **picker panel** in the Playlist lists all patterns and audio clips to drag from.
-  Reuse the sampler + mixer routing internally. Needed either way: the engine must start a clip
-  part-way in (play/seek into the middle of a clip), not only from its beginning.
+  waveform. Open decision: (a) audio **sources** as their own list, *not* channels (user's first
+  preference), or (b) suggested middle ground: channels internally (reuses mixer routing, knobs,
+  mute, live audition, later automation and a channel settings window) but **hidden from the
+  Channel Rack by default**, with a "Show audio clips" filter. Either way each source has a mixer
+  track, volume and pan, and an FL-style **picker panel** in the Playlist lists all patterns and
+  audio clips to drag from. Needed either way: the engine must start a clip part-way in
+  (play/seek into the middle of a clip), not only from its beginning.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log

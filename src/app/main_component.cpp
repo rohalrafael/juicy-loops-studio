@@ -36,7 +36,8 @@ void noFocus(juce::Component& c)
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), pluginHost(themeManager.themesFolder().getParentDirectory()),
       document(model::makeDefaultProject()), playlist(document, engine.transport()),
-      pianoRoll(document, engine.transport()), mixer(document), effectPanel(document),
+      pianoRoll(document, engine.transport()), mixer(document),
+      browser(engine.preview(), themeManager.settingsFile()), effectPanel(document),
       projectFolder(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)),
       channelRack(document, engine.transport(), sampleLoader)
 {
@@ -125,6 +126,11 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
     addChildComponent(mixer);
+    addChildComponent(browser);
+    browser.setVisible(themes.settingsFile().getBoolValue("browserVisible", true));
+    browser.previewSeconds = [this] { return ui::settings::previewSeconds(themes.settingsFile()); };
+    browser.onSideChanged = [this] { resized(); };
+    browser.onClose = [this] { toggleBrowser(); };
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
     addChildComponent(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
@@ -474,6 +480,13 @@ void MainComponent::showPianoRoll()
     menuItemsChanged();
 }
 
+void MainComponent::toggleBrowser()
+{
+    browser.setVisible(!browser.isVisible());
+    themes.settingsFile().setValue("browserVisible", browser.isVisible());
+    resized();
+}
+
 void MainComponent::toggleMixer()
 {
     mixer.setVisible(!mixer.isVisible());
@@ -549,6 +562,17 @@ void MainComponent::resized()
     typingButton.setBounds(bar.removeFromLeft(60));
 
     area.removeFromTop(margin);
+    if (browser.isVisible())
+    {
+        // Full height next to everything below the transport bar.
+        browser.setBounds(browser.onRight()
+                              ? area.removeFromRight(ui::BrowserPanel::preferredWidth)
+                              : area.removeFromLeft(ui::BrowserPanel::preferredWidth));
+        if (browser.onRight())
+            area.removeFromRight(margin / 2);
+        else
+            area.removeFromLeft(margin / 2);
+    }
     if (mixer.isVisible())
     {
         const int height = std::min(ui::MixerView::preferredHeight, area.getHeight() / 2);
@@ -625,7 +649,8 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     case 3:
     {
         add({jls::commands::showPlaylist, jls::commands::toggleChannelRack,
-             jls::commands::showPianoRoll, jls::commands::toggleMixer, 0});
+             jls::commands::showPianoRoll, jls::commands::toggleMixer, jls::commands::toggleBrowser,
+             jls::commands::browserSwitchSide, jls::commands::browserAddFolder, 0});
         juce::PopupMenu rack;
         for (int id : {jls::commands::toggleRackLoop, jls::commands::rackShow16,
                        jls::commands::rackShow32, jls::commands::rackShow64})
@@ -732,6 +757,12 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
         break;
     case jls::commands::toggleMixer:
         info.setTicked(mixer.isVisible());
+        break;
+    case jls::commands::toggleBrowser:
+        info.setTicked(browser.isVisible());
+        break;
+    case browserSwitchSide:
+        info.setTicked(browser.onRight());
         break;
     case toggleRackLoop:
         info.setTicked(project.loopChannels);
@@ -855,6 +886,18 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case jls::commands::toggleMixer:
         toggleMixer();
+        break;
+    case jls::commands::toggleBrowser:
+        toggleBrowser();
+        break;
+    case browserSwitchSide:
+        browser.setOnRight(!browser.onRight());
+        break;
+    case browserAddFolder:
+        browser.chooseFolderToAdd();
+        break;
+    case previewPlayPause:
+        browser.playPause();
         break;
 
     case sliceNotes:

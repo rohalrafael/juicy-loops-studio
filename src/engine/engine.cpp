@@ -5,7 +5,8 @@
 //      triggers on instrument channels (and the ends of held notes) into note events
 //   4. render instruments with their events, add them into their mixer-track buses
 //   5. run each insert's effects + fader/pan + meter, sum into the Master
-//   6. Master effects + fader/pan + meter, add to the output; metronome on top
+//   6. Master effects + fader/pan + meter, add to the output; metronome and Browser preview
+//      on top
 
 #include "engine/engine.h"
 
@@ -44,6 +45,7 @@ void Engine::prepare(double newSampleRate, int maxBlockSize)
     maxBlock = std::max(64, maxBlockSize);
     sampler.prepare(newSampleRate);
     metronomeState.prepare(newSampleRate);
+    previewPlayer.prepare(newSampleRate);
 
     busMemory.assign(static_cast<std::size_t>(maxMixerTracks * 2 * maxBlock), 0.0f);
     for (std::size_t i = 0; i < buses.size(); ++i)
@@ -477,6 +479,7 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
     std::array<float*, 2> out{channels[0] + offset,
                               numChannels > 1 ? channels[1] + offset : nullptr};
     metronomeState.render(out.data(), std::min(numChannels, 2), numSamples, block);
+    previewPlayer.render(out.data(), std::min(numChannels, 2), numSamples);
 }
 
 void Engine::updatePlayPosition(const BlockPosition& block)

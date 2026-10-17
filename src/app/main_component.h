@@ -11,6 +11,7 @@
 #include "io/sample_loader.h"
 #include "model/document.h"
 #include "plugins/plugin_host.h"
+#include "ui/browser.h"
 #include "ui/channel_rack.h"
 #include "ui/mixer.h"
 #include "ui/piano_roll.h"
@@ -28,6 +29,7 @@ namespace jls
 class MainComponent final : public juce::AudioAppComponent,
                             public juce::MenuBarModel,
                             public juce::ApplicationCommandTarget,
+                            public juce::DragAndDropContainer, // Browser -> Channel Rack
                             private juce::ChangeListener,
                             private juce::Timer
 {
@@ -75,6 +77,7 @@ class MainComponent final : public juce::AudioAppComponent,
     void showPlaylist();
     void showPianoRoll();
     void toggleMixer();
+    void toggleBrowser();
     void publishState();
     void showAudioSettings();
     void showAbout();
@@ -129,6 +132,7 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::PlaylistView playlist;
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)
     ui::MixerView mixer;         // docked below them (F9)
+    ui::BrowserPanel browser;    // docked at the left or right (Alt+F8)
     ui::EffectPanel effectPanel;
     bool effectPanelPlaced = false;
     juce::File currentFile;   // where the project was last saved/opened; empty if never

@@ -174,6 +174,7 @@ class ChannelRow final : public juce::Component
 // anywhere else (new channel).
 class ChannelRack final : public juce::Component,
                           public juce::FileDragAndDropTarget,
+                          public juce::DragAndDropTarget, // files dragged from the Browser
                           private juce::Timer
 {
   public:
@@ -227,6 +228,12 @@ class ChannelRack final : public juce::Component,
     void fileDragMove(const juce::StringArray& files, int x, int y) override;
     void fileDragExit(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
+
+    // Files dragged from the Browser (description "file:<path>") act like dropped files.
+    bool isInterestedInDragSource(const SourceDetails& details) override;
+    void itemDragMove(const SourceDetails& details) override;
+    void itemDragExit(const SourceDetails& details) override;
+    void itemDropped(const SourceDetails& details) override;
 
   private:
     void timerCallback() override;

@@ -4,6 +4,7 @@ add_library(jls_engine STATIC
     effects.cpp
     engine.cpp
     metronome.cpp
+    preview_player.cpp
     sampler.cpp
     step_sequencer.cpp
     transport.cpp)

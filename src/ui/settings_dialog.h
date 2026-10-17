@@ -15,9 +15,12 @@ inline constexpr const char* tempoStepKey = "tempoStep";
 inline constexpr const char* tempoStepFineKey = "tempoStepFine";
 inline constexpr double defaultTempoStep = 5.0; // BPM, Tempo up/down
 inline constexpr double defaultTempoStepFine = 1.0;
+inline constexpr const char* previewSecondsKey = "previewSeconds";
+inline constexpr double defaultPreviewSeconds = 5.0; // Browser: length of a click preview
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
+double previewSeconds(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

@@ -430,3 +430,34 @@ TEST_CASE("A plugin effect on an insert processes audio; a missing one passes it
         CHECK(renderPeak(project, engine, &pool) == Catch::Approx(1.0f));
     }
 }
+
+TEST_CASE("Sample previews play a range of a sample to the output, then stop")
+{
+    engine::SampleBuffer sample;
+    sample.sampleRate = rate;
+    sample.channels.assign(2, std::vector<float>(1000, 0.5f));
+
+    engine::PreviewPlayer preview;
+    preview.prepare(rate);
+    std::vector<float> left(512, 0.0f), right(512, 0.0f);
+    float* out[] = {left.data(), right.data()};
+
+    const auto first = preview.play(&sample, 100.0, 400.0);
+    REQUIRE(first == 1);
+    preview.render(out, 2, 512);
+    CHECK(preview.consumed() == 1);
+    CHECK(left[0] == Catch::Approx(0.5f * engine::PreviewPlayer::gain));
+    CHECK(left[299] != 0.0f);
+    CHECK(left[300] == 0.0f); // the range ended
+    CHECK_FALSE(preview.isPlaying());
+
+    std::fill(left.begin(), left.end(), 0.0f);
+    preview.play(&sample, 0.0, 1000.0);
+    preview.render(out, 2, 100);
+    CHECK(preview.isPlaying());
+    CHECK(preview.position() == Catch::Approx(100.0));
+    const auto stopped = preview.stop();
+    preview.render(out, 2, 100);
+    CHECK(preview.consumed() == stopped); // the sample may be freed now
+    CHECK_FALSE(preview.isPlaying());
+}

@@ -56,6 +56,10 @@ enum ID : juce::CommandID
     toggleChannelRack,
     showPianoRoll,
     toggleMixer,
+    toggleBrowser,
+    browserSwitchSide,
+    browserAddFolder,
+    previewPlayPause,
 
     // Piano Roll / Playlist editing
     sliceNotes = 0x1501,

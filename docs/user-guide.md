@@ -35,6 +35,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | F4 / Ctrl+Shift+C / F2 | New / clone / rename pattern |
 | Numpad + / − | Next / previous pattern |
 | F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
+| Alt+F8 | Browser |
 | Ctrl+C / X / V | Copy / cut / paste (Piano Roll or Playlist) |
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
 | Alt+U | Slice notes (Piano Roll) |
@@ -48,7 +49,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Ctrl+S / Ctrl+Shift+S | Save / save as |
 | Ctrl+R | Export the song as a WAV file |
 | Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z | Undo / redo |
-| Ctrl+, | Settings (tempo steps) |
+| Ctrl+, | Settings (tempo steps, preview length) |
 
 While **Keys** is on, the typing keyboard's letter keys play notes even if you give one of them
 to a command; use them with Ctrl or Alt for shortcuts. The tempo steps are set in
@@ -97,6 +98,26 @@ Details of the file format: [project-format.md](project-format.md).
 Plugins follow the tempo, time signature and position, so arpeggiators, tempo-synced delays
 and LFOs stay in time with the song. In PAT mode they see the pattern as a loop, in SONG mode
 the whole song.
+
+## Browser
+
+The Browser (**Alt+F8**, View › Browser) lists folders of samples. It docks on the left; **>**
+moves it to the right (**<** back), **×** hides it. Your folders, its side and whether it's open
+are remembered.
+
+| Do this | To |
+|---|---|
+| **+** (title bar) | Add a folder (right-click a folder at the top level to remove it) |
+| Click a folder | Open / close it |
+| Click a sample | Show its waveform and play a short preview (the first 5 s; Settings › Click preview length) |
+| Shift+click a sample | Play all of it |
+| Click in the waveform | Play from there to the end |
+| Play / Pause (bottom) | Play the whole sample, pause, and resume where it paused |
+| Drag a sample onto the Channel Rack | Add it as a channel (or onto a row: replace that channel's sample) |
+
+Previews go straight to your speakers, past the mixer and the song, so they're heard while the
+song plays or not. Samples load in the background, so long files don't freeze the app; files
+longer than 2 minutes are cut at 2 minutes (for now).
 
 ## Channel Rack
 

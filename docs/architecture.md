@@ -283,6 +283,23 @@ Hosted plugins (VST3 and LV2, through JUCE) are effects and instruments like any
   gives the same plugins their own positions without interfering.
 - **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
 
+## Browser and previews
+
+- **Panel** (`ui/browser`): a `juce::TreeView` of the folders you added (saved in the settings
+  file as `browserFolders`, with `browserOnRight` / `browserVisible`); folder items list their
+  children when first opened (folders, then audio files, natural sort, hidden files skipped).
+- **Loading** runs on a one-thread `juce::ThreadPool` with its own `io::SampleLoader`; a
+  generation counter drops results that a newer click superseded.
+- **Playback:** `engine::PreviewPlayer` (JUCE-free, tested) is fed through a lock-free command
+  queue and mixed into the output after the Master, like the metronome. It gets a raw
+  `SampleBuffer*`; the panel keeps replaced samples in `retired` until `consumed()` shows the
+  audio thread has applied the command that dropped them, so nothing is freed while in use.
+- **Waveform:** min/max peaks in 1024 buckets, computed once per sample; the playhead comes from
+  `PreviewPlayer::position()` on a 30 Hz timer.
+- **Dragging:** `MainComponent` is the `juce::DragAndDropContainer`; tree items describe audio
+  files as `"file:" + path` (`BrowserPanel::dragPrefix`), and the Channel Rack, a
+  `juce::DragAndDropTarget`, treats them like files dropped from the desktop.
+
 ## Commands and shortcuts
 
 Every action with a shortcut is a command in `src/app/commands` (id, name, category,

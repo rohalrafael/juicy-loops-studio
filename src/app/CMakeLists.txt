@@ -13,6 +13,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../io/audio_export.cpp
     ../io/sample_loader.cpp
     ../plugins/plugin_host.cpp
+    ../ui/browser.cpp
     ../ui/channel_rack.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp

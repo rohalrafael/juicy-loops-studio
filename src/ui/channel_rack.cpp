@@ -1,6 +1,7 @@
 #include "ui/channel_rack.h"
 
 #include "engine/step_sequencer.h"
+#include "ui/browser.h"
 #include "ui/theme.h"
 
 #include <cmath>
@@ -1071,6 +1072,28 @@ void ChannelRack::fileDragMove(const juce::StringArray&, int, int y)
         dropRow = row;
         repaint();
     }
+}
+
+bool ChannelRack::isInterestedInDragSource(const SourceDetails& details)
+{
+    return details.description.toString().startsWith(BrowserPanel::dragPrefix);
+}
+
+void ChannelRack::itemDragMove(const SourceDetails& details)
+{
+    fileDragMove({}, details.localPosition.x, details.localPosition.y);
+}
+
+void ChannelRack::itemDragExit(const SourceDetails&)
+{
+    fileDragExit({});
+}
+
+void ChannelRack::itemDropped(const SourceDetails& details)
+{
+    const auto path = details.description.toString().fromFirstOccurrenceOf(BrowserPanel::dragPrefix,
+                                                                           false, false);
+    filesDropped(juce::StringArray(path), details.localPosition.x, details.localPosition.y);
 }
 
 void ChannelRack::fileDragExit(const juce::StringArray&)

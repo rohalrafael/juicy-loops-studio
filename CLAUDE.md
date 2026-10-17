@@ -146,12 +146,6 @@ and run it before milestones or after platform-specific changes.
 
 Requested by the user, not started yet (newest first). Ask before starting one unless told to.
 
-- **Browser panel (file explorer), like FL's:** dockable on the left or the right; add folders
-  to it and drag samples from it onto the Channel Rack (new channel / replace sample), the
-  Playlist, etc. Previews (user's design): **click = short preview** (first **5 s**, user-confirmed default,
-  adjustable in Settings) so very long files don't play for ages; **Shift+click = play the whole
-  sample** (a command, so rebindable); a **play/pause button** by the waveform at the bottom of
-  the panel; selecting a sample shows its waveform, clicking in it plays from there.
 - **Audio clips in the Playlist:** dropping a sample on the Playlist places a clip showing its
   waveform. **Decided (user, 2026-10-17): option (b)** — each audio source is a channel internally
   (reuses mixer routing, knobs, mute, live audition, later automation and a channel settings
@@ -362,6 +356,14 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   Ctrl+Shift+C clone, Shift+Space play/pause, Ctrl+Q quit. Views take `ui::EditAction`s.
   Import/Export of full shortcut sets in the shortcuts window; tooltips of controls with commands
   show their current keys (`updateShortcutHints()`, refreshed on mapping changes).
+
+- 2026-10-17: Browser panel (backlog). `ui/browser` (TreeView of added folders, docks left/right,
+  Alt+F8), previews via `engine::PreviewPlayer` (lock-free, after the Master; raw sample pointer
+  kept alive by `retired` + `consumed()`), background loading (ThreadPool, generation counter).
+  Click = first 5 s (Settings: preview length), Shift+click = whole, waveform click = from there,
+  Play/Pause button. Drag "file:<path>" onto the Channel Rack (DragAndDropTarget). Commands:
+  toggle browser, switch side, add folder, preview play/pause. Loader still caps at 120 s.
+  Next in the backlog: audio clips (drop on the Playlist), which this enables.
 
 ## Dev environment notes
 

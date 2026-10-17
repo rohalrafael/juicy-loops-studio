@@ -19,6 +19,11 @@ double tempoStepFine(juce::PropertiesFile& file)
     return file.getDoubleValue(tempoStepFineKey, defaultTempoStepFine);
 }
 
+double previewSeconds(juce::PropertiesFile& file)
+{
+    return file.getDoubleValue(previewSecondsKey, defaultPreviewSeconds);
+}
+
 } // namespace settings
 
 namespace
@@ -42,7 +47,8 @@ void launch(std::unique_ptr<juce::Component> content, const juce::String& title,
 class NumberSetting final : public juce::Component
 {
   public:
-    NumberSetting(juce::PropertiesFile& f, const char* k, const juce::String& text, double value)
+    NumberSetting(juce::PropertiesFile& f, const char* k, const juce::String& text, double value,
+                  const juce::String& suffix = " BPM")
         : file(f), key(k)
     {
         label.setText(text, juce::dontSendNotification);
@@ -50,7 +56,7 @@ class NumberSetting final : public juce::Component
         box.setSliderStyle(juce::Slider::IncDecButtons);
         box.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 70, 24);
         box.setRange(0.1, 100.0, 0.1);
-        box.setTextValueSuffix(" BPM");
+        box.setTextValueSuffix(suffix);
         box.setValue(value, juce::dontSendNotification);
         box.onValueChange = [this] { file.setValue(key, box.getValue()); };
         addAndMakeVisible(box);
@@ -76,8 +82,15 @@ class SettingsPanel final : public juce::Component
     explicit SettingsPanel(juce::PropertiesFile& file)
         : tempoStep(file, settings::tempoStepKey, "Tempo step", settings::tempoStep(file)),
           tempoStepFine(file, settings::tempoStepFineKey, "Fine tempo step",
-                        settings::tempoStepFine(file))
+                        settings::tempoStepFine(file)),
+          previewLength(file, settings::previewSecondsKey, "Click preview length",
+                        settings::previewSeconds(file), " s")
     {
+        browserHeading.setText("Browser", juce::dontSendNotification);
+        browserHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+        browserNote.setText("Clicking a sample plays this much of it; Shift+click plays it all.",
+                            juce::dontSendNotification);
+        browserNote.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
         heading.setText("Tempo", juce::dontSendNotification);
         heading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
         note.setText("How far the Tempo up / down and Tempo up / down (fine) shortcuts change the "
@@ -96,7 +109,11 @@ class SettingsPanel final : public juce::Component
         heading.setBounds(area.removeFromTop(24));
         tempoStep.setBounds(area.removeFromTop(32));
         tempoStepFine.setBounds(area.removeFromTop(32));
-        note.setBounds(area);
+        note.setBounds(area.removeFromTop(40));
+        area.removeFromTop(8);
+        browserHeading.setBounds(area.removeFromTop(24));
+        previewLength.setBounds(area.removeFromTop(32));
+        browserNote.setBounds(area);
     }
 
   private:
@@ -104,6 +121,9 @@ class SettingsPanel final : public juce::Component
     NumberSetting tempoStep;
     NumberSetting tempoStepFine;
     juce::Label note;
+    juce::Label browserHeading;
+    NumberSetting previewLength;
+    juce::Label browserNote;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

@@ -30,7 +30,11 @@ struct Recorded
     NoteEvent::Kind kind;
     long long sample; // since the instrument was created
     int pitch;
-    bool operator==(const Recorded&) const = default;
+    float value = 0.0f; // velocity / controller value / bend; not compared
+    bool operator==(const Recorded& o) const
+    {
+        return kind == o.kind && sample == o.sample && pitch == o.pitch;
+    }
 };
 
 using Log = std::vector<Recorded>;
@@ -51,7 +55,7 @@ class FakeInstrument final : public engine::InstrumentProcessor
             for (; next < events.size() && events[next].sampleOffset == i; ++next)
             {
                 const auto& e = events[next];
-                log->push_back({e.kind, position + i, e.pitch});
+                log->push_back({e.kind, position + i, e.pitch, e.velocity});
                 if (e.kind == NoteEvent::Kind::noteOn)
                     ++down;
                 else if (e.kind == NoteEvent::Kind::noteOff)
@@ -337,4 +341,138 @@ TEST_CASE("Export can reuse live instruments instead of loading them again")
     CHECK(created == 1); // the same instance rendered the export
     CHECK(audio.left[1000] != 0.0f);
     CHECK(pool.findInstrument(id) == live->channels[0].instrument);
+}
+
+// ------------------------------------------------------------------------------- live input
+
+namespace
+{
+
+engine::LiveEvent liveOn(model::ChannelId channel, int pitch, float velocity = 0.8f)
+{
+    return {engine::LiveEvent::Kind::noteOn, channel, pitch, velocity};
+}
+
+engine::LiveEvent liveOff(int pitch)
+{
+    return {engine::LiveEvent::Kind::noteOff, 0, pitch, 0.0f};
+}
+
+} // namespace
+
+TEST_CASE("Live notes play instruments at the next block, also while stopped")
+{
+    Rig rig;
+    rig.publish();
+    rig.run(block); // transport stopped
+    REQUIRE(rig.engine.sendLive(liveOn(rig.synth, 64)));
+    const auto out = rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 1);
+    CHECK(out[10] != 0.0f);
+    rig.engine.sendLive(liveOff(64));
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 0);
+
+    const Log expected = {{NoteEvent::Kind::noteOn, block, 64},
+                          {NoteEvent::Kind::noteOff, 2 * block, 64}};
+    CHECK(*rig.log == expected);
+}
+
+TEST_CASE("A live note ends on its channel even after the selection changed")
+{
+    Rig rig;
+    auto otherLog = std::make_shared<Log>();
+    const auto other = rig.project.addInstrumentChannel("fake:other", "Other");
+    rig.pool.setInstrumentFactory(
+        [&rig, otherLog](const std::string& id, const std::string&, double,
+                         int) -> std::unique_ptr<engine::InstrumentProcessor>
+        { return std::make_unique<FakeInstrument>(id == "fake:other" ? otherLog : rig.log); });
+    rig.publish();
+    rig.engine.sendLive(liveOn(rig.synth, 60));
+    rig.run(block);
+    rig.engine.sendLive(liveOn(other, 62)); // the user selected another channel
+    rig.engine.sendLive(liveOff(60));       // releases the key pressed on the first
+    rig.run(block);
+
+    REQUIRE(rig.log->size() == 2);
+    CHECK(rig.log->back().kind == NoteEvent::Kind::noteOff);
+    REQUIRE(otherLog->size() == 1);
+    CHECK(otherLog->front().kind == NoteEvent::Kind::noteOn);
+}
+
+TEST_CASE("Live notes trigger samples on sampler channels")
+{
+    Rig rig;
+    const auto kick = rig.project.addChannel("Kick", model::builtinSample("kick", rate));
+    rig.publish();
+    rig.engine.sendLive(liveOn(kick, 60));
+    const auto out = rig.run(block);
+    CHECK(std::any_of(out.begin(), out.end(), [](float x) { return x != 0.0f; }));
+    CHECK(rig.engine.liveNoteCount() == 0); // one-shots aren't held
+}
+
+TEST_CASE("The sustain pedal is lifted where it went down")
+{
+    Rig rig;
+    auto otherLog = std::make_shared<Log>();
+    const auto other = rig.project.addInstrumentChannel("fake:other", "Other");
+    rig.pool.setInstrumentFactory(
+        [&rig, otherLog](const std::string& id, const std::string&, double,
+                         int) -> std::unique_ptr<engine::InstrumentProcessor>
+        { return std::make_unique<FakeInstrument>(id == "fake:other" ? otherLog : rig.log); });
+    rig.publish();
+    using Kind = engine::LiveEvent::Kind;
+    rig.engine.sendLive({Kind::controller, rig.synth, 64, 1.0f}); // pedal down on the synth
+    rig.engine.sendLive({Kind::pitchBend, rig.synth, 0, 0.5f});
+    rig.run(block);
+    rig.engine.sendLive({Kind::controller, other, 64, 0.0f}); // up, with another selected
+    rig.run(block);
+
+    REQUIRE(rig.log->size() == 3);
+    CHECK((*rig.log)[0].kind == NoteEvent::Kind::controller);
+    CHECK((*rig.log)[0].value == 1.0f);
+    CHECK((*rig.log)[1].kind == NoteEvent::Kind::pitchBend);
+    CHECK((*rig.log)[1].value == 0.5f);
+    CHECK((*rig.log)[2] == Recorded{NoteEvent::Kind::controller, block, 64});
+    CHECK((*rig.log)[2].value == 0.0f);
+    CHECK(otherLog->empty());
+}
+
+TEST_CASE("Releasing all live notes, and removing their channel, leaves nothing held")
+{
+    Rig rig;
+    rig.publish();
+    rig.engine.sendLive(liveOn(rig.synth, 60));
+    rig.engine.sendLive(liveOn(rig.synth, 64));
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 2);
+    rig.engine.sendLive({engine::LiveEvent::Kind::releaseAll, 0, 0, 0.0f});
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 0);
+    CHECK(std::count_if(rig.log->begin(), rig.log->end(),
+                        [](const Recorded& r) { return r.kind == NoteEvent::Kind::noteOff; }) == 2);
+
+    rig.engine.sendLive(liveOn(rig.synth, 67));
+    rig.run(block);
+    rig.project.removeChannel(rig.synth);
+    rig.publish();
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 0);
+    rig.engine.sendLive(liveOn(rig.synth, 67)); // a channel that's gone: ignored
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 0);
+}
+
+TEST_CASE("Pressing a held key again releases it first")
+{
+    Rig rig;
+    rig.publish();
+    rig.engine.sendLive(liveOn(rig.synth, 60));
+    rig.engine.sendLive(liveOn(rig.synth, 60));
+    rig.run(block);
+    CHECK(rig.engine.liveNoteCount() == 1);
+    const Log expected = {{NoteEvent::Kind::noteOn, 0, 60},
+                          {NoteEvent::Kind::noteOff, 0, 60},
+                          {NoteEvent::Kind::noteOn, 0, 60}};
+    CHECK(*rig.log == expected);
 }

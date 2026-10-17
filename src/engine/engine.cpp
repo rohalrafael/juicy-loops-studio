@@ -50,6 +50,8 @@ void Engine::prepare(double newSampleRate, int maxBlockSize)
         buses[i] = busMemory.data() + i * static_cast<std::size_t>(maxBlock);
     instrumentMemory.assign(static_cast<std::size_t>(2 * maxBlock), 0.0f);
     heldCount = 0;
+    liveCount = 0;
+    sustain = {};
     wasPlaying = false;
 
     if (current != nullptr)
@@ -91,19 +93,146 @@ void Engine::adoptNewestState()
 
         // Held notes follow their channel to its new index. A removed channel or replaced
         // instrument takes its notes with it (the old instrument is no longer played).
-        int kept = 0;
-        for (int i = 0; i < heldCount; ++i)
+        heldCount = remapHeld(heldNotes.data(), heldCount);
+        liveCount = remapHeld(liveNotes.data(), liveCount);
+        if (sustain.channelId != 0 && remapHeld(&sustain, 1) == 0)
+            sustain = {};
+    }
+}
+
+int Engine::remapHeld(HeldNote* notes, int count) const
+{
+    int kept = 0;
+    for (int i = 0; i < count; ++i)
+    {
+        auto note = notes[i];
+        const int index = indexOfChannel(note.channelId);
+        if (index < 0 ||
+            current->channels[static_cast<std::size_t>(index)].instrument.get() != note.instrument)
+            continue;
+        note.channelIndex = index;
+        notes[kept++] = note;
+    }
+    return kept;
+}
+
+int Engine::indexOfChannel(std::uint32_t id) const
+{
+    if (current == nullptr)
+        return -1;
+    for (std::size_t i = 0; i < current->channels.size(); ++i)
+        if (current->channels[i].id == id)
+            return static_cast<int>(i);
+    return -1;
+}
+
+bool Engine::sendLive(const LiveEvent& event)
+{
+    const std::scoped_lock lock(liveSenders);
+    return liveEvents.push(event);
+}
+
+void Engine::releaseLiveNotes()
+{
+    for (int i = 0; i < liveCount; ++i)
+    {
+        const auto& note = liveNotes[static_cast<std::size_t>(i)];
+        addNoteEvent(note.channelIndex, {NoteEvent::Kind::noteOff, 0, note.pitch});
+    }
+    liveCount = 0;
+    if (sustain.channelId != 0)
+        addNoteEvent(sustain.channelIndex, {NoteEvent::Kind::controller, 0, 64, 0.0f});
+    sustain = {};
+}
+
+void Engine::applyLiveEvents()
+{
+    while (auto next = liveEvents.pop())
+    {
+        const auto& e = *next;
+        switch (e.kind)
         {
-            auto note = heldNotes[static_cast<std::size_t>(i)];
-            const auto& channels = current->channels;
-            const auto it = std::find_if(channels.begin(), channels.end(),
-                                         [&](const auto& c) { return c.id == note.channelId; });
-            if (it == channels.end() || it->instrument.get() != note.instrument)
-                continue;
-            note.channelIndex = static_cast<int>(it - channels.begin());
-            heldNotes[static_cast<std::size_t>(kept++)] = note;
+        case LiveEvent::Kind::releaseAll:
+            releaseLiveNotes();
+            break;
+
+        case LiveEvent::Kind::noteOff:
+            for (int i = 0; i < liveCount; ++i)
+            {
+                const auto& note = liveNotes[static_cast<std::size_t>(i)];
+                if (note.pitch == e.number)
+                {
+                    addNoteEvent(note.channelIndex, {NoteEvent::Kind::noteOff, 0, note.pitch});
+                    liveNotes[static_cast<std::size_t>(i)] =
+                        liveNotes[static_cast<std::size_t>(--liveCount)];
+                    break;
+                }
+            }
+            break;
+
+        case LiveEvent::Kind::noteOn:
+        {
+            const int index = indexOfChannel(e.channelId);
+            if (index < 0)
+                break;
+            const int pitch = std::clamp(e.number, 0, 127);
+            const auto& channel = current->channels[static_cast<std::size_t>(index)];
+            if (!channel.instrument)
+            {
+                // Samples are one-shots: start a voice, nothing to release later.
+                sampler.trigger(*current, index, pitch, std::clamp(e.value, 0.0f, 1.0f));
+                break;
+            }
+            // Same key again while held (e.g. a missed note-off): release it first.
+            for (int i = 0; i < liveCount; ++i)
+                if (liveNotes[static_cast<std::size_t>(i)].pitch == pitch)
+                {
+                    const auto old = liveNotes[static_cast<std::size_t>(i)];
+                    addNoteEvent(old.channelIndex, {NoteEvent::Kind::noteOff, 0, pitch});
+                    liveNotes[static_cast<std::size_t>(i)] =
+                        liveNotes[static_cast<std::size_t>(--liveCount)];
+                    break;
+                }
+            if (liveCount == maxLiveNotes)
+                break; // can't remember it, so don't start it
+            addNoteEvent(index,
+                         {NoteEvent::Kind::noteOn, 0, pitch, std::clamp(e.value, 0.0f, 1.0f)});
+            liveNotes[static_cast<std::size_t>(liveCount++)] = {
+                channel.id, index, channel.instrument.get(), pitch, 0.0};
+            break;
         }
-        heldCount = kept;
+
+        case LiveEvent::Kind::controller:
+        case LiveEvent::Kind::pitchBend:
+        {
+            int index = indexOfChannel(e.channelId);
+            const bool isSustain = e.kind == LiveEvent::Kind::controller && e.number == 64;
+            if (isSustain && e.value < 0.5f)
+            {
+                // Lift the pedal where it went down, whatever is selected now.
+                if (sustain.channelId == 0)
+                    break;
+                index = sustain.channelIndex;
+                sustain = {};
+            }
+            if (!isInstrument(index))
+                break;
+            if (isSustain && e.value >= 0.5f)
+            {
+                if (sustain.channelId != 0 && sustain.channelIndex != index)
+                    addNoteEvent(sustain.channelIndex, {NoteEvent::Kind::controller, 0, 64, 0.0f});
+                const auto& channel = current->channels[static_cast<std::size_t>(index)];
+                sustain = {channel.id, index, channel.instrument.get(), 64, 0.0};
+            }
+            if (e.kind == LiveEvent::Kind::pitchBend)
+                addNoteEvent(index,
+                             {NoteEvent::Kind::pitchBend, 0, 0, std::clamp(e.value, -1.0f, 1.0f)});
+            else
+                addNoteEvent(index, {NoteEvent::Kind::controller, 0, std::clamp(e.number, 0, 127),
+                                     std::clamp(e.value, 0.0f, 1.0f)});
+            break;
+        }
+        }
     }
 }
 
@@ -132,6 +261,9 @@ void Engine::releaseAllNotes()
         addNoteEvent(note.channelIndex, {NoteEvent::Kind::noteOff, 0, note.pitch});
     }
     heldCount = 0;
+    // The all-notes-off below silences live notes (and lifts the pedal) too.
+    liveCount = 0;
+    sustain = {};
     if (current != nullptr)
         for (int ch = 0; ch < static_cast<int>(current->channels.size()); ++ch)
             if (isInstrument(ch))
@@ -265,6 +397,7 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
             releaseAllNotes();
         wasPlaying = block.playing;
         lastEndBeat = block.endBeat;
+        applyLiveEvents();
 
         const double t0 = block.startBeat * ticksPerBeat;
         const double t1 = block.endBeat * ticksPerBeat;

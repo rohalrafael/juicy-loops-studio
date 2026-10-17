@@ -23,6 +23,9 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 | F4 | New pattern |
 | F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
 | Ctrl+M | Metronome on/off |
+| Ctrl+T | Typing keyboard to piano on/off (the **Keys** button) |
+| Z S X D C V G B H N J M | Play C5 to B5 on the selected channel (when Keys is on) |
+| Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P | Play C6 to E7 |
 | Ctrl+N / Ctrl+O | New project / open project |
 | Ctrl+S / Ctrl+Shift+S | Save / save as |
 | Ctrl+R | Export the song as a WAV file |
@@ -30,6 +33,15 @@ The Playlist and Piano Roll share the main area; F5 and F7 switch between them.
 | Ctrl+Y or Ctrl+Shift+Z | Redo |
 
 On macOS use Cmd instead of Ctrl.
+
+**Playing live.** With **Keys** on (the default), the letter rows play the selected channel like
+a piano, as in FL: the bottom row is the white and black keys from C5, the top row continues
+from C6. Shortcuts with Ctrl still work (Ctrl+Z undoes, it doesn't play a note), and L stays
+the PAT/SONG switch. **MIDI keyboards** are picked up automatically when plugged in (also
+while the app runs) and play the selected channel too, on any MIDI channel, with velocity,
+sustain pedal, mod wheel and pitch bend. Switch devices off in Options › Audio settings. Live
+notes play instruments and samples alike, also while the transport is stopped; they aren't
+recorded yet.
 
 ## Projects and export
 

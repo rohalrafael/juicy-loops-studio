@@ -6,6 +6,7 @@ juce_add_gui_app(JuicyLoopsStudio
     NEEDS_CURL FALSE)
 
 target_sources(JuicyLoopsStudio PRIVATE
+    live_input.cpp
     main.cpp
     main_component.cpp
     ../io/audio_export.cpp

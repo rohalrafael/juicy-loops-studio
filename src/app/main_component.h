@@ -5,6 +5,7 @@
 // floating panels, and handles menus and keyboard shortcuts. Whenever the document changes it
 // publishes a new engine snapshot and refreshes the views (see docs/architecture.md).
 
+#include "app/live_input.h"
 #include "engine/effect_pool.h"
 #include "engine/engine.h"
 #include "io/sample_loader.h"
@@ -39,6 +40,8 @@ class MainComponent final : public juce::AudioAppComponent,
     void paint(juce::Graphics& g) override;
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
+    bool keyStateChanged(bool isKeyDown) override;
+    void focusLost(FocusChangeType cause) override;
     void mouseDown(const juce::MouseEvent& e) override;
 
     // Quits, after asking to save unsaved changes (called for the window's close button too).
@@ -81,12 +84,14 @@ class MainComponent final : public juce::AudioAppComponent,
     void updateTitle();
     void openEffectEditor(model::EffectId id);
     void showInstrumentEditor(model::ChannelId id, bool toggle);
+    void setTypingKeyboard(bool enabled);
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
 
     ui::ThemeManager& themes;
 
     engine::Engine engine;
     engine::EffectPool effectPool; // effect processors and instruments live here between snapshots
+    LiveInput liveInput{engine, deviceManager}; // computer keyboard + MIDI input
     plugins::PluginHost pluginHost;
     model::Document document;
     io::SampleLoader sampleLoader;
@@ -100,6 +105,7 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::Slider tempoSlider;
     juce::ComboBox timeSignatureBox;
     juce::TextButton metronomeButton{"Metronome"};
+    juce::TextButton typingButton{"Keys"}; // typing keyboard to piano (Ctrl+T)
     juce::Label positionLabel;
     ui::PlaylistView playlist;
     ui::PianoRollView pianoRoll; // shares the main area with the Playlist (F5 / F7)

@@ -17,13 +17,15 @@ struct NoteEvent
     {
         noteOff,     // releases `pitch`
         noteOn,      // starts `pitch` at `velocity`
-        allNotesOff, // panic: sent when the transport stops or jumps
+        allNotesOff, // panic: sent when the transport stops or jumps (also lifts sustain)
+        controller,  // MIDI controller `pitch` (e.g. 64 = sustain) set to `velocity` (0..1)
+        pitchBend,   // `velocity` from -1 (down) to +1 (up), 0 = centre
     };
 
     Kind kind = Kind::noteOn;
     int sampleOffset = 0;  // within the block
-    int pitch = 60;        // MIDI note number
-    float velocity = 0.0f; // 0..1 (note-ons)
+    int pitch = 60;        // MIDI note number, or the controller number
+    float velocity = 0.0f; // note-on velocity 0..1, controller value or bend amount
 };
 
 // Audio generation for one channel. prepare() may allocate; process() and reset() must not,

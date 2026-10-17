@@ -38,6 +38,7 @@ enum MenuItem
     pluginsItem,
     themeItem,
     audioSettingsItem,
+    typingKeyboardItem,
     aboutItem,
 };
 
@@ -108,17 +109,24 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     metronomeButton.onClick = [this]
     { engine.metronome().setEnabled(metronomeButton.getToggleState()); };
 
+    typingButton.setClickingTogglesState(true);
+    typingButton.setToggleState(liveInput.isTypingEnabled(), juce::dontSendNotification);
+    typingButton.setTooltip("Typing keyboard to piano (Ctrl+T): Z-M and Q-P play the selected "
+                            "channel. MIDI keyboards always play it.");
+    typingButton.onClick = [this] { setTypingKeyboard(typingButton.getToggleState()); };
+
     positionLabel.setJustificationType(juce::Justification::centred);
     positionLabel.setFont(juce::FontOptions(20.0f));
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
-             &timeSignatureBox, &metronomeButton})
+             &timeSignatureBox, &metronomeButton, &typingButton})
         noFocus(*c);
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
-             &tempoSlider, &timeSignatureBox, &metronomeButton, &positionLabel, &playlist})
+             &tempoSlider, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
+             &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
     addChildComponent(mixer);
@@ -180,9 +188,28 @@ MainComponent::~MainComponent()
     shutdownAudio();
 }
 
+bool MainComponent::keyStateChanged(bool)
+{
+    return liveInput.updateKeys();
+}
+
+void MainComponent::focusLost(FocusChangeType)
+{
+    // Key-up events go to whoever has focus now: end typed notes so none hang.
+    liveInput.releaseKeys();
+}
+
+void MainComponent::setTypingKeyboard(bool enabled)
+{
+    liveInput.setTypingEnabled(enabled);
+    typingButton.setToggleState(enabled, juce::dontSendNotification);
+    menuItemsChanged();
+}
+
 void MainComponent::documentChanged()
 {
     const auto& project = document.project();
+    liveInput.setTargetChannel(project.selectedChannel);
     engine.transport().setBeatsPerBar(project.beatsPerBar);
     engine.transport().setTempo(project.tempo);
     publishState();
@@ -498,6 +525,9 @@ void MainComponent::resized()
     timeSignatureBox.setBounds(bar.removeFromLeft(64).reduced(0, 4));
     bar.removeFromLeft(4);
     metronomeButton.setBounds(bar.removeFromLeft(96));
+    bar.removeFromLeft(4);
+    typingButton.setVisible(roomForRest && bar.getWidth() >= 60);
+    typingButton.setBounds(bar.removeFromLeft(60));
 
     area.removeFromTop(margin);
     if (mixer.isVisible())
@@ -539,6 +569,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         return engine.transport().togglePlay(), true;
     if (key == KeyPress('m', cmd, 0))
         return engine.metronome().toggleEnabled(), true;
+    if (key == KeyPress('t', cmd, 0))
+    {
+        setTypingKeyboard(!liveInput.isTypingEnabled());
+        return true;
+    }
+    if (liveInput.isNoteKey(key))
+        return true; // played in keyStateChanged()
     if (key == KeyPress('l'))
         return setSongMode(!document.project().songMode), true;
     if (key == KeyPress(KeyPress::F4Key))
@@ -576,16 +613,16 @@ juce::StringArray MainComponent::getMenuBarNames()
 juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
 {
     using Item = juce::PopupMenu::Item;
+    const auto withKey = [](Item item, const char* key)
+    {
+        item.shortcutKeyDescription = key;
+        return item;
+    };
     juce::PopupMenu menu;
     switch (index)
     {
     case 0:
     {
-        auto withKey = [](Item item, const char* key)
-        {
-            item.shortcutKeyDescription = key;
-            return item;
-        };
         menu.addItem(withKey(Item("New").setID(newItem), "Ctrl+N"));
         menu.addItem(withKey(Item("Open...").setID(openItem), "Ctrl+O"));
         menu.addItem(withKey(Item("Save").setID(saveItem), "Ctrl+S"));
@@ -612,11 +649,6 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
     }
     case 3:
     {
-        auto withKey = [](Item item, const char* key)
-        {
-            item.shortcutKeyDescription = key;
-            return item;
-        };
         menu.addItem(
             withKey(Item("Playlist").setID(playlistItem).setTicked(playlist.isVisible()), "F5"));
         menu.addItem(withKey(
@@ -630,6 +662,11 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
         menu.addItem(Item("Theme...").setID(themeItem));
         menu.addItem(Item("Plugins...").setID(pluginsItem));
         menu.addItem(Item("Audio settings...").setID(audioSettingsItem));
+        menu.addSeparator();
+        menu.addItem(withKey(Item("Typing keyboard to piano")
+                                 .setID(typingKeyboardItem)
+                                 .setTicked(liveInput.isTypingEnabled()),
+                             "Ctrl+T"));
         break;
     case 5:
         menu.addItem(Item("About Juicy Loops Studio").setID(aboutItem));
@@ -716,6 +753,9 @@ void MainComponent::menuItemSelected(int itemId, int)
         break;
     case themeItem:
         ui::ThemeDialog::show(themes);
+        break;
+    case typingKeyboardItem:
+        setTypingKeyboard(!liveInput.isTypingEnabled());
         break;
     case pluginsItem:
         pluginHost.showManager();
@@ -979,6 +1019,11 @@ void MainComponent::timerCallback()
     if (getCurrentlyFocusedComponent() == nullptr && isShowing())
         if (auto* peer = getPeer(); peer != nullptr && peer->isFocused())
             grabKeyboardFocus();
+    // Typed notes can't hang if the window loses focus without a focusLost() (e.g. alt-tab
+    // while a child window had focus).
+    if (liveInput.anyKeyDown())
+        if (auto* peer = getPeer(); peer == nullptr || !peer->isFocused())
+            liveInput.releaseKeys();
 
     // Position within what's looping: the pattern in PAT mode, the song in SONG mode.
     const auto& project = document.project();

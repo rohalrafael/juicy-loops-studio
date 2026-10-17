@@ -147,7 +147,23 @@ void PluginInstrument::process(std::span<const engine::NoteEvent> events, float*
             midi.addEvent(juce::MidiMessage::noteOff(1, pitch), e.sampleOffset);
             break;
         case engine::NoteEvent::Kind::allNotesOff:
+            // All-notes-off leaves sustained notes ringing, so lift the pedal first.
+            midi.addEvent(juce::MidiMessage::controllerEvent(1, 64, 0), e.sampleOffset);
             midi.addEvent(juce::MidiMessage::allNotesOff(1), e.sampleOffset);
+            break;
+        case engine::NoteEvent::Kind::controller:
+            midi.addEvent(
+                juce::MidiMessage::controllerEvent(
+                    1, pitch,
+                    std::clamp(static_cast<int>(std::lround(e.velocity * 127.0f)), 0, 127)),
+                e.sampleOffset);
+            break;
+        case engine::NoteEvent::Kind::pitchBend:
+            midi.addEvent(
+                juce::MidiMessage::pitchWheel(
+                    1, std::clamp(static_cast<int>(std::lround(8192.0f + e.velocity * 8192.0f)), 0,
+                                  16383)),
+                e.sampleOffset);
             break;
         }
     }

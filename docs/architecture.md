@@ -56,11 +56,15 @@ libraries without JUCE. The `JuicyLoopsStudio` app target compiles `src/app`, `s
 |---|---|---|
 | **UI (message) thread** | All JUCE components, `Document` edits, `toEngineState()`, `EffectPool`, `Engine::setState()` / `collectGarbage()` | Allocate, block, do file I/O |
 | **Audio thread** | `Engine::process()` (from the audio device callback) | Only read its current snapshot, write its own preallocated state and atomics |
+| **MIDI input thread(s)** | `LiveInput::handleIncomingMidiMessage()` | Only call `Engine::sendLive()` and read an atomic |
 
-They share exactly three things:
+They share exactly four things:
 1. **Snapshots** (`EngineState`), passed through lock-free queues (below).
 2. **Transport and metronome controls**: atomics (`play()`, `setTempo()`, ...).
 3. **Meters**: atomic peak values (`Engine::takePeak()`).
+4. **Live events** (`Engine::sendLive()`): a lock-free queue to the audio thread. Its senders
+   (UI and MIDI threads) take a mutex among themselves so the queue keeps a single producer;
+   the audio thread never touches that mutex.
 
 ## How an edit reaches the audio
 
@@ -189,6 +193,23 @@ Stuck notes are the main risk, so the engine (not the sequencer) owns note ends:
 - **Full array** (512 held notes): the note gets its note-off immediately rather than being
   forgotten.
 
+**Live input** (`src/app/live_input`, `Engine::sendLive()`): the typing keyboard and MIDI
+devices send `LiveEvent`s (note-on/off, controller, pitch bend, release-all) for the selected
+channel, which `LiveInput` keeps in an atomic. The audio thread applies them at the start of
+each chunk (offset 0, so latency is one block):
+- On an instrument channel a note-on is remembered in `Engine::liveNotes` (by channel id, like
+  sequenced notes, and remapped/dropped the same way on snapshot changes). A note-off is
+  matched **by pitch**, not by channel, so a key still ends on the channel it started on after
+  the selection changed. On a sampler channel a note-on just triggers the sample.
+- The sustain pedal (CC 64) is lifted on the channel it went down on (`Engine::sustain`).
+  `PluginInstrument` also sends sustain-off before every all-notes-off.
+- Stopping the transport sends all-notes-off, which ends live notes too; the typing keyboard
+  releases its keys when the window loses focus (`focusLost()` plus a check in the timer).
+- The typing keyboard polls `KeyPress::isKeyCurrentlyDown()` in `keyStateChanged()` (so key
+  auto-repeat doesn't retrigger) and doesn't start notes while Ctrl/Cmd/Alt is held.
+- New MIDI devices are enabled when first seen (`juce::MidiDeviceListConnection`); turning one
+  off in Audio settings sticks until the next start (device choices aren't saved yet).
+
 Instruments live in the same `EffectPool` as effect processors (keyed by channel id; see
 `getInstrument()`), so a synth keeps its voices and settings across edits, and the pool's
 format reset and unused-collection cover them too.
@@ -220,7 +241,7 @@ Hosted plugins (VST3 and LV2, through JUCE) are effects and instruments like any
   window's `owner()` no longer matches the pool's).
 - **Not yet:** plugins run in the app's process, so a crashing plugin takes the app down.
   Plugins get no play head (tempo/position), so tempo-synced LFOs and arpeggiators run at their
-  own default tempo. No live playing (computer keyboard / MIDI input) yet.
+  own default tempo.
 
 ## UI
 

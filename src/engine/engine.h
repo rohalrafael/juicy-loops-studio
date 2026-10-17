@@ -14,10 +14,29 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace jls::engine
 {
+
+// A note or controller played live (computer keyboard, MIDI input). See Engine::sendLive().
+struct LiveEvent
+{
+    enum class Kind : std::uint8_t
+    {
+        noteOn,     // starts `number` on channel `channelId` at velocity `value`
+        noteOff,    // releases `number`, on whichever channel it was started
+        controller, // MIDI controller `number` = `value` (0..1) on `channelId`
+        pitchBend,  // `value` -1..1 on `channelId`
+        releaseAll, // ends every live note (e.g. the window lost keyboard focus)
+    };
+
+    Kind kind = Kind::noteOn;
+    std::uint32_t channelId = 0; // target for noteOn / controller / pitchBend
+    int number = 60;             // pitch or controller number
+    float value = 0.0f;          // velocity, controller value or bend
+};
 
 // Owns everything that runs on the audio thread and the hand-off of state to it.
 //
@@ -55,6 +74,15 @@ class Engine
 
     // Notes currently held on instruments (for tests and debugging). Audio thread / offline.
     int heldNoteCount() const { return heldCount; }
+    int liveNoteCount() const { return liveCount; }
+
+    // Any thread but the audio thread (UI, MIDI input): queues a live event; the audio thread
+    // applies it at the start of its next block. Senders are serialized with a mutex the audio
+    // thread never takes. Returns false if the queue is full (the event is dropped).
+    // Live notes play instruments (held until their note-off) and trigger samples. A held
+    // sustain pedal is lifted on the channel it went down on, so changing the selected channel
+    // can't leave notes ringing.
+    bool sendLive(const LiveEvent& event);
 
   private:
     void adoptNewestState();
@@ -82,6 +110,12 @@ class Engine
     static constexpr int maxNoteEvents = 2048;
 
     bool isInstrument(int channelIndex) const;
+    int indexOfChannel(std::uint32_t id) const;
+    void applyLiveEvents();
+    void releaseLiveNotes();
+    // After a snapshot change: moves held notes to their channel's new index and drops those
+    // whose channel or instrument is gone. Returns the new count.
+    int remapHeld(HeldNote* notes, int count) const;
     void addNoteEvent(int channelIndex, NoteEvent event);
     void releaseAllNotes();
     void startInstrumentNote(const Trigger& trigger, int offsetOfEnd);
@@ -109,6 +143,14 @@ class Engine
     int noteEventCount = 0;
     bool wasPlaying = false;
     double lastEndBeat = 0.0;
+
+    // Live input: queue (UI/MIDI threads -> audio) and what is held (audio thread only).
+    static constexpr int maxLiveNotes = 128;
+    std::mutex liveSenders;
+    SpscQueue<LiveEvent, 1024> liveEvents;
+    std::array<HeldNote, maxLiveNotes> liveNotes{};
+    int liveCount = 0;
+    HeldNote sustain{}; // channel whose sustain pedal is down; channelId 0 = none
 
     std::atomic<double> preparedRate{0.0};
     std::atomic<int> preparedBlock{0};

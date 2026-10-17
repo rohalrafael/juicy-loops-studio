@@ -45,7 +45,8 @@ plugin *hosting* and GUI support are still immature.
 ## Architecture
 
 ```
-src/app/      JUCE app shell: window, transport bar, MainComponent (owns Document + Engine)
+src/app/      JUCE app shell: window, transport bar, MainComponent (owns Document + Engine),
+              LiveInput (typing keyboard + MIDI devices -> Engine::sendLive)
 src/engine/   Real-time, JUCE-free: Engine (mixer buses), Transport, StepSequencer, Sampler,
               Metronome, DrumSynth, effects (Filter/EQ/Delay/Reverb/Compressor/SoftClip),
               InstrumentProcessor + NoteEvent, EffectPool (effects + instruments), SpscQueue,
@@ -136,8 +137,9 @@ and run it before milestones or after platform-specific changes.
 4. [x] Pattern system + Playlist (PAT/SONG modes)
 5. [x] Piano Roll
 6. [x] Mixer (inserts, built-in effects). Sends between tracks still to do.
-7. [x] Plugin hosting: VST3/LV2 **effects** (phase 1) and **instruments** (phase 2). Still to
-       do: play head for plugins, live input (keyboard/MIDI), out-of-process hosting
+7. [x] Plugin hosting: VST3/LV2 **effects** (phase 1) and **instruments** (phase 2), live input
+       (typing keyboard + MIDI). Still to do: play head for plugins, recording live input,
+       out-of-process hosting
 8. [x] Project save/load (.jls JSON), WAV export
 
 ## Decision log
@@ -279,6 +281,18 @@ and run it before milestones or after platform-specific changes.
   LSP Sampler Stereo + a 440 Hz WAV: notes at steps 0 and 8 cut after one step (+10 ms fade),
   identical after save/reopen. Known: delete + undo of an instrument channel restores the plugin
   state as of the last save.
+
+- 2026-10-17: Surge XT (VST3, `surge-xt`) tested: editor renders on Xvfb, export plays C5 =
+  261.6 Hz with releases on time; user reports its window is "a bit wonky" on Hyprland but works.
+- 2026-10-17: Live input. `Engine::sendLive(LiveEvent)` from any non-audio thread (senders
+  serialized by a mutex, SPSC queue to the audio thread, applied at chunk start). Note-offs match
+  by **pitch** (ends on the channel it started on); sustain lifted where it went down; live notes
+  remapped/dropped on snapshot change like sequenced ones; sampler channels just trigger. Typing
+  keyboard = FL layout (Z row C5, Q row C6, skipping L and punctuation), **on by default**,
+  Ctrl+T / "Keys" button / Options menu; polled via `isKeyCurrentlyDown` in `keyStateChanged`,
+  released on focus loss. MIDI: all inputs omni, new devices auto-enabled
+  (`MidiDeviceListConnection`); notes, CCs, pitch bend. Not saved: device choices. Not yet:
+  recording, octave shift for the typing keyboard, highlighting played keys.
 
 ## Dev environment notes
 

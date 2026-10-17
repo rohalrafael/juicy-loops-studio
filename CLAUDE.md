@@ -153,13 +153,12 @@ Requested by the user, not started yet (newest first). Ask before starting one u
   sample** (a command, so rebindable); a **play/pause button** by the waveform at the bottom of
   the panel; selecting a sample shows its waveform, clicking in it plays from there.
 - **Audio clips in the Playlist:** dropping a sample on the Playlist places a clip showing its
-  waveform. Open decision: (a) audio **sources** as their own list, *not* channels (user's first
-  preference), or (b) suggested middle ground: channels internally (reuses mixer routing, knobs,
-  mute, live audition, later automation and a channel settings window) but **hidden from the
-  Channel Rack by default**, with a "Show audio clips" filter. Either way each source has a mixer
-  track, volume and pan, and an FL-style **picker panel** in the Playlist lists all patterns and
-  audio clips to drag from. Needed either way: the engine must start a clip part-way in
-  (play/seek into the middle of a clip), not only from its beginning.
+  waveform. **Decided (user, 2026-10-17): option (b)** — each audio source is a channel internally
+  (reuses mixer routing, knobs, mute, live audition, later automation and a channel settings
+  window) but **hidden from the Channel Rack by default**, with a "Show audio clips" filter.
+  (Rejected: a separate source list.) An FL-style **picker panel** in the Playlist lists all
+  patterns and audio clips to drag from. The engine must start a clip part-way in (play/seek into
+  the middle of a clip), not only from its beginning.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
 ## Decision log

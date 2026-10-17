@@ -25,6 +25,12 @@ class Sampler
     // 2^(1/12)); `velocity` scales the level, with FL's default 100/128 playing at unity.
     void trigger(const EngineState& state, int channelIndex, int pitch = 60,
                  float velocity = 100.0f / 128.0f);
+    // An audio clip: plays the channel's sample from `startSeconds` into it, for at most
+    // `lengthSeconds` (then fades out quickly), at unity gain and original pitch.
+    void triggerClip(const EngineState& state, int channelIndex, double startSeconds,
+                     double lengthSeconds);
+    // Fades out every audio-clip voice (transport stopped or jumped). Samples ring on.
+    void stopClips();
 
     // Adds all sounding voices into their channel's mixer-track bus, [from, to).
     // buses[2 * track] is a track's left, buses[2 * track + 1] its right; channels routed to a
@@ -43,7 +49,10 @@ class Sampler
         double increment = 1.0;
         float gain = 1.0f; // from velocity
         std::uint64_t startedAt = 0;
+        long long remaining = -1; // output samples left (audio clips); -1 = until the end
     };
+
+    static constexpr long long clipFadeSamples = 128; // a clip cut fades over this many samples
 
     Voice& allocateVoice();
 

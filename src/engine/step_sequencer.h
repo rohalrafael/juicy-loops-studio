@@ -23,6 +23,11 @@ struct Trigger
     // When the note ends, in the same (unwrapped) tick timeline as the transport: the note's own
     // end, cut at the end of its clip or of the pattern loop. Instruments get a note-off there.
     double endTick = 0.0;
+    // Audio clips: the channel's sample plays from `clipOffsetTicks` into the clip (0 = from its
+    // start) for `lengthTicks`, then stops; it's cut when the transport stops or jumps.
+    bool audioClip = false;
+    double clipOffsetTicks = 0.0;
+    double lengthTicks = 0.0;
 };
 
 // Finds the notes that start inside `block` and returns how many triggers were written to
@@ -32,5 +37,10 @@ struct Trigger
 // each started note until its Trigger::endTick (see Engine).
 int collectTriggers(const EngineState& state, const BlockPosition& block, int numSamples,
                     std::span<Trigger> out);
+
+// Audio clips playing at song position `tick` that started before it (Play pressed, or a jump,
+// into the middle of them): one trigger each, at sample offset 0, with clipOffsetTicks set.
+// Song mode only. Clips starting exactly at `tick` are left to collectTriggers().
+int collectClipsUnderPlayhead(const EngineState& state, double tick, std::span<Trigger> out);
 
 } // namespace jls::engine

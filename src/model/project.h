@@ -42,6 +42,9 @@ struct Channel
     // Repeat this channel's notes when the pattern is longer than they are (see
     // Project::loopLengthInSteps()). Applies only while Project::loopChannels is on.
     bool loop = true;
+    // The source of audio clips in the Playlist (Clip::audio): its sample plays in song time.
+    // Hidden from the Channel Rack unless Project::showAudioClips is on.
+    bool audioClip = false;
 
     // A hosted plugin instrument plays the channel instead of a sample (see setInstrument()).
     std::string pluginId;    // the host's identifier string; empty = sampler channel
@@ -150,13 +153,18 @@ struct Pattern
 
 // A pattern placed in the Playlist. Positions are in steps (16ths) from the song start.
 // A clip longer than its pattern repeats the pattern.
+// A pattern, or an audio clip (`audio` set: the audio-clip channel whose sample it plays), placed
+// in the Playlist. Positions are in steps (16ths) from the song start. A pattern clip longer than
+// its pattern repeats it; an audio clip longer than its sample is silent after it.
 struct Clip
 {
     PatternId pattern = 0;
     int track = 0;
     int startStep = 0;
     int lengthInSteps = Pattern::defaultLength;
+    ChannelId audio = 0; // audio clips: the Channel (Channel::audioClip) to play
 
+    bool isAudio() const { return audio != 0; }
     int endStep() const { return startStep + lengthInSteps; }
     bool operator==(const Clip&) const = default;
 };
@@ -201,6 +209,7 @@ struct Project
     PatternId currentPattern = 0;
     ChannelId selectedChannel = 0; // 0 = none; the Piano Roll (F7) edits this channel
     int selectedMixerTrack = 1;    // the mixer track whose effect slots are shown
+    bool showAudioClips = false;   // Channel Rack also lists audio-clip channels
     Scale scale = Scale::none;     // Piano Roll scale highlight
     int scaleRoot = 0;             // 0 = C ... 11 = B
     bool songMode = false;
@@ -213,6 +222,10 @@ struct Project
 
     // New channels go to the first insert no other channel uses (Master if all are taken).
     ChannelId addChannel(std::string name, std::shared_ptr<const engine::SampleBuffer> sample);
+    // The audio-clip channel for a sample file: the existing one for that path, or a new one
+    // (named after the file, routed like a new channel, hidden in the Channel Rack).
+    ChannelId audioClipChannel(const std::string& path, const std::string& name,
+                               std::shared_ptr<const engine::SampleBuffer> sample);
     // A channel played by a hosted plugin instrument, named after it.
     ChannelId addInstrumentChannel(const std::string& pluginId, const std::string& pluginName);
     void removeChannel(ChannelId id); // also removes its notes from every pattern

@@ -397,8 +397,13 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
     {
         // Stopping, pausing or jumping (e.g. Stop + Play within one block) ends held notes.
         noteEventCount = 0;
-        if (wasPlaying && (!block.playing || block.startBeat != lastEndBeat))
+        const bool jumped = wasPlaying && block.startBeat != lastEndBeat;
+        const bool starting = block.playing && (!wasPlaying || jumped);
+        if (wasPlaying && (!block.playing || jumped))
+        {
             releaseAllNotes();
+            sampler.stopClips();
+        }
         wasPlaying = block.playing;
         lastEndBeat = block.endBeat;
         applyLiveEvents();
@@ -434,11 +439,36 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
 
         const int count = collectTriggers(*current, block, numSamples, triggers);
 
+        // Audio clips are timed in ticks; their sample plays in seconds at the current tempo.
+        const double secondsPerTick = 60.0 / (transportState.tempo() * ticksPerBeat);
+        // Play (or a jump) landing inside audio clips starts them part-way in.
+        if (starting)
+        {
+            std::array<Trigger, 64> resumed{};
+            const int n = collectClipsUnderPlayhead(*current, t0, resumed);
+            for (int i = 0; i < n; ++i)
+            {
+                const auto& clip = resumed[static_cast<std::size_t>(i)];
+                sampler.triggerClip(*current, clip.channelIndex,
+                                    clip.clipOffsetTicks * secondsPerTick,
+                                    clip.lengthTicks * secondsPerTick);
+            }
+        }
+
         // Render in segments so each trigger starts on its exact sample.
         int cursor = 0;
         for (int i = 0; i < count; ++i)
         {
             const auto& trigger = triggers[static_cast<std::size_t>(i)];
+            if (trigger.audioClip)
+            {
+                sampler.render(*current, buses.data(), numTracks * 2, cursor, trigger.sampleOffset);
+                sampler.triggerClip(*current, trigger.channelIndex,
+                                    trigger.clipOffsetTicks * secondsPerTick,
+                                    trigger.lengthTicks * secondsPerTick);
+                cursor = trigger.sampleOffset;
+                continue;
+            }
             if (isInstrument(trigger.channelIndex))
             {
                 startInstrumentNote(trigger, trigger.endTick < t1 ? offsetOf(trigger.endTick) : -1);

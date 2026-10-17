@@ -99,6 +99,8 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
         json channel = {{"id", c.id},         {"name", c.name},   {"volume", tidy(c.volume)},
                         {"pan", tidy(c.pan)}, {"muted", c.muted}, {"mixerTrack", c.mixerTrack},
                         {"loop", c.loop}};
+        if (c.audioClip)
+            channel["audioClip"] = true;
         if (c.isInstrument())
             channel["instrument"] = {
                 {"id", c.pluginId}, {"name", c.pluginName}, {"state", c.pluginState}};
@@ -126,10 +128,14 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
 
     json clips = json::array();
     for (const auto& c : project.playlist.clips)
-        clips.push_back({{"pattern", c.pattern},
-                         {"track", c.track},
-                         {"start", c.startStep},
-                         {"length", c.lengthInSteps}});
+    {
+        json clip = {{"track", c.track}, {"start", c.startStep}, {"length", c.lengthInSteps}};
+        if (c.isAudio())
+            clip["audio"] = c.audio; // an audio clip: the channel whose sample it plays
+        else
+            clip["pattern"] = c.pattern;
+        clips.push_back(std::move(clip));
+    }
 
     json tracks = json::array();
     for (const auto& t : project.mixer.tracks)
@@ -177,7 +183,8 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
           {"scale", project.scale == Scale::major   ? "major"
                     : project.scale == Scale::minor ? "minor"
                                                     : "none"},
-          {"scaleRoot", project.scaleRoot}}},
+          {"scaleRoot", project.scaleRoot},
+          {"showAudioClips", project.showAudioClips}}},
         {"nextIds",
          {{"channel", project.nextChannelId},
           {"pattern", project.nextPatternId},
@@ -230,6 +237,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         channel.muted = read.get<bool>(c, "muted", false);
         channel.mixerTrack = read.clamped<int>(c, "mixerTrack", 0, 0, Mixer::numInserts);
         channel.loop = read.get<bool>(c, "loop", true);
+        channel.audioClip = read.get<bool>(c, "audioClip", false);
 
         // A plugin instrument channel. Kept even if the plugin isn't installed here (it stays
         // silent), so the project survives a round trip through another machine.
@@ -332,10 +340,14 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         for (const auto& c : read.array(*playlist, "clips"))
         {
             Clip clip;
+            clip.audio = read.get<ChannelId>(c, "audio", 0);
             clip.pattern = read.get<PatternId>(c, "pattern", 0);
-            if (project.findPattern(clip.pattern) == nullptr)
+            if (clip.isAudio() ? project.findChannel(clip.audio) == nullptr
+                               : project.findPattern(clip.pattern) == nullptr)
             {
-                read.warn("A Playlist clip for a pattern that doesn't exist was skipped.");
+                read.warn(clip.isAudio()
+                              ? "An audio clip for a channel that doesn't exist was skipped."
+                              : "A Playlist clip for a pattern that doesn't exist was skipped.");
                 continue;
             }
             clip.track = read.clamped<int>(c, "track", 0, 0, project.playlist.numTracks - 1);
@@ -464,6 +476,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
     const auto scale = read.get<std::string>(viewObj, "scale", "none");
     project.scale = scale == "major" ? Scale::major : scale == "minor" ? Scale::minor : Scale::none;
     project.scaleRoot = read.clamped<int>(viewObj, "scaleRoot", 0, 0, 11);
+    project.showAudioClips = read.get<bool>(viewObj, "showAudioClips", false);
 
     result.project = std::move(project);
     return result;

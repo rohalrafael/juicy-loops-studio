@@ -54,6 +54,23 @@ class Collector
         }
     }
 
+    // An audio clip starting at `tick` (block time), lasting `length` ticks.
+    void addClip(int channel, double tick, double length)
+    {
+        if (count == static_cast<int>(out.size()))
+            return;
+        const double fraction = (tick - startTick) / span;
+        Trigger trigger;
+        trigger.channelIndex = channel;
+        trigger.sampleOffset =
+            std::clamp(static_cast<int>(std::lround(fraction * numSamples)), 0, numSamples - 1);
+        trigger.velocity = 100.0f / 128.0f; // unity
+        trigger.endTick = tick + length;
+        trigger.audioClip = true;
+        trigger.lengthTicks = length;
+        out[static_cast<std::size_t>(count++)] = trigger;
+    }
+
     int finish()
     {
         std::sort(out.begin(), out.begin() + count, [](const Trigger& a, const Trigger& b)
@@ -113,6 +130,15 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
         const double to = std::min(t1, loopStart + songLength);
         for (const auto& clip : state.clips)
         {
+            if (clip.audioChannel >= 0)
+            {
+                const double clipStart = loopStart + clip.startTick;
+                if (clipStart >= from && clipStart < to &&
+                    clip.audioChannel < static_cast<int>(state.channels.size()) &&
+                    !state.channels[static_cast<std::size_t>(clip.audioChannel)].muted)
+                    collector.addClip(clip.audioChannel, clipStart, clip.lengthTicks);
+                continue;
+            }
             if (clip.patternIndex < 0 ||
                 clip.patternIndex >= static_cast<int>(state.patterns.size()))
                 continue;
@@ -127,6 +153,33 @@ int collectTriggers(const EngineState& state, const BlockPosition& block, int nu
         from = to;
     }
     return collector.finish();
+}
+
+int collectClipsUnderPlayhead(const EngineState& state, double tick, std::span<Trigger> out)
+{
+    const double songLength = state.songLengthTicks;
+    if (!state.songMode || songLength <= 0.0)
+        return 0;
+    const double inSong = std::fmod(std::max(0.0, tick), songLength);
+    int count = 0;
+    for (const auto& clip : state.clips)
+    {
+        if (clip.audioChannel < 0 || clip.audioChannel >= static_cast<int>(state.channels.size()) ||
+            state.channels[static_cast<std::size_t>(clip.audioChannel)].muted)
+            continue;
+        const double offset = inSong - clip.startTick;
+        if (offset <= 0.0 || offset >= clip.lengthTicks || count == static_cast<int>(out.size()))
+            continue;
+        Trigger trigger;
+        trigger.channelIndex = clip.audioChannel;
+        trigger.velocity = 100.0f / 128.0f;
+        trigger.audioClip = true;
+        trigger.clipOffsetTicks = offset;
+        trigger.lengthTicks = clip.lengthTicks - offset;
+        trigger.endTick = tick + trigger.lengthTicks;
+        out[static_cast<std::size_t>(count++)] = trigger;
+    }
+    return count;
 }
 
 } // namespace jls::engine

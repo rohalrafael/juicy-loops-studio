@@ -68,9 +68,10 @@ struct PatternState
 
 struct ClipState
 {
-    int patternIndex = 0; // into EngineState::patterns
+    int patternIndex = 0; // into EngineState::patterns (pattern clips)
     int startTick = 0;    // position in the song
     int lengthTicks = 16 * ticksPerBeat / 4;
+    int audioChannel = -1; // audio clips: index into EngineState::channels, whose sample plays
 };
 
 struct EngineState

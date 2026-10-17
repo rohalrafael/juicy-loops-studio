@@ -70,6 +70,38 @@ void Sampler::trigger(const EngineState& state, int channelIndex, int pitch, flo
                       std::exp2((std::clamp(pitch, 0, 127) - 60) / 12.0);
     voice.gain = std::clamp(velocity, 0.0f, 1.0f) / (100.0f / 128.0f);
     voice.startedAt = ++triggerCounter;
+    voice.remaining = -1;
+}
+
+void Sampler::triggerClip(const EngineState& state, int channelIndex, double startSeconds,
+                          double lengthSeconds)
+{
+    if (channelIndex < 0 || channelIndex >= static_cast<int>(state.channels.size()))
+        return;
+    const auto& channel = state.channels[static_cast<std::size_t>(channelIndex)];
+    if (!channel.sample || channel.sample->numFrames() == 0)
+        return;
+    const double startFrame = std::max(0.0, startSeconds) * channel.sample->sampleRate;
+    if (startFrame >= channel.sample->numFrames() - 1)
+        return; // the clip is longer than its sample and we're past the sound
+
+    auto& voice = allocateVoice();
+    voice.active = true;
+    voice.channelId = channel.id;
+    voice.sample = channel.sample.get();
+    voice.position = startFrame;
+    voice.increment = channel.sample->sampleRate / sampleRate;
+    voice.gain = 1.0f;
+    voice.startedAt = ++triggerCounter;
+    voice.remaining =
+        std::max(1LL, static_cast<long long>(std::llround(lengthSeconds * sampleRate)));
+}
+
+void Sampler::stopClips()
+{
+    for (auto& voice : voices)
+        if (voice.active && voice.remaining >= 0)
+            voice.remaining = std::min(voice.remaining, clipFadeSamples);
 }
 
 void Sampler::render(const EngineState& state, float* const* buses, int numBuses, int from, int to)
@@ -101,10 +133,17 @@ void Sampler::render(const EngineState& state, float* const* buses, int numBuses
 
         for (int i = from; i < to; ++i)
         {
-            if (voice.position >= lastFrame)
+            if (voice.position >= lastFrame || voice.remaining == 0)
             {
                 voice.active = false;
                 break;
+            }
+            // Audio clips fade out over their last few samples instead of clicking.
+            float fade = 1.0f;
+            if (voice.remaining > 0)
+            {
+                fade = std::min(1.0f, static_cast<float>(voice.remaining) / clipFadeSamples);
+                --voice.remaining;
             }
 
             // Linear interpolation, also handles sample-rate conversion.
@@ -113,9 +152,9 @@ void Sampler::render(const EngineState& state, float* const* buses, int numBuses
             const float l = left[index] + frac * (left[index + 1] - left[index]);
             const float r = right[index] + frac * (right[index + 1] - right[index]);
 
-            outLeft[i] += l * gainLeft;
+            outLeft[i] += l * gainLeft * fade;
             if (outRight != nullptr)
-                outRight[i] += r * gainRight;
+                outRight[i] += r * gainRight * fade;
 
             voice.position += voice.increment;
         }

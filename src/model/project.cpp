@@ -143,6 +143,19 @@ ChannelId Project::addChannel(std::string name, std::shared_ptr<const engine::Sa
     return channels.back().id;
 }
 
+ChannelId Project::audioClipChannel(const std::string& path, const std::string& name,
+                                    std::shared_ptr<const engine::SampleBuffer> sample)
+{
+    for (const auto& c : channels)
+        if (c.audioClip && c.samplePath == path)
+            return c.id;
+    const auto id = addChannel(name, std::move(sample));
+    auto* channel = findChannel(id);
+    channel->samplePath = path;
+    channel->audioClip = true;
+    return id;
+}
+
 ChannelId Project::addInstrumentChannel(const std::string& pluginId, const std::string& pluginName)
 {
     const auto id = addChannel(pluginName, nullptr);
@@ -176,6 +189,7 @@ void Project::removeChannel(ChannelId id)
     std::erase_if(channels, [id](const Channel& c) { return c.id == id; });
     for (auto& pattern : patterns)
         pattern.notes.erase(id);
+    std::erase_if(playlist.clips, [id](const Clip& c) { return c.audio == id; });
     if (selectedChannel == id)
         selectedChannel = channels.empty() ? 0 : channels.front().id;
 }
@@ -470,6 +484,16 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
 
     for (const auto& clip : project.playlist.clips)
     {
+        if (clip.isAudio())
+        {
+            const auto channel = std::find_if(project.channels.begin(), project.channels.end(),
+                                              [&](const Channel& c) { return c.id == clip.audio; });
+            if (channel != project.channels.end())
+                state->clips.push_back({-1, clip.startStep * ticksPerStep,
+                                        clip.lengthInSteps * ticksPerStep,
+                                        static_cast<int>(channel - project.channels.begin())});
+            continue;
+        }
         const auto it = std::find_if(project.patterns.begin(), project.patterns.end(),
                                      [&](const Pattern& p) { return p.id == clip.pattern; });
         if (it == project.patterns.end())

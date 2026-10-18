@@ -211,10 +211,10 @@ ChannelId Project::addInstrumentChannel(const std::string& pluginId, const std::
     return id;
 }
 
-void Channel::setInstrument(std::string id, std::string name)
+void Channel::setInstrument(std::string newPluginId, std::string newPluginName)
 {
-    pluginId = std::move(id);
-    pluginName = std::move(name);
+    pluginId = std::move(newPluginId);
+    pluginName = std::move(newPluginName);
     pluginState.clear();
     sample = nullptr;
     samplePath.clear();

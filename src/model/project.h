@@ -73,7 +73,7 @@ struct Channel
 
     bool isInstrument() const { return !pluginId.empty(); }
     // Makes this a plugin instrument channel (drops the sample) ...
-    void setInstrument(std::string id, std::string name);
+    void setInstrument(std::string newPluginId, std::string newPluginName);
     // ... or a sampler channel again (drops the plugin).
     void setSample(std::shared_ptr<const engine::SampleBuffer> buffer, std::string path,
                    std::string builtin = {});

@@ -24,6 +24,16 @@ FetchContent_Declare(signalsmith_stretch
     GIT_TAG 1.4.0
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(signalsmith_stretch)
+# Its headers are someone else's code: include them as system headers so our strict warnings
+# (/W4 /WX on MSVC, which flags its double -> float constants) don't apply to them.
+foreach(target signalsmith-stretch signalsmith-linear)
+    if(TARGET ${target})
+        get_target_property(dirs ${target} INTERFACE_INCLUDE_DIRECTORIES)
+        if(dirs)
+            set_target_properties(${target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${dirs}")
+        endif()
+    endif()
+endforeach()
 
 # Engine, model and theme: plain C++, no JUCE or GUI dependency, so they stay unit-testable.
 add_subdirectory(src/engine)

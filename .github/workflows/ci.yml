@@ -1,8 +1,9 @@
 name: CI
 
 # Private repo with limited CI minutes (macOS bills 10x, Windows 2x):
-# pushes/PRs build on Linux only; the full OS matrix runs only when triggered manually
-# (Actions tab -> CI -> Run workflow, or `gh workflow run ci.yml`).
+# pushes/PRs build on Linux only; other OSes run only when triggered manually
+# (Actions tab -> CI -> Run workflow, or `gh workflow run ci.yml -f platforms=windows`).
+# Windows and macOS runs upload the built app as an artifact to download.
 on:
   push:
     branches: [main]
@@ -10,9 +11,15 @@ on:
   pull_request:
     paths-ignore: ['**.md', 'LICENSE', '.clang-format']
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Which OSes to build
+        type: choice
+        options: [all, windows, macos, linux]
+        default: all
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -20,7 +27,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["ubuntu-latest", "windows-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        os: >-
+          ${{ github.event_name != 'workflow_dispatch' && fromJSON('["ubuntu-latest"]')
+          || inputs.platforms == 'windows' && fromJSON('["windows-latest"]')
+          || inputs.platforms == 'macos' && fromJSON('["macos-latest"]')
+          || inputs.platforms == 'linux' && fromJSON('["ubuntu-latest"]')
+          || fromJSON('["ubuntu-latest", "windows-latest", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
 
@@ -51,12 +63,34 @@ jobs:
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-      - name: Configure (Windows/macOS)
-        if: runner.os != 'Linux'
+      # Static MSVC runtime: the .exe runs without the Visual C++ redistributable installed.
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release --parallel
+
+      # Before the tests, so a test failure on a rarely built OS still leaves an app to try.
+      - name: Upload app (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: juicy-loops-studio-windows
+          path: build/src/app/JuicyLoopsStudio_artefacts/Release/*.exe
+          retention-days: 14
+
+      - name: Upload app (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: juicy-loops-studio-macos
+          path: build/src/app/JuicyLoopsStudio_artefacts/Release/*.app
+          retention-days: 14
 
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure

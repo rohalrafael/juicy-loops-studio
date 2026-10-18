@@ -48,7 +48,7 @@ juce_add_binary_data(JlsFonts SOURCES
 target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
-    JUCE_JACK=1
+    $<$<PLATFORM_ID:Linux>:JUCE_JACK=1>
     JUCE_PLUGINHOST_VST3=1
     JUCE_PLUGINHOST_LV2=1
     JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:JuicyLoopsStudio,JUCE_PRODUCT_NAME>"

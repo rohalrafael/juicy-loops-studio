@@ -11,6 +11,13 @@
 namespace jls::engine
 {
 
+#ifdef _MSC_VER
+// C4324 "structure was padded due to alignment specifier" is the point of the alignas(64) below:
+// the two indices sit on separate cache lines. Disabled here so every includer builds with /WX.
+#pragma warning(push)
+#pragma warning(disable : 4324)
+#endif
+
 // Wait-free single-producer / single-consumer ring buffer.
 // push() and hasSpace() from the producer thread only; pop() from the consumer thread only.
 template <typename T, std::size_t Capacity> class SpscQueue
@@ -52,5 +59,9 @@ template <typename T, std::size_t Capacity> class SpscQueue
     alignas(64) std::atomic<std::size_t> writeIndex{0};
     alignas(64) std::atomic<std::size_t> readIndex{0};
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 } // namespace jls::engine

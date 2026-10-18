@@ -15,9 +15,7 @@ target_include_directories(jls_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(jls_engine PRIVATE signalsmith-stretch)
 
 if(MSVC)
-    # C4324 "structure was padded due to alignment specifier" is the point of SpscQueue's
-    # alignas(64): its indices sit on separate cache lines.
-    target_compile_options(jls_engine PRIVATE /W4 /WX /wd4324)
+    target_compile_options(jls_engine PRIVATE /W4 /WX)
 else()
     target_compile_options(jls_engine PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

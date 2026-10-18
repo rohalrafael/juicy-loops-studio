@@ -143,8 +143,12 @@ tempo or sample-rate change, so it doesn't drift; `advance()` returns the block'
   block. Each trigger also carries its `endTick`: the note's end, cut at the end of its clip
   or pattern repeat, in the same unwrapped tick timeline as the transport.
 - **Sampler:** renders the voices in segments between those offsets, so timing doesn't
-  depend on buffer size. Samples play to their end (note length is ignored, as in FL's
-  default sampler).
+  depend on buffer size. Reads samples with 4-point cubic (Hermite) interpolation. Without an
+  envelope a sample plays to its end (note length ignored, FL's default); with the DAHDSR
+  envelope on, each voice steps the envelope per sample and releases at the note's end (the
+  trigger's `endTick` as seconds) or, for live notes, at `releaseLive()`. Cutting: a trigger
+  fades out (64 samples) the channel's own voices when `cutItself`, and every voice whose
+  channel's `cutBy` equals its `cutGroup`.
 - **Instruments:** triggers on plugin-instrument channels become note events instead (see
   below).
 - **Audio clips:** a clip starting in the span becomes one trigger for its channel's sample

@@ -476,7 +476,7 @@ const std::vector<EffectType>& effectTypes()
          "Soft Clipper",
          {{"Drive", 0.0f, 24.0f, 0.0f, "dB"},
           {"Ceiling", -12.0f, 0.0f, -0.3f, "dB"},
-          {"Knee", 0.0f, 1.0f, 0.5f}},
+          {"Knee", 0.0f, 1.0f, 0.1f}},
          make<SoftClipper>},
     };
     return types;

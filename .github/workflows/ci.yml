@@ -1,15 +1,15 @@
 name: CI
 
 # Private repo with limited CI minutes (macOS bills 10x, Windows 2x):
-# pushes/PRs build on Linux only; other OSes run only when triggered manually
+# when on, pushes/PRs build on Linux only; other OSes run only when triggered manually
 # (Actions tab -> CI -> Run workflow, or `gh workflow run ci.yml -f platforms=windows`).
 # Windows and macOS runs upload the built app as an artifact to download.
+#
+# Automatic runs are off for now (maintainer's choice, 2026-10-18): build and test happen in the
+# sandbox. To turn them back on, restore:
+#   push: {branches: [main], paths-ignore: ['**.md', 'LICENSE', '.clang-format']}
+#   pull_request: {paths-ignore: ['**.md', 'LICENSE', '.clang-format']}
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['**.md', 'LICENSE', '.clang-format']
-  pull_request:
-    paths-ignore: ['**.md', 'LICENSE', '.clang-format']
   workflow_dispatch:
     inputs:
       platforms:

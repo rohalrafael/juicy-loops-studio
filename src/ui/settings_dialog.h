@@ -20,6 +20,10 @@ inline constexpr double defaultPreviewSeconds = 5.0; // Browser: length of a cli
 // Ctrl+Tab order: "fixed" (Browser, Channel Rack, Playlist, Mixer) or "recent" (last used first,
 // like Alt+Tab).
 inline constexpr const char* focusOrderKey = "focusOrder";
+// Interface size: scales the whole UI (text included), e.g. 1.25 for 125%.
+inline constexpr const char* uiScaleKey = "uiScale";
+double uiScale(juce::PropertiesFile& file);
+void applyUiScale(juce::PropertiesFile& file);
 // Plugin editors: "inside" (panels in the main window, the default) or "separate" (windows).
 inline constexpr const char* pluginWindowsKey = "pluginWindows";
 

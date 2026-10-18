@@ -66,6 +66,23 @@ class IconButton : public juce::Button
     bool flat = false;
 };
 
+// Letter keys for a popup menu while it's open, as in FL (right-click a channel, press D to
+// delete it). JUCE's menus only handle arrows, Enter and Escape, so this watches the keys
+// itself: pressing one closes the menu and runs its action. Show the letter in the menu with
+// PopupMenu::Item::shortcutKeyDescription. Create it right after showing the menu and delete
+// it in the menu's callback.
+class MenuKeys final : private juce::Timer
+{
+  public:
+    explicit MenuKeys(std::vector<std::pair<char, std::function<void()>>> keys);
+    ~MenuKeys() override;
+
+  private:
+    void timerCallback() override;
+    std::vector<std::pair<char, std::function<void()>>> keys;
+    std::vector<bool> wasDown; // a key already held when the menu opened doesn't count
+};
+
 // Joins buttons left to right into one segmented control (PAT | SONG, 16 | 32 | 64): shared
 // borders, rounded only at the outer ends.
 void joinSegments(std::initializer_list<juce::Button*> buttons);
@@ -191,6 +208,8 @@ class FormPanel : public juce::Component
     int addNote(const juce::String& text);
     void setNote(int index, const juce::String& text);
     void addPainted(int height, std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter);
+    // A component spanning the column (e.g. the Sampler's envelope editor).
+    void addComponent(juce::Component& component, int height);
     // The height the items need at `width` (plus `extra` below, e.g. a footer).
     int preferredHeight(int width) const;
 
@@ -201,6 +220,7 @@ class FormPanel : public juce::Component
     // Below the items (for a footer); laid out by subclasses.
     juce::Rectangle<int> itemsArea() const;
     int footerHeight = 0;
+    int itemsWidth = -1; // the items' column width (a second column beside it); -1 = all
 
   private:
     struct Item
@@ -210,13 +230,15 @@ class FormPanel : public juce::Component
             section,
             row,
             note,
-            painted
+            painted,
+            component
         } kind;
         juce::String text;
         std::vector<std::pair<juce::Component*, int>> controls;
         int height = 0;
         std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter;
         juce::Rectangle<int> bounds;
+        juce::Component* component = nullptr;
     };
     int heightOf(const Item& item, int width) const;
     std::vector<Item> items;

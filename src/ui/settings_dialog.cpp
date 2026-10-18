@@ -36,6 +36,16 @@ bool pluginsInsideApp(juce::PropertiesFile& file)
     return file.getValue(pluginWindowsKey, "inside") != "separate";
 }
 
+double uiScale(juce::PropertiesFile& file)
+{
+    return std::clamp(file.getDoubleValue(uiScaleKey, 1.0), 0.75, 2.0);
+}
+
+void applyUiScale(juce::PropertiesFile& file)
+{
+    juce::Desktop::getInstance().setGlobalScaleFactor(static_cast<float>(uiScale(file)));
+}
+
 } // namespace settings
 
 namespace
@@ -73,6 +83,17 @@ class SettingsPanel final : public FormPanel
         focusOrder.onChange = [this, values]
         { file.setValue(settings::focusOrderKey, values[focusOrder.getSelectedItemIndex()]); };
 
+        // Interface size: ids are percentages.
+        for (int percent : {100, 110, 125, 150})
+            interfaceSize.addItem(juce::String(percent) + " %", percent);
+        interfaceSize.setSelectedId(juce::roundToInt(settings::uiScale(file) * 100.0),
+                                    juce::dontSendNotification);
+        interfaceSize.onChange = [this]
+        {
+            file.setValue(settings::uiScaleKey, interfaceSize.getSelectedId() / 100.0);
+            settings::applyUiScale(file);
+        };
+
         pluginWindows.addItemList({"Inside the app", "Separate windows"}, 1);
         pluginWindows.setSelectedItemIndex(settings::pluginsInsideApp(file) ? 0 : 1,
                                            juce::dontSendNotification);
@@ -95,6 +116,10 @@ class SettingsPanel final : public FormPanel
         addRow("Ctrl+Tab order", {{&focusOrder, 160}});
         addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
                 "keep the modifier held to go further back.");
+        addSection("Display");
+        addRow("Interface size", {{&interfaceSize, 160}});
+        addNote("Scales the whole interface, text included: larger is easier to read on "
+                "high-resolution screens.");
         addSection("Plugins");
         addRow("Plugin windows", {{&pluginWindows, 160}});
         addNote("Inside the app shows plugin editors as panels in the main window. If a plugin "
@@ -118,6 +143,7 @@ class SettingsPanel final : public FormPanel
     NumberField previewLength{"s", 1, "00.0"};
     juce::ComboBox focusOrder;
     juce::ComboBox pluginWindows;
+    juce::ComboBox interfaceSize;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

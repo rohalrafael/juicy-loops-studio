@@ -154,11 +154,36 @@ TEST_CASE("Sampler settings are saved")
 {
     model::Project project;
     const auto id = project.addChannel("loop", nullptr);
-    project.findChannel(id)->sampler = {model::StretchMode::stretch, 92.5, -3.0};
+    auto& settings = project.findChannel(id)->sampler;
+    settings.mode = model::StretchMode::stretch;
+    settings.originalTempo = 92.5;
+    settings.pitch = -3.0;
+    settings.cutItself = true;
+    settings.cutGroup = 2;
+    settings.cutBy = 3;
+    settings.envelope = {true, 0.01, 0.02, 0.03, 0.4, 0.5, 0.6};
     const auto loaded = model::loadProject(model::saveProject(project, "/p/s.jlp"), "/p/s.jlp", {});
     REQUIRE(loaded.project);
     const auto& s = loaded.project->findChannel(id)->sampler;
     CHECK(s.mode == model::StretchMode::stretch);
     CHECK(s.originalTempo == Approx(92.5));
     CHECK(s.pitch == Approx(-3.0));
+    CHECK(s.cutItself);
+    CHECK(s.cutGroup == 2);
+    CHECK(s.cutBy == 3);
+    CHECK(s.envelope.on);
+    CHECK(s.envelope.delay == Approx(0.01));
+    CHECK(s.envelope.hold == Approx(0.03));
+    CHECK(s.envelope.sustain == Approx(0.5));
+    CHECK(s.envelope.release == Approx(0.6));
+
+    // Older files have none of it: the defaults (no cutting, envelope off).
+    model::Project plain;
+    const auto other = plain.addChannel("kick", nullptr);
+    plain.findChannel(other)->sampler.pitch = 2.0; // so a "sampler" object is written
+    auto json = model::saveProject(plain, "/p/o.jlp");
+    const auto reloaded = model::loadProject(json, "/p/o.jlp", {});
+    REQUIRE(reloaded.project);
+    CHECK_FALSE(reloaded.project->findChannel(other)->sampler.cutItself);
+    CHECK_FALSE(reloaded.project->findChannel(other)->sampler.envelope.on);
 }

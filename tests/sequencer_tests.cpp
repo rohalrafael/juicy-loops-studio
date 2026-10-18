@@ -354,3 +354,143 @@ TEST_CASE("Engine plays published state and frees retired states on the UI threa
     engine.collectGarbage();
     CHECK(watched.expired());
 }
+
+TEST_CASE("Cut itself: a new note stops the channel's sounding note, with a short fade")
+{
+    auto state = stateWithSteps({});
+    state.channels[0].sample = constantSample(48000); // long enough to overlap
+    Sampler sampler;
+    sampler.prepare(sampleRate);
+    std::vector<float> left(512, 0.0f);
+    float* channels[] = {left.data()};
+
+    sampler.trigger(state, 0);
+    sampler.trigger(state, 0);
+    CHECK(sampler.activeVoiceCount() == 2); // overlapping by default
+    sampler.render(state, channels, 1, 0, 512);
+    CHECK(left[300] == Catch::Approx(2.0f));
+
+    Sampler cutting;
+    cutting.prepare(sampleRate);
+    state.channels[0].cutItself = true;
+    std::fill(left.begin(), left.end(), 0.0f);
+    cutting.trigger(state, 0);
+    cutting.trigger(state, 0); // cuts the first
+    cutting.render(state, channels, 1, 0, 512);
+    CHECK(left[10] > 1.0f);                  // the first is still fading out
+    CHECK(left[300] == Catch::Approx(1.0f)); // then only the new note
+    CHECK(cutting.activeVoiceCount() == 1);
+}
+
+TEST_CASE("Cut groups: a channel stops the channels cut by its group")
+{
+    auto state = stateWithSteps({});
+    state.channels[0].sample = constantSample(48000);
+    auto open = state.channels[0]; // open hat: cut by group 1
+    open.id = 2;
+    open.cutBy = 1;
+    state.channels.push_back(open);
+    state.channels[0].cutGroup = 1; // closed hat: cuts group 1
+
+    Sampler sampler;
+    sampler.prepare(sampleRate);
+    std::vector<float> left(512, 0.0f);
+    float* channels[] = {left.data()};
+    sampler.trigger(state, 1); // open hat rings
+    sampler.trigger(state, 0); // closed hat cuts it
+    sampler.render(state, channels, 1, 0, 512);
+    CHECK(left[300] == Catch::Approx(1.0f));
+    CHECK(sampler.activeVoiceCount() == 1);
+
+    // The other way round nothing is cut: the open hat's group is 0.
+    Sampler other;
+    other.prepare(sampleRate);
+    other.trigger(state, 0);
+    other.trigger(state, 1);
+    CHECK(other.activeVoiceCount() == 2);
+}
+
+TEST_CASE("The envelope ramps in, holds the sustain and releases when the note ends")
+{
+    auto state = stateWithSteps({});
+    state.channels[0].sample = constantSample(48000);
+    auto& e = state.channels[0].envelope;
+    e.on = true;
+    e.delay = 0.0f;
+    e.attack = 100.0f / 48000.0f; // 100 samples
+    e.hold = 0.0f;
+    e.decay = 100.0f / 48000.0f;
+    e.sustain = 0.5f;
+    e.release = 100.0f / 48000.0f;
+
+    Sampler sampler;
+    sampler.prepare(sampleRate);
+    std::vector<float> left(1000, 0.0f);
+    float* channels[] = {left.data()};
+    sampler.trigger(state, 0, 60, 100.0f / 128.0f, 500.0 / 48000.0); // a 500-sample note
+    sampler.render(state, channels, 1, 0, 1000);
+
+    CHECK(left[0] < 0.05f);                                // starts from silence
+    CHECK(left[49] == Catch::Approx(0.5f).margin(0.02));   // half way up the attack
+    CHECK(left[99] == Catch::Approx(1.0f).margin(0.02));   // the peak
+    CHECK(left[300] == Catch::Approx(0.5f));               // sustain
+    CHECK(left[550] == Catch::Approx(0.25f).margin(0.02)); // half way through the release
+    CHECK(left[700] == 0.0f);                              // released: the voice is gone
+    CHECK(sampler.activeVoiceCount() == 0);
+
+    // Off: the note's length doesn't matter, the sample plays to its end at full level.
+    e.on = false;
+    Sampler oneShot;
+    oneShot.prepare(sampleRate);
+    std::fill(left.begin(), left.end(), 0.0f);
+    oneShot.trigger(state, 0, 60, 100.0f / 128.0f, 500.0 / 48000.0);
+    oneShot.render(state, channels, 1, 0, 1000);
+    CHECK(left[0] == Catch::Approx(1.0f));
+    CHECK(left[900] == Catch::Approx(1.0f));
+}
+
+TEST_CASE("Live sample notes release on their note-off")
+{
+    auto state = stateWithSteps({});
+    state.channels[0].sample = constantSample(48000);
+    auto& e = state.channels[0].envelope;
+    e.on = true;
+    e.attack = 0.0f;
+    e.sustain = 1.0f;
+    e.release = 10.0f / 48000.0f;
+
+    Sampler sampler;
+    sampler.prepare(sampleRate);
+    std::vector<float> left(200, 0.0f);
+    float* channels[] = {left.data()};
+    sampler.trigger(state, 0, 64, 100.0f / 128.0f, -1.0, true);
+    sampler.render(state, channels, 1, 0, 100);
+    CHECK(left[50] == Catch::Approx(1.0f)); // held as long as the key is
+    sampler.releaseLive(62);                // another key: nothing happens
+    CHECK(sampler.activeVoiceCount() == 1);
+    sampler.releaseLive(64);
+    sampler.render(state, channels, 1, 100, 200);
+    CHECK(left[150] == 0.0f);
+    CHECK(sampler.activeVoiceCount() == 0);
+}
+
+TEST_CASE("Cubic interpolation passes through the samples and stays smooth between them")
+{
+    // A slow ramp read at half speed: values between samples land between their neighbours.
+    auto buffer = std::make_shared<SampleBuffer>();
+    buffer->sampleRate = sampleRate;
+    buffer->channels.assign(1, std::vector<float>(64));
+    for (std::size_t i = 0; i < 64; ++i)
+        buffer->channels[0][i] = static_cast<float>(i) / 64.0f;
+    auto state = stateWithSteps({});
+    state.channels[0].sample = buffer;
+
+    Sampler sampler;
+    sampler.prepare(sampleRate);
+    std::vector<float> left(100, 0.0f);
+    float* channels[] = {left.data()};
+    sampler.trigger(state, 0, 48); // an octave down: half speed
+    sampler.render(state, channels, 1, 0, 100);
+    CHECK(left[20] == Catch::Approx(10.0f / 64.0f));              // on a sample: exact
+    CHECK(left[21] == Catch::Approx(10.5f / 64.0f).margin(1e-4)); // a line stays a line
+}

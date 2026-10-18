@@ -544,6 +544,17 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
                     cs.speed = std::exp2(channel.sampler.pitch / 12.0) / factor;
             }
         }
+        cs.cutItself = channel.sampler.cutItself;
+        cs.cutGroup = channel.sampler.cutGroup;
+        cs.cutBy = channel.sampler.cutBy;
+        const auto& e = channel.sampler.envelope;
+        cs.envelope = {e.on,
+                       static_cast<float>(e.delay),
+                       static_cast<float>(e.attack),
+                       static_cast<float>(e.hold),
+                       static_cast<float>(e.decay),
+                       static_cast<float>(e.sustain),
+                       static_cast<float>(e.release)};
         // Balance pan: centre = full volume on both sides.
         const float pan = std::clamp(channel.pan, -1.0f, 1.0f);
         cs.gainLeft = channel.volume * std::min(1.0f, 1.0f - pan);

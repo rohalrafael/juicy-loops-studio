@@ -43,7 +43,7 @@ const std::vector<Definition>& all()
         {deleteSelection,
          "Delete selection",
          "Edit",
-         "Delete the selected notes or clips",
+         "Delete the selected notes or clips (Channel Rack focused: the selected channel)",
          {key(KeyPress::deleteKey), key(KeyPress::backspaceKey)}},
         {selectAll, "Select all", "Edit", "Select all notes or clips", {key('a', ctrl)}},
         {deselect, "Deselect", "Edit", "Clear the selection", {key(KeyPress::escapeKey)}},

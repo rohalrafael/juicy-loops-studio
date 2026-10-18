@@ -19,6 +19,9 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Own window frame (2026-10-18): no system title bar / border on the main window and the app's
+  other windows (e.g. plugin scanning); draw our own minimize / maximize / close buttons and
+  drag area, like FL.
 - Split by channel (2026-10-18): FL's Playlist / pattern action that splits a pattern into one
   pattern per channel (each with only that channel's notes), placed on separate tracks in
   place of the original clips.

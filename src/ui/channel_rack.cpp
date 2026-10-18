@@ -637,16 +637,24 @@ void ChannelRow::showMenu()
     menu.addSubMenu(isInstrument ? "Replace instrument" : "Use an instrument plugin",
                     rack.instrumentMenu(instruments));
     menu.addSeparator();
-    menu.addItem(deleteId, "Delete channel");
+    {
+        juce::PopupMenu::Item item("Delete channel");
+        item.itemID = deleteId;
+        item.shortcutKeyDescription = "D";
+        menu.addItem(std::move(item));
+    }
 
     // The row may be destroyed by the time the menu returns (e.g. an undo removed the
     // channel), so the callback only uses the rack and the id.
     auto& r = rack;
     const auto channel = id;
+    // D deletes the channel while the menu is open, as in FL.
+    auto keys = std::make_shared<std::unique_ptr<MenuKeys>>();
     menu.showMenuAsync(
         juce::PopupMenu::Options().withTargetComponent(&name),
-        [&r, channel, instruments](int result)
+        [&r, channel, instruments, keys](int result)
         {
+            keys->reset();
             switch (result)
             {
             case 0:
@@ -689,6 +697,9 @@ void ChannelRow::showMenu()
                 r.handleInstrumentMenu(result, channel, instruments);
             }
         });
+    *keys = std::make_unique<MenuKeys>(std::vector<std::pair<char, std::function<void()>>>{
+        {'d',
+         [&r, channel] { r.edit([channel](model::Project& p) { p.removeChannel(channel); }); }}});
 }
 
 // -------------------------------------------------------------------------------- ChannelRack

@@ -36,6 +36,11 @@ SampleBuffer makeBuffer(double sampleRate, double seconds)
     return buffer;
 }
 
+// The sounds' peaks, scaled down so a busy default beat (several drums at once, channels at 80%)
+// stays below full scale instead of driving the Master's clipper: at full level it peaked at
+// +4.6 dBFS and sounded loud and gritty.
+constexpr float headroom = 0.45f; // about -7 dB
+
 void normalise(SampleBuffer& buffer, float peakTarget)
 {
     float peak = 0.0f;
@@ -58,7 +63,7 @@ SampleBuffer kick(double sr)
         const double amp = std::exp(-t * 7.0) * std::min(1.0, t * 2000.0); // tiny attack ramp
         buffer.channels[0][i] = static_cast<float>(std::tanh(1.5 * std::sin(phase)) * amp);
     }
-    normalise(buffer, 0.9f);
+    normalise(buffer, 0.9f * headroom);
     return buffer;
 }
 
@@ -77,7 +82,7 @@ SampleBuffer snare(double sr)
         const double rattle = highpassed * std::exp(-t * 18.0);
         buffer.channels[0][i] = static_cast<float>(0.6 * tone + 0.8 * rattle);
     }
-    normalise(buffer, 0.8f);
+    normalise(buffer, 0.8f * headroom);
     return buffer;
 }
 
@@ -102,7 +107,7 @@ SampleBuffer clap(double sr)
             envelope = std::exp(-(t - 3 * burstGap) * 14.0);
         buffer.channels[0][i] = static_cast<float>(band * envelope);
     }
-    normalise(buffer, 0.75f);
+    normalise(buffer, 0.75f * headroom);
     return buffer;
 }
 
@@ -119,7 +124,7 @@ SampleBuffer hat(double sr)
         previous = n;
         buffer.channels[0][i] = static_cast<float>(highpassed * std::exp(-t * 45.0));
     }
-    normalise(buffer, 0.5f);
+    normalise(buffer, 0.5f * headroom);
     return buffer;
 }
 

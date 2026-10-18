@@ -259,6 +259,38 @@ void IconButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
     g.drawText(label, content, juce::Justification::centredLeft, false);
 }
 
+// ----------------------------------------------------------------------------------- MenuKeys
+
+MenuKeys::MenuKeys(std::vector<std::pair<char, std::function<void()>>> menuKeys)
+    : keys(std::move(menuKeys))
+{
+    for (const auto& [key, action] : keys)
+        wasDown.push_back(juce::KeyPress::isKeyCurrentlyDown(key));
+    startTimerHz(60);
+}
+
+MenuKeys::~MenuKeys()
+{
+    stopTimer();
+}
+
+void MenuKeys::timerCallback()
+{
+    for (std::size_t i = 0; i < keys.size(); ++i)
+    {
+        const bool down = juce::KeyPress::isKeyCurrentlyDown(keys[i].first);
+        if (down && !wasDown[i])
+        {
+            stopTimer();
+            juce::PopupMenu::dismissAllActiveMenus();
+            // After the menu has closed (its callback may delete this object).
+            juce::MessageManager::callAsync(keys[i].second);
+            return;
+        }
+        wasDown[i] = down;
+    }
+}
+
 // ------------------------------------------------------------------- Segments and headers
 
 void joinSegments(std::initializer_list<juce::Button*> buttons)
@@ -616,6 +648,14 @@ void FormPanel::setNote(int index, const juce::String& text)
     repaint(items[static_cast<std::size_t>(index)].bounds);
 }
 
+void FormPanel::addComponent(juce::Component& component, int height)
+{
+    addAndMakeVisible(component);
+    Item item{Item::Kind::component, {}, {}, height, {}, {}};
+    item.component = &component;
+    items.push_back(std::move(item));
+}
+
 void FormPanel::addPainted(int height,
                            std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter)
 {
@@ -633,6 +673,7 @@ int FormPanel::heightOf(const Item& item, int width) const
     case Item::Kind::note:
         return noteHeight(item.text, width) + 2;
     case Item::Kind::painted:
+    case Item::Kind::component:
         return item.height + 8;
     }
     return 0;
@@ -649,7 +690,10 @@ int FormPanel::preferredHeight(int width) const
 
 juce::Rectangle<int> FormPanel::itemsArea() const
 {
-    return getLocalBounds().withTrimmedBottom(footerHeight).reduced(margin);
+    auto area = getLocalBounds().withTrimmedBottom(footerHeight);
+    if (itemsWidth > 0)
+        area = area.withWidth(itemsWidth);
+    return area.reduced(margin);
 }
 
 void FormPanel::resized()
@@ -662,6 +706,8 @@ void FormPanel::resized()
         if (i == 0 && item.kind == Item::Kind::section)
             h -= 10; // no gap above the first heading
         item.bounds = area.removeFromTop(h);
+        if (item.kind == Item::Kind::component)
+            item.component->setBounds(item.bounds.withTrimmedBottom(8));
         if (item.kind != Item::Kind::row)
             continue;
         auto line = item.bounds.withTrimmedLeft(labelWidth);
@@ -697,6 +743,8 @@ void FormPanel::paint(juce::Graphics& g)
         case Item::Kind::painted:
             if (item.painter)
                 item.painter(g, item.bounds.withTrimmedBottom(8));
+            break;
+        case Item::Kind::component:
             break;
         }
     }

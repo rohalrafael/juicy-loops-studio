@@ -258,6 +258,24 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: From the maintainer's FL-vs-JLS comparison on Windows:
+  - **Loud and gritty:** a busy default beat peaked at +4.6 dBFS before the Master's Soft
+    Clipper, whose knee 0.5 also saturated everything above about -6 dB. Built-in drums are now
+    ~7 dB quieter (`headroom` in drum_synth.cpp: the same beat peaks at -2.3 dBFS, the clipper
+    doesn't touch it) and new projects get knee 0.1. The Sampler's linear interpolation became
+    4-point cubic. Saved projects keep their clipper settings.
+  - **Cut itself + cut groups** (FL's Cut / Cut by), per sample channel; cuts fade over 64
+    samples.
+  - **Envelope:** FL-style DAHDSR with an on/off switch (maintainer's choice); off = one-shot
+    as before, on = note length matters (release at the note's end; live notes at note-off).
+  - **Delete** with the Channel Rack focused deletes the selected channel; **D** in the
+    channel menu deletes it (`ui::MenuKeys` watches keys while a menu is open, since JUCE's
+    menus ignore letters).
+  - **Blurry text** (Windows, 100 % scaling): JUCE draws text with grayscale anti-aliasing
+    (no ClearType), which we can't change; Settings › Interface size (100-150 %) scales the
+    whole UI.
+  - CI's automatic runs are off for now (maintainer's choice); manual dispatch still works.
+
 - 2026-10-18: The Sampler and plugin editors float **inside** the main window (maintainer's
   choice, FL-like; separate OS windows caused the focus bug, Hyprland placing them, and couldn't
   stack with the panels). `ui::FloatingPanel` (shared header, close, drag, kept below the

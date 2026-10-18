@@ -22,6 +22,19 @@ inline constexpr int maxMixerTracks = 64;
 
 // Immutable snapshot of everything the audio thread needs to play the project.
 // Built on the UI thread, handed to the audio thread through Engine::setState().
+// The Sampler's volume envelope (FL's DAHDSR), times in seconds, sustain 0..1. Off: the sample
+// plays to its end at full level and note length doesn't matter (a one-shot).
+struct SampleEnvelope
+{
+    bool on = false;
+    float delay = 0.0f;
+    float attack = 0.005f;
+    float hold = 0.0f;
+    float decay = 0.3f;
+    float sustain = 1.0f;
+    float release = 0.1f;
+};
+
 struct ChannelState
 {
     std::uint32_t id = 0;
@@ -36,6 +49,13 @@ struct ChannelState
     // Playback speed of the sample (1 = as recorded): the Sampler's pitch, and its Resample mode
     // following the tempo. A Stretch-mode sample arrives already stretched, at speed 1.
     double speed = 1.0;
+    // Cutting (FL's Cut itself / Cut / Cut by): a new note stops this channel's sounding notes
+    // when cutItself; it also stops every channel whose cutBy equals this one's cutGroup.
+    // 0 = no group.
+    bool cutItself = false;
+    int cutGroup = 0;
+    int cutBy = 0;
+    SampleEnvelope envelope;
 };
 
 struct EffectState

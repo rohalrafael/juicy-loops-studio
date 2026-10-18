@@ -63,6 +63,66 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
         c->setWantsKeyboardFocus(false);
         c->setMouseClickGrabsKeyboardFocus(false);
     }
+    // Right column: cutting and the envelope.
+    cutItself.setClickingTogglesState(true);
+    cutItself.setTooltip("A new note stops this channel's note that's still sounding");
+    cutItself.onClick = [this]
+    {
+        const bool on = cutItself.getToggleState();
+        edit([on](model::SamplerSettings& s) { s.cutItself = on; });
+    };
+    for (auto* box : {&cutGroupBox, &cutByBox})
+    {
+        box->addItem("None", 1);
+        for (int group = 1; group <= model::SamplerSettings::maxCutGroup; ++group)
+            box->addItem(juce::String(group), group + 1);
+        box->setWantsKeyboardFocus(false);
+    }
+    cutGroupBox.setTooltip("Cut: notes on this channel stop the channels cut by this group");
+    cutByBox.setTooltip("Cut by: this channel stops when a channel in this group plays (closed "
+                        "hat cuts open hat: give both the same number)");
+    cutGroupBox.onChange = [this]
+    {
+        const int group = cutGroupBox.getSelectedId() - 1;
+        edit([group](model::SamplerSettings& s) { s.cutGroup = std::max(0, group); });
+    };
+    cutByBox.onChange = [this]
+    {
+        const int group = cutByBox.getSelectedId() - 1;
+        edit([group](model::SamplerSettings& s) { s.cutBy = std::max(0, group); });
+    };
+    envelopeOn.setClickingTogglesState(true);
+    envelopeOn.setTooltip("Shape the volume with the envelope. Off: the sample plays to its end; "
+                          "on: it releases where the note ends");
+    envelopeOn.onClick = [this]
+    {
+        const bool on = envelopeOn.getToggleState();
+        edit([on](model::SamplerSettings& s) { s.envelope.on = on; });
+    };
+    envelope.newGestureId = [this] { return doc.newGestureId(); };
+    envelope.onChange = [this](const model::Envelope& e, int gesture)
+    {
+        edit(
+            [e](model::SamplerSettings& s)
+            {
+                const bool on = s.envelope.on;
+                s.envelope = e;
+                s.envelope.on = on; // the knobs don't switch it
+            },
+            gesture);
+    };
+    for (auto* c : std::initializer_list<juce::Component*>{&cutItself, &envelopeOn})
+        c->setMouseClickGrabsKeyboardFocus(false);
+    second.addSection("Cut");
+    second.addRow("Cut itself", {{&cutItself, cutItself.preferredWidth(metrics::controlHeight)}});
+    second.addRow("Cut group", {{&cutGroupBox, metrics::comboWidth}});
+    second.addRow("Cut by", {{&cutByBox, metrics::comboWidth}});
+    second.addSection("Envelope");
+    second.addRow("Volume envelope",
+                  {{&envelopeOn, envelopeOn.preferredWidth(metrics::controlHeight) + 8}});
+    second.addComponent(envelope, EnvelopeEditor::preferredHeight);
+    addAndMakeVisible(second);
+
     const int field = tempoBox.preferredWidth(metrics::controlHeight);
     addSection("Sample");
     fileNote = addNote(" ");
@@ -75,8 +135,18 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
            {{&tempoBox, field},
             {&fromProject, buttonWidth("Use project tempo", metrics::controlHeight)}});
     addRow("Pitch", {{&pitchBox, pitchBox.preferredWidth(metrics::controlHeight)}});
-    setSize(480, preferredHeight(480));
+    constexpr int leftWidth = 480;
+    constexpr int rightWidth = 420;
+    itemsWidth = leftWidth;
+    setSize(leftWidth + rightWidth,
+            std::max(preferredHeight(leftWidth), second.preferredHeight(rightWidth)));
     refresh();
+}
+
+void SamplerPanel::resized()
+{
+    FormPanel::resized();
+    second.setBounds(getLocalBounds().withTrimmedLeft(itemsWidth));
 }
 
 SamplerPanel::~SamplerPanel() = default;
@@ -118,6 +188,11 @@ bool SamplerPanel::refresh()
     modeBox.setSelectedId(static_cast<int>(s.mode) + 1, juce::dontSendNotification);
     tempoBox.setValue(s.originalTempo > 0.0 ? s.originalTempo : project.tempo);
     pitchBox.setValue(s.pitch);
+    cutItself.setToggleState(s.cutItself, juce::dontSendNotification);
+    cutGroupBox.setSelectedId(s.cutGroup + 1, juce::dontSendNotification);
+    cutByBox.setSelectedId(s.cutBy + 1, juce::dontSendNotification);
+    envelopeOn.setToggleState(s.envelope.on, juce::dontSendNotification);
+    envelope.setEnvelope(s.envelope);
     const bool follows = s.mode != model::StretchMode::off;
     tempoBox.setEnabled(follows);
     fromProject.setEnabled(follows);

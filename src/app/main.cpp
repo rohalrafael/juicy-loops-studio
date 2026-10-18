@@ -2,6 +2,7 @@
 // window. Shutdown closes dialogs first because they reference the ThemeManager.
 
 #include "main_component.h"
+#include "ui/settings_dialog.h"
 #include "ui/theme.h"
 
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -54,6 +55,7 @@ class Application final : public juce::JUCEApplication
     {
         themes = std::make_unique<ui::ThemeManager>();
         juce::LookAndFeel::setDefaultLookAndFeel(&themes->lookAndFeel());
+        ui::settings::applyUiScale(themes->settingsFile());
         mainWindow = std::make_unique<MainWindow>(getApplicationName(), *themes);
     }
 

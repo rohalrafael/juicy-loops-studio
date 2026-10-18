@@ -107,7 +107,18 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
                             : c.sampler.mode == StretchMode::stretch ? "stretch"
                                                                      : "off"},
                 {"originalTempo", tidy(static_cast<float>(c.sampler.originalTempo))},
-                {"pitch", tidy(static_cast<float>(c.sampler.pitch))}};
+                {"pitch", tidy(static_cast<float>(c.sampler.pitch))},
+                {"cutItself", c.sampler.cutItself},
+                {"cut", c.sampler.cutGroup},
+                {"cutBy", c.sampler.cutBy},
+                {"envelope",
+                 {{"on", c.sampler.envelope.on},
+                  {"delay", tidy(static_cast<float>(c.sampler.envelope.delay))},
+                  {"attack", tidy(static_cast<float>(c.sampler.envelope.attack))},
+                  {"hold", tidy(static_cast<float>(c.sampler.envelope.hold))},
+                  {"decay", tidy(static_cast<float>(c.sampler.envelope.decay))},
+                  {"sustain", tidy(static_cast<float>(c.sampler.envelope.sustain))},
+                  {"release", tidy(static_cast<float>(c.sampler.envelope.release))}}}};
         if (c.isInstrument())
             channel["instrument"] = {
                 {"id", c.pluginId}, {"name", c.pluginName}, {"state", c.pluginState}};
@@ -258,6 +269,24 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
             channel.sampler.originalTempo =
                 read.clamped<double>(*sampler, "originalTempo", 0.0, 0.0, 999.0);
             channel.sampler.pitch = read.clamped<double>(*sampler, "pitch", 0.0, -24.0, 24.0);
+            channel.sampler.cutItself = read.get<bool>(*sampler, "cutItself", false);
+            channel.sampler.cutGroup =
+                read.clamped<int>(*sampler, "cut", 0, 0, SamplerSettings::maxCutGroup);
+            channel.sampler.cutBy =
+                read.clamped<int>(*sampler, "cutBy", 0, 0, SamplerSettings::maxCutGroup);
+            if (const auto env = sampler->find("envelope");
+                env != sampler->end() && env->is_object())
+            {
+                auto& e = channel.sampler.envelope;
+                const Envelope defaults;
+                e.on = read.get<bool>(*env, "on", false);
+                e.delay = read.clamped<double>(*env, "delay", defaults.delay, 0.0, 10.0);
+                e.attack = read.clamped<double>(*env, "attack", defaults.attack, 0.0, 10.0);
+                e.hold = read.clamped<double>(*env, "hold", defaults.hold, 0.0, 10.0);
+                e.decay = read.clamped<double>(*env, "decay", defaults.decay, 0.0, 10.0);
+                e.sustain = read.clamped<double>(*env, "sustain", defaults.sustain, 0.0, 1.0);
+                e.release = read.clamped<double>(*env, "release", defaults.release, 0.0, 10.0);
+            }
         }
 
         // A plugin instrument channel. Kept even if the plugin isn't installed here (it stays

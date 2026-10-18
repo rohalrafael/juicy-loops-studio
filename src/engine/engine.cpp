@@ -156,9 +156,11 @@ void Engine::applyLiveEvents()
         {
         case LiveEvent::Kind::releaseAll:
             releaseLiveNotes();
+            sampler.releaseLive(-1);
             break;
 
         case LiveEvent::Kind::noteOff:
+            sampler.releaseLive(e.number);
             for (int i = 0; i < liveCount; ++i)
             {
                 const auto& note = liveNotes[static_cast<std::size_t>(i)];
@@ -181,8 +183,9 @@ void Engine::applyLiveEvents()
             const auto& channel = current->channels[static_cast<std::size_t>(index)];
             if (!channel.instrument)
             {
-                // Samples are one-shots: start a voice, nothing to release later.
-                sampler.trigger(*current, index, pitch, std::clamp(e.value, 0.0f, 1.0f));
+                // A sample: its envelope (if on) releases at the key's note-off.
+                sampler.trigger(*current, index, pitch, std::clamp(e.value, 0.0f, 1.0f), -1.0,
+                                true);
                 break;
             }
             // Same key again while held (e.g. a missed note-off): release it first.
@@ -475,7 +478,10 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
                 continue;
             }
             sampler.render(*current, buses.data(), numTracks * 2, cursor, trigger.sampleOffset);
-            sampler.trigger(*current, trigger.channelIndex, trigger.pitch, trigger.velocity);
+            // The note's length matters to the Sampler's envelope (it releases at the end).
+            const double startTick = t0 + (t1 - t0) * trigger.sampleOffset / numSamples;
+            sampler.trigger(*current, trigger.channelIndex, trigger.pitch, trigger.velocity,
+                            std::max(0.0, trigger.endTick - startTick) * secondsPerTick);
             cursor = trigger.sampleOffset;
         }
         sampler.render(*current, buses.data(), numTracks * 2, cursor, numSamples);

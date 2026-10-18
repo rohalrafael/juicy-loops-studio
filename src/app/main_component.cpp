@@ -1226,7 +1226,14 @@ bool MainComponent::perform(const InvocationInfo& info)
         editInMainView(ui::EditAction::paste);
         break;
     case deleteSelection:
-        editInMainView(ui::EditAction::deleteSelection);
+        // With the Channel Rack focused: delete the selected channel (undoable), as in FL.
+        if (focusArea == Area::channelRack && channelRack.isVisible())
+        {
+            if (const auto id = document.project().selectedChannel; id != 0)
+                document.apply([id](model::Project& p) { p.removeChannel(id); });
+        }
+        else
+            editInMainView(ui::EditAction::deleteSelection);
         break;
     case jls::commands::duplicate:
         editInMainView(ui::EditAction::duplicate);

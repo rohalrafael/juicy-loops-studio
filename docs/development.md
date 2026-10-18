@@ -52,8 +52,8 @@ Sound can't be checked this way: export a WAV and analyse it (length, level, pit
 
 ## CI
 
-`.github/workflows/ci.yml`: pushes and pull requests build and test on Linux (with ccache).
-Other OSes run on manual dispatch: `gh workflow run ci.yml` (all three) or
+`.github/workflows/ci.yml`: automatic runs on push and pull requests are **off for now**
+(build and test in the sandbox); the workflow runs on manual dispatch only: `gh workflow run ci.yml` (all three) or
 `gh workflow run ci.yml -f platforms=windows` (or `macos`, `linux`). Windows and macOS runs
 upload the app as an artifact (`juicy-loops-studio-windows`: a single `.exe` with the MSVC
 runtime linked in; `juicy-loops-studio-macos`: the `.app`), kept for 14 days; download it from

@@ -36,12 +36,35 @@ enum class StretchMode
 };
 
 // The Sampler's settings for a sample channel.
+// The Sampler's volume envelope (FL's DAHDSR). Off: the sample plays to its end (a one-shot).
+// On: note length matters, the release starts where the note ends.
+struct Envelope
+{
+    bool on = false;
+    double delay = 0.0; // seconds
+    double attack = 0.005;
+    double hold = 0.0;
+    double decay = 0.3;
+    double sustain = 1.0; // level 0..1
+    double release = 0.1;
+
+    bool operator==(const Envelope&) const = default;
+};
+
 struct SamplerSettings
 {
     StretchMode mode = StretchMode::off;
     double originalTempo = 0.0; // BPM the sample is at; 0 = not set (taken as the project's)
     double pitch = 0.0;         // semitones, -24..24
+    // FL's Cut itself / Cut / Cut by: a note stops this channel's sounding notes (cutItself)
+    // and every channel whose cutBy is this one's cutGroup (e.g. closed hat cuts open hat).
+    // Groups 1..16, 0 = none.
+    bool cutItself = false;
+    int cutGroup = 0;
+    int cutBy = 0;
+    Envelope envelope;
 
+    static constexpr int maxCutGroup = 16;
     bool operator==(const SamplerSettings&) const = default;
 };
 

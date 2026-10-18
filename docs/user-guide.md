@@ -176,7 +176,8 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Left-click / drag over steps | Turn steps on (or off, if you started on a lit step) |
 | Right-click / drag over steps | Turn steps off |
 | Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
-| Right-click a channel name | Piano roll, show plugin / Sampler, Fill, rename, replace sample, use/replace an instrument plugin, delete |
+| Right-click a channel name | Piano roll, show plugin / Sampler, Fill, rename, replace sample, use/replace an instrument plugin, delete (press **D** while the menu is open) |
+| Delete (Channel Rack focused) | Delete the selected channel (Ctrl+Z brings it back) |
 | Right-click › Fill | Replace the channel's steps with one on every step, every 2, 4 or 8 steps (hi-hats), across the steps shown |
 | Green light | Mute / unmute |
 | Ctrl+click or right-click the green light | Solo: mute every other channel (again: all play) |
@@ -265,6 +266,14 @@ you change the tempo. Drum samples start in Off. Stretching is worked out in the
 after a tempo change; until it's ready (usually a moment) the sample plays resampled so it stays
 in time. Exports always use the finished stretch.
 
+The right-hand column has cutting and the envelope:
+
+| Setting | Does |
+|---|---|
+| Cut itself | A new note stops the channel's note that's still ringing (short fade, no click) |
+| Cut group / Cut by | Notes on a channel stop every channel whose *Cut by* is its *Cut group*. Closed and open hi-hat: give both the same number in both, and each stops the other |
+| Volume envelope | On: shapes the volume with Delay, Attack, Hold, Decay, Sustain and Release, and note length matters (the release starts where the note ends; a held key on the typing keyboard or MIDI holds it). Off: the sample plays to its end, as before. Knobs: drag up / down, double-click resets |
+
 ## Piano Roll
 
 | Do this | To |
@@ -314,7 +323,8 @@ length doesn't change the sound yet: samples always play to their end, like FL's
   settings are saved in the project. If a project uses a plugin that isn't installed, the slot
   shows "(missing)", passes audio through unchanged and keeps the plugin's settings.
 - **Soft Clipper on the Master:** new projects start with one, so loud mixes saturate gently
-  instead of hard-clipping. It changes nothing below its knee; remove or bypass it if you like.
+  instead of hard-clipping. It changes nothing below its knee (new projects: knee 0.1, so it only
+  touches the last dB below the ceiling); remove or bypass it if you like.
 - **Effect panel:** floating; drag it by its title bar. Knobs drag up/down and double-click
   resets them.
 
@@ -328,6 +338,7 @@ length doesn't change the sound yet: samples always play to their end, like FL's
 | Click preview length | How much of a sample a click in the Browser plays (5 s by default) |
 | Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
 | Plugin windows | Inside the app (panels, the default) or separate windows |
+| Interface size | Scales the whole interface, text included: 100, 110, 125 or 150 % |
 
 Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio
 and MIDI devices are in **Options › Audio settings…**.

@@ -392,8 +392,10 @@ void StepGrid::paintStep(int step)
     if (step == lastPainted || step < 0)
         return;
     lastPainted = step;
-    // Repeats are reported even when they already show `paintValue`, so they become real.
-    if ((steps[static_cast<std::size_t>(step)] != paintValue || isRepeat(step)) && onStepPainted)
+    // A left-click on a repeat is reported even when it's already on, so the loop becomes real
+    // with the note kept. Erasing only touches repeats that have a note: empty ones stay looped.
+    const bool on = steps[static_cast<std::size_t>(step)];
+    if ((on != paintValue || (isRepeat(step) && paintValue)) && onStepPainted)
         onStepPainted(step, paintValue, gestureId);
 }
 

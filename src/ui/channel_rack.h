@@ -103,7 +103,8 @@ class InsertBox final : public juce::Component, public juce::SettableTooltipClie
 //
 // A looping channel shows its repeats greyed from `loopStart` on. Clicking one makes the repeats
 // up to there real first (see ChannelRow), so what you hear doesn't change, and then sets that
-// step: on for a left-click (a looped note stays), off for a right-click.
+// step: on for a left-click (a looped note stays), off for a right-click. Right-click (and drag)
+// only acts on repeats that have a note; empty ones stay looped.
 class StepGrid final : public juce::Component
 {
   public:

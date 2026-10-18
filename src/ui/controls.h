@@ -157,6 +157,24 @@ int noteHeight(const juce::String& text, int width);
 void paintDialogFooter(juce::Graphics& g, juce::Rectangle<int> area);
 inline constexpr int dialogFooterHeight = 44;
 
+// A JUCE-made component (the plugin list, the audio device selector) in a themed dialog body:
+// the panel background, a section heading and a note above it, and the usual margins.
+class DialogFrame final : public juce::Component
+{
+  public:
+    DialogFrame(std::unique_ptr<juce::Component> content, const juce::String& heading,
+                const juce::String& note, int contentWidth, int contentHeight);
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+  private:
+    int topHeight() const;
+
+    std::unique_ptr<juce::Component> content;
+    juce::String heading, note;
+};
+
 // A settings form: sections with a heading, rows of a label and controls, notes and painted
 // areas, laid out top to bottom. It paints its own text, so theme changes restyle it.
 class FormPanel : public juce::Component

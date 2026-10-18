@@ -1740,13 +1740,18 @@ void MainComponent::showAudioSettings()
 {
     auto selector = std::make_unique<juce::AudioDeviceSelectorComponent>(deviceManager, 0, 2, 0, 2,
                                                                          true, true, true, false);
-    selector->setSize(500, 450);
+    selector->setItemHeight(ui::metrics::controlHeight);
+    auto frame = std::make_unique<ui::DialogFrame>(
+        std::move(selector), "Audio and MIDI",
+        "The output device, sample rate and buffer size, and which MIDI inputs play the selected "
+        "channel (new devices are switched on automatically).",
+        500, 370);
 
     juce::DialogWindow::LaunchOptions options;
     // JUCE dialogs default to light grey; follow the theme instead.
     options.dialogBackgroundColour = juce::LookAndFeel::getDefaultLookAndFeel().findColour(
         juce::ResizableWindow::backgroundColourId);
-    options.content.setOwned(selector.release());
+    options.content.setOwned(frame.release());
     options.dialogTitle = "Audio settings";
     options.useNativeTitleBar = true;
     options.resizable = false;

@@ -559,6 +559,35 @@ void paintDialogFooter(juce::Graphics& g, juce::Rectangle<int> area)
     g.fillRect(area.withHeight(1));
 }
 
+DialogFrame::DialogFrame(std::unique_ptr<juce::Component> c, const juce::String& h,
+                         const juce::String& n, int contentWidth, int contentHeight)
+    : content(std::move(c)), heading(h), note(n)
+{
+    addAndMakeVisible(*content);
+    setSize(contentWidth + 2 * FormPanel::margin,
+            contentHeight + topHeight() + 2 * FormPanel::margin);
+}
+
+int DialogFrame::topHeight() const
+{
+    const int width = std::max(200, getWidth() - 2 * FormPanel::margin);
+    return 24 + (note.isEmpty() ? 4 : noteHeight(note, width) + 10);
+}
+
+void DialogFrame::paint(juce::Graphics& g)
+{
+    g.fillAll(colour(currentTheme().colours.panel));
+    auto area = getLocalBounds().reduced(FormPanel::margin);
+    paintSectionHeading(g, heading, area.removeFromTop(24));
+    if (note.isNotEmpty())
+        paintNote(g, note, area.removeFromTop(topHeight() - 24).withTrimmedTop(6));
+}
+
+void DialogFrame::resized()
+{
+    content->setBounds(getLocalBounds().reduced(FormPanel::margin).withTrimmedTop(topHeight()));
+}
+
 void FormPanel::addSection(const juce::String& heading)
 {
     items.push_back({Item::Kind::section, heading, {}, 0, {}, {}});

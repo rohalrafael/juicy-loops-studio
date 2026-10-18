@@ -180,7 +180,8 @@ The pattern *plays* as far as its notes go, rounded up to whole bars: with notes
 first 16 steps it plays 16 steps and starts over, even when 32 are shown. Steps past that are
 greyed and show what will be heard there (the repeat). Clicking a greyed step makes that bar
 real: the repeat is copied in first, so nothing else you hear changes, and the pattern now plays
-up to there. Left-click keeps or adds a note on that step; right-click removes it. With **Loop** on (the default), a channel whose notes are shorter than the pattern
+up to there. Left-click keeps or adds a note on that step; right-click (or right-drag) removes
+looped notes, and leaves empty greyed steps alone. With **Loop** on (the default), a channel whose notes are shorter than the pattern
 repeats them: its notes are rounded up to 1, 2, 4, 8... bars, and that block plays again and
 again. Example: a 4-bar bass line with a 1-bar drum beat gives 4 bars of drums. Those repeats
 are greyed too. Because the loop length comes from the notes, a looping channel can't end with

@@ -258,6 +258,12 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Right-click / right-drag over greyed steps only acts on looped *notes*; empty greyed
+  steps stay looped (they used to make the whole loop real). Plugins and Audio settings dialogs
+  framed like the others (`ui::DialogFrame`), with themed table headers, check boxes and level
+  meter. Note: erasing every looped note of a bar leaves that bar empty, so (by the "only what
+  has notes plays" rule) the channel loops its shorter part again and the copies reappear.
+
 - 2026-10-18: Clicking a greyed (looped) step no longer toggles it: left-click makes the loop
   real and sets the step on (a looped note stays), right-click makes it real and sets it off.
   Dialogs and the Sampler window restyled as forms (`ui::FormPanel`, `NumberField` replacing

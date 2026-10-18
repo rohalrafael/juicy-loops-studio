@@ -249,6 +249,92 @@ void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int heigh
                      juce::Justification::centred, 1);
 }
 
+void LookAndFeel::drawTableHeaderBackground(juce::Graphics& g, juce::TableHeaderComponent& header)
+{
+    const auto& c = currentTheme().colours;
+    g.fillAll(colour(c.header));
+    g.setColour(colour(c.outline));
+    g.fillRect(0, header.getHeight() - 1, header.getWidth(), 1);
+}
+
+void LookAndFeel::drawTableHeaderColumn(juce::Graphics& g, juce::TableHeaderComponent&,
+                                        const juce::String& columnName, int, int width, int height,
+                                        bool isMouseOver, bool, int columnFlags)
+{
+    const auto& c = currentTheme().colours;
+    if (isMouseOver)
+    {
+        g.setColour(colour(c.panelRaised).withAlpha(0.5f));
+        g.fillRect(0, 0, width, height - 1);
+    }
+    g.setColour(colour(c.outline));
+    g.fillRect(width - 1, 6, 1, height - 12);
+    auto area = juce::Rectangle<int>(width, height).reduced(8, 0);
+    const bool sorted = (columnFlags & (juce::TableHeaderComponent::sortedForwards |
+                                        juce::TableHeaderComponent::sortedBackwards)) != 0;
+    if (sorted)
+    {
+        auto arrow = area.removeFromRight(12).toFloat().withSizeKeepingCentre(10.0f, 10.0f);
+        juce::Graphics::ScopedSaveState state(g);
+        if ((columnFlags & juce::TableHeaderComponent::sortedBackwards) != 0)
+            g.addTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::pi,
+                                                           arrow.getCentreX(), arrow.getCentreY()));
+        drawIcon(g, Icon::chevronDown, arrow, colour(c.textDim));
+    }
+    g.setColour(colour(sorted ? c.text : c.textDim));
+    g.setFont(semiboldFont(11.5f));
+    g.drawFittedText(columnName, area, juce::Justification::centredLeft, 1);
+}
+
+void LookAndFeel::drawTickBox(juce::Graphics& g, juce::Component&, float x, float y, float w,
+                              float h, bool ticked, bool isEnabled, bool isMouseOverButton, bool)
+{
+    const auto& t = currentTheme();
+    const auto& c = t.colours;
+    const float size = std::min({w, h, 16.0f});
+    const auto box = juce::Rectangle<float>(x, y, w, h).withSizeKeepingCentre(size, size);
+    const float radius = std::min(4.0f, t.shape.cornerRadius);
+    g.setColour(colour(ticked ? c.accent : c.panelRaised)
+                    .withMultipliedAlpha(isEnabled ? 1.0f : 0.5f)
+                    .brighter(isMouseOverButton ? 0.1f : 0.0f));
+    g.fillRoundedRectangle(box, radius);
+    if (!ticked)
+    {
+        g.setColour(colour(c.outline).brighter(0.2f));
+        g.drawRoundedRectangle(box.reduced(0.5f), radius, 1.0f);
+        return;
+    }
+    juce::Path tick;
+    tick.startNewSubPath(box.getX() + size * 0.25f, box.getCentreY());
+    tick.lineTo(box.getX() + size * 0.43f, box.getY() + size * 0.7f);
+    tick.lineTo(box.getRight() - size * 0.22f, box.getY() + size * 0.3f);
+    g.setColour(colour(c.background));
+    g.strokePath(tick, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved,
+                                            juce::PathStrokeType::rounded));
+}
+
+void LookAndFeel::drawLevelMeter(juce::Graphics& g, int width, int height, float level)
+{
+    const auto& t = currentTheme();
+    const auto& c = t.colours;
+    const auto bounds =
+        juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height));
+    paintDisplayBox(g, bounds);
+    // Segments like the mixer's meters: lit up to the level, the top ones in the accent colour.
+    constexpr int segments = 24;
+    const auto inner = bounds.reduced(4.0f, 3.0f);
+    const float segmentWidth = inner.getWidth() / segments;
+    const int lit = static_cast<int>(std::pow(std::clamp(level, 0.0f, 1.0f), 0.5f) * segments);
+    for (int i = 0; i < segments; ++i)
+    {
+        const auto segment = juce::Rectangle<float>(inner.getX() + i * segmentWidth, inner.getY(),
+                                                    segmentWidth - 2.0f, inner.getHeight());
+        const auto on = colour(i >= segments * 5 / 6 ? c.accent : c.led);
+        g.setColour(i < lit ? on : colour(c.ledOff));
+        g.fillRoundedRectangle(segment, 1.5f);
+    }
+}
+
 juce::Font LookAndFeel::getAlertWindowTitleFont()
 {
     return juce::Font(semiboldFont(15.0f));

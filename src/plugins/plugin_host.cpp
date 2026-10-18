@@ -1,5 +1,7 @@
 #include "plugins/plugin_host.h"
 
+#include "ui/controls.h"
+
 #include <tuple>
 
 namespace jls::plugins
@@ -364,13 +366,19 @@ void PluginHost::showManager()
 {
     auto list = std::make_unique<juce::PluginListComponent>(formats, known, crashFile,
                                                             scanSettings.get(), false);
-    list->setSize(720, 480);
+    list->getTableListBox().setRowHeight(21); // JUCE sizes the row text from this
+    list->getTableListBox().setHeaderHeight(28);
+    auto frame = std::make_unique<ui::DialogFrame>(
+        std::move(list), "Plugins",
+        "Options... scans for plugins (VST3, LV2), removes entries and sorts the list. Effects "
+        "are added from a mixer slot's menu, instruments from the Channel Rack's +.",
+        720, 460);
 
     juce::DialogWindow::LaunchOptions options;
     // JUCE dialogs default to light grey; follow the theme instead.
     options.dialogBackgroundColour = juce::LookAndFeel::getDefaultLookAndFeel().findColour(
         juce::ResizableWindow::backgroundColourId);
-    options.content.setOwned(list.release());
+    options.content.setOwned(frame.release());
     options.dialogTitle = "Plugins";
     options.useNativeTitleBar = true;
     options.resizable = true;

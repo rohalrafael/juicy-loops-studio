@@ -94,6 +94,15 @@ class LookAndFeel final : public juce::LookAndFeel_V4
     // Shortcut chips in the Keyboard shortcuts window, and message boxes.
     void drawKeymapChangeButton(juce::Graphics&, int width, int height, juce::Button&,
                                 const juce::String& keyDescription) override;
+    // The plugin list's table header, check boxes and the audio settings' level meter.
+    void drawTableHeaderBackground(juce::Graphics&, juce::TableHeaderComponent&) override;
+    void drawTableHeaderColumn(juce::Graphics&, juce::TableHeaderComponent&,
+                               const juce::String& columnName, int columnId, int width, int height,
+                               bool isMouseOver, bool isMouseDown, int columnFlags) override;
+    void drawTickBox(juce::Graphics&, juce::Component&, float x, float y, float w, float h,
+                     bool ticked, bool isEnabled, bool isMouseOverButton,
+                     bool isButtonDown) override;
+    void drawLevelMeter(juce::Graphics&, int width, int height, float level) override;
     juce::Font getAlertWindowTitleFont() override;
     juce::Font getAlertWindowMessageFont() override;
     juce::Font getAlertWindowFont() override;

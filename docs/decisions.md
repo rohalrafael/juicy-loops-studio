@@ -258,6 +258,12 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: All UI text one pixel larger (12 -> 13 px in panels, 13 -> 14 px in the transport
+  bar, and so on), the first step against soft text on Windows; the rest is an open question in
+  roadmap.md. **No VST2 hosting**: it needs Steinberg's VST2 headers (no longer licensed) or a
+  clean-room reimplementation; not needed for now (Serum 2 is VST3; 32-bit-only plugins would
+  need a bridge anyway).
+
 - 2026-10-18: Playhead artifacts (Piano Roll, Playlist): the timer repainted strips around the
   position it computed, but the paint asked the transport again a moment later and drew the line
   where playback had got to, outside the cleared strip. Now the paint draws it where the timer

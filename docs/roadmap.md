@@ -30,3 +30,18 @@ starting one.
   commands by string id, read project state, load / save, screenshots), possibly wrapped as
   an MCP server.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
+
+## Open questions
+
+To discuss before working on them.
+
+- **Text sharpness on Windows** (2026-10-18). The maintainer finds our text blurrier than FL's
+  at 100 % display scaling. Cause: JUCE draws text with grayscale anti-aliasing; FL gets
+  Windows' ClearType (subpixel) rendering. Done so far: real Medium / SemiBold weights, all UI
+  text 1 px larger, Settings > Interface size. Options left:
+  - a theme option to use the system UI font (Segoe UI on Windows), which is hinted for small
+    sizes on screen
+  - patching JUCE's Direct2D text rendering to use ClearType where the background is opaque
+    (the real fix for the softness; needs several Windows builds to test, and ClearType can
+    fringe on semi-transparent areas)
+

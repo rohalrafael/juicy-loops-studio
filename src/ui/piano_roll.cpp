@@ -62,7 +62,7 @@ class PianoRollView::Keyboard final : public juce::Component
         const auto& t = currentTheme();
         const int offset = view.viewport.getViewPositionY();
         g.fillAll(colour(t.colours.panel));
-        g.setFont(juce::FontOptions(9.5f));
+        g.setFont(juce::FontOptions(10.5f));
         for (int pitch = 0; pitch < numPitches; ++pitch)
         {
             const float y = view.yForPitch(pitch) - offset;
@@ -131,7 +131,7 @@ class PianoRollView::Ruler final : public juce::Component, public juce::Settable
         const auto& project = view.doc.project();
         const int barTicks = project.stepsPerBar() * model::ticksPerStep;
         const float offset = static_cast<float>(view.viewport.getViewPositionX());
-        g.setFont(juce::FontOptions(11.0f));
+        g.setFont(juce::FontOptions(12.0f));
         for (int bar = 0; view.xForTick(bar * barTicks) - offset < getWidth(); ++bar)
         {
             const float x = view.xForTick(bar * barTicks) - offset;
@@ -574,7 +574,7 @@ void NoteGrid::paint(juce::Graphics& g)
 
     // Notes: brighter for higher velocity.
     const float radius = std::min(3.0f, t.shape.cornerRadius);
-    g.setFont(juce::FontOptions(10.0f));
+    g.setFont(juce::FontOptions(11.0f));
     const auto& notes = view.notes();
     for (std::size_t i = 0; i < notes.size(); ++i)
     {

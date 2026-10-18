@@ -24,6 +24,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
+#include <optional>
+
 namespace jls
 {
 
@@ -50,7 +52,6 @@ class MainComponent final : public juce::AudioAppComponent,
     void forwardShortcuts(juce::Component& window);
 
     void paint(juce::Graphics& g) override;
-    void paintOverChildren(juce::Graphics& g) override; // outline of the focused area
     void resized() override;
     void lookAndFeelChanged() override; // display colours of the clock
     bool keyPressed(const juce::KeyPress& key) override;
@@ -176,11 +177,20 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::File currentFile;   // where the project was last saved/opened; empty if never
     juce::File projectFolder; // where file choosers start: the last project's folder
     std::unique_ptr<juce::FileChooser> fileChooser;
-    std::map<model::EffectId, std::unique_ptr<plugins::PluginWindow>> pluginWindows;
-    std::map<model::ChannelId, std::unique_ptr<plugins::PluginWindow>> instrumentWindows;
-    std::unique_ptr<ui::SamplerWindow> samplerWindow; // one at a time, like FL's channel window
-    StretchCache stretchCache;                        // Stretch-mode samples for the current tempo
-    double formatRate = 0.0; // engine format the effect pool was last set up for
+    // Plugin editors (panels inside the window, or separate windows: Settings).
+    std::map<model::EffectId, std::unique_ptr<plugins::PluginView>> pluginWindows;
+    std::map<model::ChannelId, std::unique_ptr<plugins::PluginView>> instrumentWindows;
+    std::unique_ptr<plugins::PluginView> openPluginView(std::shared_ptr<void> owner,
+                                                        juce::AudioPluginInstance& plugin,
+                                                        const juce::String& title);
+    // The Sampler: one at a time, like FL's channel window, floating inside the main window.
+    std::unique_ptr<ui::FloatingPanel> samplerPanel;
+    ui::SamplerPanel* sampler = nullptr;             // inside samplerPanel
+    std::optional<juce::Point<int>> samplerPosition; // where it was last (reopens there)
+    void closeSampler();
+    juce::Rectangle<int> floatingArea; // where floating panels may go (below the transport bar)
+    StretchCache stretchCache;         // Stretch-mode samples for the current tempo
+    double formatRate = 0.0;           // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;
     bool channelRackPlaced = false;

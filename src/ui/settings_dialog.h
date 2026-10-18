@@ -20,11 +20,14 @@ inline constexpr double defaultPreviewSeconds = 5.0; // Browser: length of a cli
 // Ctrl+Tab order: "fixed" (Browser, Channel Rack, Playlist, Mixer) or "recent" (last used first,
 // like Alt+Tab).
 inline constexpr const char* focusOrderKey = "focusOrder";
+// Plugin editors: "inside" (panels in the main window, the default) or "separate" (windows).
+inline constexpr const char* pluginWindowsKey = "pluginWindows";
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
 double previewSeconds(juce::PropertiesFile& file);
 bool focusOrderRecent(juce::PropertiesFile& file);
+bool pluginsInsideApp(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

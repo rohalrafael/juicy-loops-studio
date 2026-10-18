@@ -7,6 +7,8 @@
 #include "engine/effects.h"
 #include "engine/instrument.h"
 
+#include "ui/floating_panel.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -80,17 +82,49 @@ class PluginInstrument final : public engine::InstrumentProcessor
 
 // A plugin's own editor (or a generic one if it has none) in a separate window. Holds the
 // plugin's owner (a PluginEffect or PluginInstrument) so the plugin outlives its editor.
-class PluginWindow final : public juce::DocumentWindow
+// Where a plugin's editor is shown: a panel inside the main window (PluginPanel, the default) or
+// a separate window (PluginWindow, Options > Settings > Plugin windows). Either holds on to the
+// plugin (`owner`) and deletes the editor before letting go of it.
+class PluginView
+{
+  public:
+    virtual ~PluginView() = default;
+    // What it holds on to, to tell whether its plugin was replaced.
+    virtual const void* owner() const = 0;
+    virtual void bringToFront() = 0;
+    virtual void setCloseHandler(std::function<void()> handler) = 0;
+};
+
+// The plugin's editor, or a generic one with a control per parameter when it has none.
+juce::AudioProcessorEditor* createEditor(juce::AudioPluginInstance& plugin);
+
+class PluginWindow final : public juce::DocumentWindow, public PluginView
 {
   public:
     PluginWindow(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
                  const juce::String& title);
     ~PluginWindow() override;
 
-    std::function<void()> onClose;
     void closeButtonPressed() override;
-    // What the window holds on to, to tell whether its plugin was replaced.
-    const void* owner() const { return keepAlive.get(); }
+    const void* owner() const override { return keepAlive.get(); }
+    void bringToFront() override { toFront(true); }
+    void setCloseHandler(std::function<void()> handler) override { onClose = std::move(handler); }
+
+  private:
+    std::shared_ptr<void> keepAlive;
+    std::function<void()> onClose;
+};
+
+class PluginPanel final : public ui::FloatingPanel, public PluginView
+{
+  public:
+    PluginPanel(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
+                const juce::String& panelTitle);
+    ~PluginPanel() override;
+
+    const void* owner() const override { return keepAlive.get(); }
+    void bringToFront() override { toFront(false); }
+    void setCloseHandler(std::function<void()> handler) override { onClose = std::move(handler); }
 
   private:
     std::shared_ptr<void> keepAlive;

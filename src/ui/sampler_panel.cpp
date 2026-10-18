@@ -1,5 +1,7 @@
 #include "ui/sampler_panel.h"
 
+#include "ui/floating_panel.h"
+
 #include "ui/theme.h"
 
 namespace jls::ui
@@ -109,9 +111,8 @@ bool SamplerPanel::refresh()
                           ? juce::String("Built-in sound: ") +
                                 juce::String::fromUTF8(channel->builtinSample.c_str())
                           : file.getFileName());
-    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
-        window->setName(juce::String::fromUTF8("Sampler \xc2\xb7 ") +
-                        juce::String::fromUTF8(channel->name.c_str()));
+    if (auto* panel = findParentComponentOfClass<FloatingPanel>())
+        panel->setTitle("Sampler", juce::String::fromUTF8(channel->name.c_str()));
 
     const auto& s = channel->sampler;
     modeBox.setSelectedId(static_cast<int>(s.mode) + 1, juce::dontSendNotification);
@@ -165,27 +166,6 @@ void SamplerPanel::paintWaveform(juce::Graphics& g, juce::Rectangle<int> area)
             peaks[static_cast<std::size_t>(x * static_cast<int>(peaks.size()) / width)];
         g.fillRect(wave.getX() + x, mid - high * half, 1.0f, std::max(1.0f, (high - low) * half));
     }
-}
-
-SamplerWindow::SamplerWindow(model::Document& document, model::ChannelId channel)
-    : juce::DocumentWindow("Sampler",
-                           juce::LookAndFeel::getDefaultLookAndFeel().findColour(
-                               juce::ResizableWindow::backgroundColourId),
-                           juce::DocumentWindow::closeButton),
-      content(new SamplerPanel(document, channel))
-{
-    setUsingNativeTitleBar(true);
-    setContentOwned(content, true);
-    content->refresh(); // now that it's in the window: names the window after the channel
-    setResizable(false, false);
-    centreWithSize(getWidth(), getHeight());
-    setVisible(true);
-}
-
-void SamplerWindow::closeButtonPressed()
-{
-    if (onClose)
-        onClose();
 }
 
 } // namespace jls::ui

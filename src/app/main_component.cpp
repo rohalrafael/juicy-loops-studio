@@ -225,7 +225,7 @@ MainComponent::~MainComponent()
     document.onChange = nullptr;
     commandManager.getKeyMappings()->removeChangeListener(this);
     setApplicationCommandManagerToWatch(nullptr); // the manager goes before the MenuBarModel base
-    samplerWindow.reset();
+    closeSampler();
     pluginWindows.clear(); // editors before their plugins
     instrumentWindows.clear();
     shutdownAudio();
@@ -264,13 +264,8 @@ void MainComponent::documentChanged()
     if (effectPanel.isVisible())
         effectPanel.refresh();
     // The Sampler window follows its channel (and closes with it).
-    if (samplerWindow != nullptr)
-    {
-        if (!samplerWindow->panel().refresh())
-            samplerWindow.reset();
-        else if (const auto* c = project.findChannel(samplerWindow->panel().channel()))
-            samplerWindow->setName("Sampler - " + juce::String::fromUTF8(c->name.c_str()));
-    }
+    if (sampler != nullptr && !sampler->refresh())
+        closeSampler();
     // Close plugin windows whose effect or instrument was removed or replaced (e.g. by undo).
     for (auto it = pluginWindows.begin(); it != pluginWindows.end();)
     {
@@ -312,7 +307,7 @@ void MainComponent::openEffectEditor(model::EffectId id)
 
     if (auto it = pluginWindows.find(id); it != pluginWindows.end())
     {
-        it->second->toFront(true);
+        it->second->bringToFront();
         return;
     }
     auto processor = effectPool.find(id);
@@ -334,11 +329,10 @@ void MainComponent::openEffectEditor(model::EffectId id)
     auto* effect = dynamic_cast<plugins::PluginEffect*>(processor.get());
     if (effect == nullptr)
         return;
-    auto window = std::make_unique<plugins::PluginWindow>(processor, effect->plugin(), title);
-    window->onClose = [this, id]
-    { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); };
-    forwardShortcuts(*window);
-    pluginWindows[id] = std::move(window);
+    auto view = openPluginView(processor, effect->plugin(), title);
+    view->setCloseHandler(
+        [this, id] { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); });
+    pluginWindows[id] = std::move(view);
 }
 
 void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
@@ -352,7 +346,7 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
         if (toggle)
             instrumentWindows.erase(it);
         else
-            it->second->toFront(true);
+            it->second->bringToFront();
         return;
     }
     auto instrument = effectPool.findInstrument(id);
@@ -369,11 +363,44 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
         return;
     }
     const auto title = juce::String::fromUTF8(channel->name.c_str());
-    auto window = std::make_unique<plugins::PluginWindow>(instrument, plugin->plugin(), title);
-    window->onClose = [this, id]
-    { juce::MessageManager::callAsync([this, id] { instrumentWindows.erase(id); }); };
-    forwardShortcuts(*window);
-    instrumentWindows[id] = std::move(window);
+    auto view = openPluginView(instrument, plugin->plugin(), title);
+    view->setCloseHandler(
+        [this, id]
+        { juce::MessageManager::callAsync([this, id] { instrumentWindows.erase(id); }); });
+    instrumentWindows[id] = std::move(view);
+}
+
+std::unique_ptr<plugins::PluginView>
+MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
+                              const juce::String& title)
+{
+    if (!ui::settings::pluginsInsideApp(themes.settingsFile()))
+    {
+        auto window = std::make_unique<plugins::PluginWindow>(std::move(owner), plugin, title);
+        forwardShortcuts(*window);
+        return window;
+    }
+    // A panel inside the main window. Plugin editors are native windows on Linux, which JUCE
+    // can't draw over, so plugin panels stay in front of everything else.
+    // Placed before it's added: the editor's native window appears where the panel is then.
+    auto panel = std::make_unique<plugins::PluginPanel>(std::move(owner), plugin, title);
+    panel->setMovableArea(floatingArea);
+    panel->placeInitially(static_cast<int>(pluginWindows.size() + instrumentWindows.size()) % 6);
+    addAndMakeVisible(*panel);
+    panel->toFront(false);
+    // Again once the plugin has settled (some size their editor asynchronously), repainting the
+    // window so nothing it drew before moving is left behind.
+    juce::Component::SafePointer<juce::Component> safe(panel.get());
+    juce::Timer::callAfterDelay(300,
+                                [safe]
+                                {
+                                    if (safe == nullptr)
+                                        return;
+                                    safe->toFront(false);
+                                    if (auto* parent = safe->getParentComponent())
+                                        parent->repaint();
+                                });
+    return panel;
 }
 
 void MainComponent::syncPluginStates()
@@ -574,11 +601,14 @@ void MainComponent::raiseFocusedArea()
 
 void MainComponent::updateFocusFrames()
 {
-    // Docked panels draw their own frame (ui::paintCardFrame), accented while focused.
-    const std::array<std::pair<juce::Component*, Area>, 4> panels{{{&browser, Area::browser},
-                                                                   {&playlist, Area::mainView},
-                                                                   {&pianoRoll, Area::mainView},
-                                                                   {&mixer, Area::mixer}}};
+    // Panels draw their own focus frame (ui::paintCardFrame; the Channel Rack its own), so
+    // floating panels above them cover it.
+    const std::array<std::pair<juce::Component*, Area>, 5> panels{
+        {{&browser, Area::browser},
+         {&channelRack, Area::channelRack},
+         {&playlist, Area::mainView},
+         {&pianoRoll, Area::mainView},
+         {&mixer, Area::mixer}}};
     for (const auto& [panel, area] : panels)
     {
         const bool focused = area == focusArea;
@@ -666,21 +696,12 @@ void MainComponent::navigate(juce::CommandID command)
         }
         break;
     case Area::mainView:
-        break; // nothing yet
+        // Piano Roll: Ctrl+Up / Down move the selected notes an octave (FL).
+        if (pianoRoll.isVisible() && (command == navUpLoad || command == navDownLoad))
+            pianoRoll.edit(command == navUpLoad ? ui::EditAction::moveOctaveUp
+                                                : ui::EditAction::moveOctaveDown);
+        break;
     }
-}
-
-void MainComponent::paintOverChildren(juce::Graphics& g)
-{
-    // The floating Channel Rack's focus outline; docked panels draw their own (raiseFocusedArea).
-    auto* c = areaComponent(focusArea);
-    if (focusArea != Area::channelRack || c == nullptr || !c->isVisible())
-        return;
-    const auto& t = ui::currentTheme();
-    g.setColour(ui::colour(t.colours.accent).withAlpha(0.85f));
-    // Inside the area's bounds: when it moves (the Channel Rack can be dragged), JUCE repaints
-    // exactly its old and new bounds, so an outline drawn outside them would leave a trail.
-    g.drawRoundedRectangle(c->getBounds().toFloat().reduced(0.75f), t.shape.windowRadius, 1.5f);
 }
 
 void MainComponent::showSampler(model::ChannelId id, bool toggle)
@@ -688,19 +709,37 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     const auto* channel = document.project().findChannel(id);
     if (channel == nullptr || channel->isInstrument())
         return;
-    if (samplerWindow != nullptr && samplerWindow->panel().channel() == id)
+    if (sampler != nullptr && sampler->channel() == id)
     {
         if (toggle)
-            samplerWindow.reset();
+            closeSampler();
         else
-            samplerWindow->toFront(true);
+            samplerPanel->toFront(false);
         return;
     }
-    samplerWindow = std::make_unique<ui::SamplerWindow>(document, id);
-    samplerWindow->setName("Sampler - " + juce::String::fromUTF8(channel->name.c_str()));
-    samplerWindow->onClose = [this]
-    { juce::MessageManager::callAsync([this] { samplerWindow.reset(); }); };
-    forwardShortcuts(*samplerWindow);
+    closeSampler();
+    auto content = std::make_unique<ui::SamplerPanel>(document, id);
+    sampler = content.get();
+    samplerPanel = std::make_unique<ui::FloatingPanel>(std::move(content));
+    samplerPanel->onClose = [this] { juce::MessageManager::callAsync([this] { closeSampler(); }); };
+    addAndMakeVisible(*samplerPanel);
+    samplerPanel->setMovableArea(floatingArea);
+    if (samplerPosition)
+        samplerPanel->setTopLeftPosition(*samplerPosition);
+    else
+        samplerPanel->placeInitially(0);
+    samplerPanel->setMovableArea(floatingArea); // keeps a remembered position reachable
+    sampler->refresh();                         // its title names the channel
+    samplerPanel->toFront(false);
+}
+
+void MainComponent::closeSampler()
+{
+    if (samplerPanel == nullptr)
+        return;
+    samplerPosition = samplerPanel->getPosition();
+    sampler = nullptr;
+    samplerPanel.reset();
 }
 
 void MainComponent::forwardShortcuts(juce::Component& window)
@@ -915,6 +954,15 @@ void MainComponent::resized()
         channelRack.setSize(width, height);
     }
     channelRack.setMovableArea(panelsArea);
+    floatingArea = panelsArea;
+    if (samplerPanel != nullptr)
+        samplerPanel->setMovableArea(floatingArea);
+    for (auto& [id, view] : pluginWindows)
+        if (auto* panel = dynamic_cast<ui::FloatingPanel*>(view.get()))
+            panel->setMovableArea(floatingArea);
+    for (auto& [id, view] : instrumentWindows)
+        if (auto* panel = dynamic_cast<ui::FloatingPanel*>(view.get()))
+            panel->setMovableArea(floatingArea);
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)

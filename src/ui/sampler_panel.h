@@ -1,8 +1,9 @@
 #pragma once
 
-// The Sampler: a sample channel's settings window (FL's channel settings for its sampler). For
-// now: the sample's waveform and its time-stretching (Off / Resample / Stretch, original tempo,
-// pitch). Drum channels and audio clips alike, since audio clips are channels too.
+// The Sampler: a sample channel's settings (FL's channel settings for its sampler), shown in a
+// ui::FloatingPanel inside the main window. For now: the sample's waveform and its
+// time-stretching (Off / Resample / Stretch, original tempo, pitch). Drum channels and audio
+// clips alike, since audio clips are channels too.
 
 #include "model/document.h"
 #include "ui/controls.h"
@@ -39,20 +40,6 @@ class SamplerPanel final : public FormPanel
     juce::TextButton fromProject{"Use project tempo"};
     NumberField pitchBox{"st", 0, "+00"};
     int gestureId = 0;
-};
-
-// The window around a SamplerPanel.
-class SamplerWindow final : public juce::DocumentWindow
-{
-  public:
-    SamplerWindow(model::Document& document, model::ChannelId channel);
-
-    SamplerPanel& panel() { return *content; }
-    std::function<void()> onClose;
-    void closeButtonPressed() override;
-
-  private:
-    SamplerPanel* content;
 };
 
 } // namespace jls::ui

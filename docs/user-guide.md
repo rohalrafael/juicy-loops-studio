@@ -12,7 +12,13 @@ mouse actions follow FL wherever FL has one.
 | Piano Roll | F7 | Notes of the selected channel in the current pattern |
 | Mixer | F9 | Insert tracks, levels and effects (docked at the bottom) |
 | Browser | Alt+F8 | Your sample folders, with previews (docked at the left or right) |
-| Sampler | (click a sample channel) | A sample's time-stretching and pitch (a separate window) |
+| Sampler | (click a sample channel) | A sample's time-stretching and pitch (a floating panel; reopens where you left it) |
+
+Plugin editors and the Sampler float inside the main window: drag them by their title bar,
+close them with ×, and click one to bring it to the front. Plugin panels always stay in front
+(on Linux a plugin draws in its own native window, which the app can't draw over). If a plugin
+misbehaves inside the app, switch **Options › Settings › Plugin windows** to *Separate
+windows*.
 
 The Playlist and Piano Roll share the main area; F5 and F7 switch between them. The Channel
 Rack floats in front of them while you work in it; clicking the Playlist or Piano Roll (or
@@ -57,6 +63,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
 | Ctrl+B | Duplicate: copy the selection and paste it right after (Piano Roll or Playlist) |
 | Shift+↑ / ↓ | Move the selected notes up / down a semitone (Piano Roll) |
+| Ctrl+↑ / ↓ | Piano Roll focused: move the selected notes up / down an octave (Browser focused: previous / next sample into the channel) |
 | Shift+← / → | Move the selected notes earlier / later by the snap (Piano Roll) |
 | Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Alt+U | Slice notes (Piano Roll) |
@@ -199,7 +206,7 @@ shrink the step buttons to fit.
 
 **Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
 with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its
-window opens right away; click the channel name to show or hide it later. Instrument channels
+editor opens right away (a panel in the main window); click the channel name to show or hide it later. Instrument channels
 play their notes like any channel: steps play C5 for one step, and the Piano Roll sets pitch,
 length and velocity (note length matters here, unlike for samples). Volume, pan, mute and the
 mixer track apply after the plugin. Notes are always released: when a note ends, when its
@@ -276,6 +283,7 @@ in time. Exports always use the finished stretch.
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected notes; paste them right after the copied beats (again: after the last paste), also into another channel or pattern |
 | Shift + arrows | Move the selected notes: ↑ / ↓ a semitone, ← / → by the snap |
+| Ctrl + ↑ / ↓ | Move the selected notes an octave |
 | Ctrl+B | Duplicate the selected notes (all if none are selected) right after their beats; the copies get selected, so pressing again keeps going. The clipboard is left alone |
 | Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
@@ -302,7 +310,7 @@ length doesn't change the sound yet: samples always play to their end, like FL's
   - Click an effect to open its controls; click its light to bypass it.
   - Right-click for edit, bypass, move up/down and remove.
 - **Plugins (VST3 / LV2):** first scan for them in **Options › Plugins…**. Then
-  **+ Add effect › Plugins** lists them. Clicking a plugin's slot opens its own window. Its
+  **+ Add effect › Plugins** lists them. Clicking a plugin's slot opens its editor (a panel in the main window). Its
   settings are saved in the project. If a project uses a plugin that isn't installed, the slot
   shows "(missing)", passes audio through unchanged and keeps the plugin's settings.
 - **Soft Clipper on the Master:** new projects start with one, so loud mixes saturate gently
@@ -319,6 +327,7 @@ length doesn't change the sound yet: samples always play to their end, like FL's
 | Tempo step / Fine tempo step | How far Tempo up / down (Alt+Shift+↑ / ↓) and the fine versions (Ctrl+Shift+↑ / ↓) move the tempo: 5 and 1 BPM by default |
 | Click preview length | How much of a sample a click in the Browser plays (5 s by default) |
 | Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
+| Plugin windows | Inside the app (panels, the default) or separate windows |
 
 Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio
 and MIDI devices are in **Options › Audio settings…**.

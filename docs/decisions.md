@@ -258,6 +258,16 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: The Sampler and plugin editors float **inside** the main window (maintainer's
+  choice, FL-like; separate OS windows caused the focus bug, Hyprland placing them, and couldn't
+  stack with the panels). `ui::FloatingPanel` (shared header, close, drag, kept below the
+  transport bar). Plugins keep a fallback, Settings › Plugin windows = Separate windows. Found
+  on Xvfb: `XEmbedComponent` doesn't follow an ancestor's move (call `updateEmbeddedBounds()`),
+  the panel must be placed before it's added (or the native window shows up at 0,0 first), and
+  the window is repainted once the editor has settled. Plugin panels stay on top: JUCE can't
+  paint over a native child window. Ctrl+Up/Down in the Piano Roll (focused) moves the
+  selection an octave; in the Browser they still load the previous / next sample.
+
 - 2026-10-18: Ctrl+click or right-click a channel's light = solo (`Project::soloChannel`, FL's
   toggle: again unmutes all; audio-clip channels untouched). Channel menu › Fill every 1/2/4/8
   steps **replaces** the steps (maintainer's choice) across the shown grid; disabled for melodic

@@ -849,16 +849,19 @@ bool PianoRollView::edit(EditAction action)
         return true;
     }
     if (action == EditAction::moveUp || action == EditAction::moveDown ||
-        action == EditAction::moveLeft || action == EditAction::moveRight)
+        action == EditAction::moveLeft || action == EditAction::moveRight ||
+        action == EditAction::moveOctaveUp || action == EditAction::moveOctaveDown)
     {
         if (selection.empty())
             return false;
         const int ticks = action == EditAction::moveLeft    ? -snapTicks()
                           : action == EditAction::moveRight ? snapTicks()
                                                             : 0;
-        const int semitones = action == EditAction::moveUp     ? 1
-                              : action == EditAction::moveDown ? -1
-                                                               : 0;
+        const int semitones = action == EditAction::moveUp           ? 1
+                              : action == EditAction::moveDown       ? -1
+                              : action == EditAction::moveOctaveUp   ? 12
+                              : action == EditAction::moveOctaveDown ? -12
+                                                                     : 0;
         auto moved = notes();
         if (model::moveNotes(moved, selection, ticks, semitones))
             editNotes([moved](std::vector<model::Note>& list) { list = moved; }, 0);

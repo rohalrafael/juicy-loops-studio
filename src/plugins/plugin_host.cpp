@@ -216,15 +216,35 @@ std::string PluginInstrument::saveState() const
 
 // ----------------------------------------------------------------------------- PluginWindow
 
-PluginWindow::PluginWindow(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
-                           const juce::String& title)
-    : juce::DocumentWindow(title, juce::Colours::black, juce::DocumentWindow::closeButton),
-      keepAlive(std::move(owner))
+juce::AudioProcessorEditor* createEditor(juce::AudioPluginInstance& plugin)
 {
     juce::AudioProcessorEditor* editor =
         plugin.hasEditor() ? plugin.createEditorAndMakeActive() : nullptr;
     if (editor == nullptr)
         editor = new juce::GenericAudioProcessorEditor(plugin);
+    return editor;
+}
+
+PluginPanel::PluginPanel(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
+                         const juce::String& panelTitle)
+    : ui::FloatingPanel(std::unique_ptr<juce::Component>(createEditor(plugin))),
+      keepAlive(std::move(owner))
+{
+    setTitle(panelTitle);
+}
+
+PluginPanel::~PluginPanel()
+{
+    // Delete the editor before releasing our hold on the plugin it belongs to.
+    deleteContent();
+}
+
+PluginWindow::PluginWindow(std::shared_ptr<void> owner, juce::AudioPluginInstance& plugin,
+                           const juce::String& title)
+    : juce::DocumentWindow(title, juce::Colours::black, juce::DocumentWindow::closeButton),
+      keepAlive(std::move(owner))
+{
+    auto* editor = createEditor(plugin);
 
     setUsingNativeTitleBar(true);
     setContentOwned(editor, true);

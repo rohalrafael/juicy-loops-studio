@@ -17,6 +17,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../ui/browser.cpp
     ../ui/channel_rack.cpp
     ../ui/controls.cpp
+    ../ui/floating_panel.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp
     ../ui/oscilloscope.cpp

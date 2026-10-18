@@ -20,6 +20,8 @@ enum class EditAction
     moveDown,
     moveLeft, // by the snap
     moveRight,
+    moveOctaveUp, // 12 semitones
+    moveOctaveDown,
     lengthToStep, // shorten notes to one step
 };
 

@@ -972,6 +972,17 @@ void ChannelRack::paint(juce::Graphics& g)
 
 void ChannelRack::paintOverChildren(juce::Graphics& g)
 {
+    // The focus outline (the "focused" property, set by MainComponent), drawn here rather than
+    // by the main window so floating panels above the rack cover it.
+    if (getProperties()["focused"])
+    {
+        const auto& t = currentTheme();
+        auto frame = getLocalBounds().toFloat();
+        if (t.effects.hardShadow)
+            frame = frame.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
+        g.setColour(colour(t.colours.accent).withAlpha(0.85f));
+        g.drawRoundedRectangle(frame.reduced(0.75f), t.shape.windowRadius, 1.5f);
+    }
     if (!dragging)
         return;
     g.setColour(colour(currentTheme().colours.accent).withAlpha(0.25f));

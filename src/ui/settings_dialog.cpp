@@ -31,6 +31,11 @@ double previewSeconds(juce::PropertiesFile& file)
     return file.getDoubleValue(previewSecondsKey, defaultPreviewSeconds);
 }
 
+bool pluginsInsideApp(juce::PropertiesFile& file)
+{
+    return file.getValue(pluginWindowsKey, "inside") != "separate";
+}
+
 } // namespace settings
 
 namespace
@@ -68,6 +73,15 @@ class SettingsPanel final : public FormPanel
         focusOrder.onChange = [this, values]
         { file.setValue(settings::focusOrderKey, values[focusOrder.getSelectedItemIndex()]); };
 
+        pluginWindows.addItemList({"Inside the app", "Separate windows"}, 1);
+        pluginWindows.setSelectedItemIndex(settings::pluginsInsideApp(file) ? 0 : 1,
+                                           juce::dontSendNotification);
+        pluginWindows.onChange = [this]
+        {
+            file.setValue(settings::pluginWindowsKey,
+                          pluginWindows.getSelectedItemIndex() == 0 ? "inside" : "separate");
+        };
+
         const int field = tempoStep.preferredWidth(metrics::controlHeight);
         addSection("Tempo");
         addRow("Tempo step", {{&tempoStep, field}});
@@ -81,6 +95,11 @@ class SettingsPanel final : public FormPanel
         addRow("Ctrl+Tab order", {{&focusOrder, 160}});
         addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
                 "keep the modifier held to go further back.");
+        addSection("Plugins");
+        addRow("Plugin windows", {{&pluginWindows, 160}});
+        addNote("Inside the app shows plugin editors as panels in the main window. If a plugin "
+                "misbehaves there, choose separate windows. Applies to editors opened from now "
+                "on.");
         setSize(440, preferredHeight(440));
     }
 
@@ -98,6 +117,7 @@ class SettingsPanel final : public FormPanel
     NumberField tempoStepFine{"BPM", 1, "00.0"};
     NumberField previewLength{"s", 1, "00.0"};
     juce::ComboBox focusOrder;
+    juce::ComboBox pluginWindows;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

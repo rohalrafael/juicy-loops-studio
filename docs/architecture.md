@@ -386,11 +386,15 @@ which gives:
 - the main area, showing either the **Playlist** (F5, with its picker panel) or the
   **Piano Roll** (F7)
 - the **Mixer** docked below (F9)
-- floating panels inside the window: the **Channel Rack** (F6) and the **effect panel**,
-  both dragged by their title bars (the rack is kept inside the area below the transport bar,
-  `ChannelRack::setMovableArea`)
-- separate windows: plugin editors (`PluginWindow`), the **Sampler** (`SamplerWindow`), and the
-  Settings / Keyboard shortcuts / Theme / Plugins / Audio settings dialogs
+- floating panels inside the window, dragged by their title bars and kept below the transport
+  bar: the **Channel Rack** (F6), the **effect panel**, and `ui::FloatingPanel`s holding the
+  **Sampler** (`SamplerPanel`) and plugin editors (`plugins::PluginPanel`). A plugin editor is
+  a native window on Linux (`juce::XEmbedComponent`): it follows only its own moves, so the
+  panel calls `updateEmbeddedBounds()` when it moves, and plugin panels stay in front since
+  JUCE can't draw over them. `plugins::PluginView` hides whether an editor is a panel or a
+  separate `PluginWindow` (Settings › Plugin windows).
+- separate windows: the Settings / Keyboard shortcuts / Theme / Plugins / Audio settings
+  dialogs, and plugin editors when set to separate windows
 
 Views are plain JUCE components that read the `Document` in `refresh()` and change it only
 through `Document::apply()` / `setViewState()`.

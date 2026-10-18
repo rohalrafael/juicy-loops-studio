@@ -3,6 +3,7 @@
 #include "engine/effect_pool.h"
 #include "engine/engine.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace jls::model

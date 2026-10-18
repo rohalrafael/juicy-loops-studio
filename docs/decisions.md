@@ -258,6 +258,15 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Clicking a greyed (looped) step no longer toggles it: left-click makes the loop
+  real and sets the step on (a looped note stays), right-click makes it real and sets it off.
+  Dialogs and the Sampler window restyled as forms (`ui::FormPanel`, `NumberField` replacing
+  JUCE's -/+ sliders, dialog footers, key chips in the shortcuts window). After comparing with
+  the mockups: real **Medium / SemiBold** font files (cut from the variable fonts with fontTools,
+  picked by style in `LookAndFeel::getTypefaceForFont`; the double-drawn titles are gone) and
+  docked panels drawn as **cards** (rounded, bordered, 8 px apart, the focused one's border in
+  the accent colour).
+
 - 2026-10-18: UI polish, maintainer picked mockup **option A (compact)**: one control height
   per area (panel headers 36 px with 26 px controls; transport 32 px), drawn icons instead of
   typed symbols, segmented PAT | SONG and 16 | 32 | 64, drop-downs styled like buttons,

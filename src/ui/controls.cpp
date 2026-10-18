@@ -150,7 +150,7 @@ void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::C
 
 juce::FontOptions controlFont(int controlHeight)
 {
-    return juce::FontOptions(controlHeight >= metrics::transportControlHeight ? 13.0f : 12.0f);
+    return mediumFont(controlHeight >= metrics::transportControlHeight ? 13.0f : 12.0f);
 }
 
 juce::FontOptions displayFont(float height)
@@ -305,14 +305,11 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
     auto text = header.withTrimmedLeft(metrics::controlPadding);
     if (textRight >= 0)
         text.setRight(std::min(text.getRight(), textRight));
-    const juce::FontOptions titleFont(13.0f, juce::Font::bold);
+    const auto titleFont = semiboldFont(13.0f);
     const int titleWidth = std::min(text.getWidth(), textWidth(titleFont, title) + 2);
-    // The bundled fonts are Regular only: a second pass half a pixel over makes a semibold.
     g.setColour(colour(t.colours.text));
     g.setFont(titleFont);
-    const auto titleArea = text.removeFromLeft(titleWidth).toFloat();
-    g.drawText(title, titleArea, juce::Justification::centredLeft, true);
-    g.drawText(title, titleArea.translated(0.45f, 0.0f), juce::Justification::centredLeft, true);
+    g.drawText(title, text.removeFromLeft(titleWidth), juce::Justification::centredLeft, true);
     if (subtitle.isNotEmpty() && text.getWidth() > 20)
     {
         text.removeFromLeft(metrics::controlGap + 2);
@@ -356,6 +353,24 @@ juce::Rectangle<int> HeaderLayout::fromLeft(int width)
     return r;
 }
 
+void paintCardFrame(juce::Graphics& g, juce::Component& panel)
+{
+    const auto& t = currentTheme();
+    const auto bounds = panel.getLocalBounds().toFloat();
+    const float radius = t.shape.windowRadius;
+    juce::Path corners;
+    corners.addRectangle(bounds);
+    corners.addRoundedRectangle(bounds, radius);
+    corners.setUsingNonZeroWinding(false); // just the bits outside the rounded rectangle
+    g.setColour(colour(t.colours.background));
+    g.fillPath(corners);
+
+    const bool focused = panel.getProperties()["focused"];
+    const float width = focused ? 1.5f : std::max(1.0f, t.shape.borderWidth);
+    g.setColour(focused ? colour(t.colours.accent).withAlpha(0.85f) : colour(t.colours.outline));
+    g.drawRoundedRectangle(bounds.reduced(width / 2.0f), radius, width);
+}
+
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
 {
     const auto& t = currentTheme();
@@ -369,15 +384,16 @@ void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
     }
 }
 
-// ------------------------------------------------------------------------------- TempoDisplay
+// -------------------------------------------------------------------------------- NumberField
 
 namespace
 {
 constexpr int displayInset = 5;
-constexpr int unitWidth = 30; // "BPM"
 } // namespace
 
-TempoDisplay::TempoDisplay()
+NumberField::NumberField(const juce::String& unitText, int decimalPlaces,
+                         const juce::String& widestText)
+    : unit(unitText), decimals(decimalPlaces), widest(widestText)
 {
     for (auto* button : {&down, &up})
     {
@@ -403,35 +419,45 @@ TempoDisplay::TempoDisplay()
     updateLabel();
 }
 
-void TempoDisplay::setRange(double lowest, double highest)
+void NumberField::setRange(double lowest, double highest)
 {
     minimum = lowest;
     maximum = highest;
-}
-
-void TempoDisplay::setValue(double bpm)
-{
-    value = std::clamp(bpm, minimum, maximum);
+    value = std::clamp(value, minimum, maximum);
     updateLabel();
 }
 
-void TempoDisplay::setTooltip(const juce::String& tooltip)
+void NumberField::setValue(double newValue)
+{
+    value = std::clamp(newValue, minimum, maximum);
+    updateLabel();
+}
+
+void NumberField::setTooltip(const juce::String& tooltip)
 {
     juce::SettableTooltipClient::setTooltip(tooltip);
     for (auto* part : std::initializer_list<juce::SettableTooltipClient*>{&number, &down, &up})
         part->setTooltip(tooltip);
 }
 
-int TempoDisplay::preferredWidth(int height) const
+float NumberField::numberHeight() const
 {
-    const int nudge = height - 10;
-    return 2 * displayInset + 2 * nudge + textWidth(displayFont(16.0f), "000.000") + 8 + unitWidth;
+    return std::round(static_cast<float>(std::max(getHeight(), 20)) * 0.5f);
 }
 
-void TempoDisplay::change(double bpm)
+int NumberField::preferredWidth(int height) const
 {
-    // Typed values keep three decimals.
-    const double rounded = std::clamp(std::round(bpm * 1000.0) / 1000.0, minimum, maximum);
+    const int nudge = height - 10;
+    const int unitWidth = unit.isEmpty() ? 0 : textWidth(juce::FontOptions(10.0f), unit) + 10;
+    return 2 * displayInset + 2 * nudge +
+           textWidth(displayFont(std::round(static_cast<float>(height) * 0.5f)), widest) + 10 +
+           unitWidth;
+}
+
+void NumberField::change(double newValue)
+{
+    const double scale = std::pow(10.0, decimals);
+    const double rounded = std::clamp(std::round(newValue * scale) / scale, minimum, maximum);
     if (std::abs(rounded - value) < 1.0e-9)
         return;
     value = rounded;
@@ -440,46 +466,213 @@ void TempoDisplay::change(double bpm)
         onChange(value);
 }
 
-void TempoDisplay::updateLabel()
+void NumberField::updateLabel()
 {
-    number.setText(juce::String(value, 3), juce::dontSendNotification);
+    auto text = juce::String(value, decimals);
+    if (showPlus && value > 0.0)
+        text = "+" + text;
+    number.setText(text, juce::dontSendNotification);
 }
 
-void TempoDisplay::paint(juce::Graphics& g)
+void NumberField::paint(juce::Graphics& g)
 {
     paintDisplayBox(g, getLocalBounds().toFloat());
+    if (unit.isEmpty())
+        return;
     const auto& c = currentTheme().colours;
     g.setColour(colour(c.displayDim));
     g.setFont(juce::FontOptions(10.0f));
-    g.drawText("BPM", up.getX() - unitWidth, 0, unitWidth - 4, getHeight(),
-               juce::Justification::centred);
+    g.drawText(unit, number.getRight() + 4, 0, up.getX() - number.getRight() - 6, getHeight(),
+               juce::Justification::centredLeft);
 }
 
-void TempoDisplay::resized()
+void NumberField::resized()
 {
     auto area = getLocalBounds().reduced(displayInset, 0);
     const int nudge = getHeight() - 10;
     down.setBounds(area.removeFromLeft(nudge).withSizeKeepingCentre(nudge, nudge));
     up.setBounds(area.removeFromRight(nudge).withSizeKeepingCentre(nudge, nudge));
-    area.removeFromRight(unitWidth);
+    if (unit.isNotEmpty())
+        area.removeFromRight(textWidth(juce::FontOptions(10.0f), unit) + 10);
     number.setBounds(area);
+    number.setFont(displayFont(numberHeight()));
 }
 
-void TempoDisplay::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
+void NumberField::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
 {
     if (std::abs(w.deltaY) > 0.0f)
         change(value + (w.deltaY > 0.0f ? step : -step));
 }
 
-void TempoDisplay::lookAndFeelChanged()
+void NumberField::lookAndFeelChanged()
 {
     const auto& c = currentTheme().colours;
-    number.setFont(displayFont(16.0f));
+    number.setFont(displayFont(numberHeight()));
     number.setColour(juce::Label::textColourId, colour(c.displayText));
     number.setColour(juce::Label::backgroundWhenEditingColourId, colour(c.display));
     number.setColour(juce::Label::textWhenEditingColourId, colour(c.text));
     number.setColour(juce::Label::outlineWhenEditingColourId, colour(c.accent));
     number.setColour(juce::TextEditor::highlightColourId, colour(c.activeBackground));
+}
+
+// ------------------------------------------------------------------------------ Forms, dialogs
+
+void paintSectionHeading(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area)
+{
+    const auto& c = currentTheme().colours;
+    const auto font = semiboldFont(11.0f).withKerningFactor(0.08f);
+    g.setColour(colour(c.textDim));
+    g.setFont(font);
+    const auto upper = text.toUpperCase();
+    g.drawText(upper, area, juce::Justification::bottomLeft, false);
+    // A hairline from the heading to the right edge.
+    const int x = area.getX() + textWidth(font, upper) + 10;
+    if (x < area.getRight())
+    {
+        g.setColour(colour(c.outline));
+        g.fillRect(x, area.getBottom() - 6, area.getRight() - x, 1);
+    }
+}
+
+void paintNote(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area)
+{
+    g.setColour(colour(currentTheme().colours.textDim));
+    g.setFont(juce::FontOptions(12.0f));
+    g.drawFittedText(text, area, juce::Justification::topLeft, 6, 1.0f);
+}
+
+int noteHeight(const juce::String& text, int width)
+{
+    juce::AttributedString attributed(text);
+    attributed.setFont(juce::FontOptions(12.0f));
+    juce::TextLayout layout;
+    layout.createLayout(attributed, static_cast<float>(std::max(40, width)));
+    return static_cast<int>(std::ceil(layout.getHeight())) + 4;
+}
+
+void paintDialogFooter(juce::Graphics& g, juce::Rectangle<int> area)
+{
+    const auto& t = currentTheme();
+    g.setColour(colour(t.colours.header));
+    g.fillRect(area);
+    g.setColour(colour(t.colours.outline));
+    g.fillRect(area.withHeight(1));
+}
+
+void FormPanel::addSection(const juce::String& heading)
+{
+    items.push_back({Item::Kind::section, heading, {}, 0, {}, {}});
+}
+
+void FormPanel::addRow(const juce::String& label,
+                       std::initializer_list<std::pair<juce::Component*, int>> controls)
+{
+    for (const auto& [control, width] : controls)
+        addAndMakeVisible(control);
+    items.push_back({Item::Kind::row, label, controls, 0, {}, {}});
+}
+
+int FormPanel::addNote(const juce::String& text)
+{
+    items.push_back({Item::Kind::note, text, {}, 0, {}, {}});
+    return static_cast<int>(items.size()) - 1;
+}
+
+void FormPanel::setNote(int index, const juce::String& text)
+{
+    if (index < 0 || index >= static_cast<int>(items.size()) ||
+        items[static_cast<std::size_t>(index)].text == text)
+        return;
+    items[static_cast<std::size_t>(index)].text = text;
+    repaint(items[static_cast<std::size_t>(index)].bounds);
+}
+
+void FormPanel::addPainted(int height,
+                           std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter)
+{
+    items.push_back({Item::Kind::painted, {}, {}, height, std::move(painter), {}});
+}
+
+int FormPanel::heightOf(const Item& item, int width) const
+{
+    switch (item.kind)
+    {
+    case Item::Kind::section:
+        return 34;
+    case Item::Kind::row:
+        return metrics::controlHeight + 8;
+    case Item::Kind::note:
+        return noteHeight(item.text, width) + 2;
+    case Item::Kind::painted:
+        return item.height + 8;
+    }
+    return 0;
+}
+
+int FormPanel::preferredHeight(int width) const
+{
+    int h = margin;
+    for (std::size_t i = 0; i < items.size(); ++i)
+        h += (i == 0 && items[i].kind == Item::Kind::section ? -10 : 0) +
+             heightOf(items[i], width - 2 * margin);
+    return h + margin + footerHeight;
+}
+
+juce::Rectangle<int> FormPanel::itemsArea() const
+{
+    return getLocalBounds().withTrimmedBottom(footerHeight).reduced(margin);
+}
+
+void FormPanel::resized()
+{
+    auto area = itemsArea();
+    for (std::size_t i = 0; i < items.size(); ++i)
+    {
+        auto& item = items[i];
+        int h = heightOf(item, area.getWidth());
+        if (i == 0 && item.kind == Item::Kind::section)
+            h -= 10; // no gap above the first heading
+        item.bounds = area.removeFromTop(h);
+        if (item.kind != Item::Kind::row)
+            continue;
+        auto line = item.bounds.withTrimmedLeft(labelWidth);
+        for (const auto& [control, width] : item.controls)
+        {
+            control->setBounds(
+                line.removeFromLeft(width).withSizeKeepingCentre(width, metrics::controlHeight));
+            line.removeFromLeft(metrics::controlGap);
+        }
+    }
+}
+
+void FormPanel::paint(juce::Graphics& g)
+{
+    const auto& c = currentTheme().colours;
+    g.fillAll(colour(c.panel));
+    for (const auto& item : items)
+    {
+        switch (item.kind)
+        {
+        case Item::Kind::section:
+            paintSectionHeading(g, item.text, item.bounds.withTrimmedBottom(6));
+            break;
+        case Item::Kind::row:
+            g.setColour(colour(c.text));
+            g.setFont(juce::FontOptions(12.5f));
+            g.drawText(item.text, item.bounds.withWidth(labelWidth - 8),
+                       juce::Justification::centredLeft, true);
+            break;
+        case Item::Kind::note:
+            paintNote(g, item.text, item.bounds);
+            break;
+        case Item::Kind::painted:
+            if (item.painter)
+                item.painter(g, item.bounds.withTrimmedBottom(8));
+            break;
+        }
+    }
+    if (footerHeight > 0)
+        paintDialogFooter(g, getLocalBounds().removeFromBottom(footerHeight));
 }
 
 } // namespace jls::ui

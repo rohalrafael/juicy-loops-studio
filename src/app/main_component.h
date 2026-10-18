@@ -97,7 +97,8 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::Component* areaComponent(Area area);
     void setFocusArea(Area area);
     void layoutTransportBar(juce::Rectangle<int> bar);
-    void raiseFocusedArea(); // stacking of the floating Channel Rack follows the focus
+    void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
+    void updateFocusFrames(); // the focused docked panel's accent frame
     void cycleFocus(int direction);
     void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
     void navigate(juce::CommandID command);
@@ -146,7 +147,7 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::IconButton newPatternButton{ui::Icon::add};
     ui::IconButton playButton{ui::Icon::play}; // shows pause while playing
     ui::IconButton stopButton{ui::Icon::stop};
-    ui::TempoDisplay tempoDisplay;
+    ui::NumberField tempoDisplay{"BPM", 3, "000.000"};
     juce::ComboBox timeSignatureBox;
     ui::IconButton metronomeButton{ui::Icon::metronome, "Metronome"};
     ui::IconButton typingButton{ui::Icon::keys, "Keys"}; // typing keyboard to piano (Ctrl+T)

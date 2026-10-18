@@ -5,6 +5,7 @@
 // pitch). Drum channels and audio clips alike, since audio clips are channels too.
 
 #include "model/document.h"
+#include "ui/controls.h"
 #include "ui/waveform.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -12,7 +13,7 @@
 namespace jls::ui
 {
 
-class SamplerPanel final : public juce::Component
+class SamplerPanel final : public FormPanel
 {
   public:
     SamplerPanel(model::Document& document, model::ChannelId channel);
@@ -22,10 +23,8 @@ class SamplerPanel final : public juce::Component
     // Re-reads the document. Returns false if the channel is gone (close the window).
     bool refresh();
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
   private:
+    void paintWaveform(juce::Graphics& g, juce::Rectangle<int> area);
     void edit(const std::function<void(model::SamplerSettings&)>& change, int gesture = 0);
 
     model::Document& doc;
@@ -33,16 +32,12 @@ class SamplerPanel final : public juce::Component
     const engine::SampleBuffer* peaksFor = nullptr;
     Peaks peaks;
 
-    juce::Label fileLabel;
-    juce::Label stretchHeading{{}, "Time stretching"};
-    juce::Label modeLabel{{}, "Mode"};
+    int fileNote = -1; // the sample's file name
+    int infoNote = -1; // its length and how it plays
     juce::ComboBox modeBox;
-    juce::Label tempoLabel{{}, "Original tempo"};
-    juce::Slider tempoBox;
+    NumberField tempoBox{"BPM", 2, "000.00"};
     juce::TextButton fromProject{"Use project tempo"};
-    juce::Label pitchLabel{{}, "Pitch"};
-    juce::Slider pitchBox;
-    juce::Label info;
+    NumberField pitchBox{"st", 0, "+00"};
     int gestureId = 0;
 };
 

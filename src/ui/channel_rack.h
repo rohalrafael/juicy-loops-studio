@@ -101,8 +101,9 @@ class InsertBox final : public juce::Component, public juce::SettableTooltipClie
 // The row of step buttons. Left-click toggles a step and dragging paints that value across
 // steps; right-click (and drag) erases, as in FL.
 //
-// A looping channel shows its repeats greyed from `loopStart` on; clicking one makes the repeats
-// up to there real first (see ChannelRow), so what you hear doesn't change.
+// A looping channel shows its repeats greyed from `loopStart` on. Clicking one makes the repeats
+// up to there real first (see ChannelRow), so what you hear doesn't change, and then sets that
+// step: on for a left-click (a looped note stays), off for a right-click.
 class StepGrid final : public juce::Component
 {
   public:
@@ -129,6 +130,7 @@ class StepGrid final : public juce::Component
     static int stepX(int step, int stepWidth);
     int stepX(int step) const { return stepX(step, stepWidth); }
     int stepAt(int x) const;
+    bool isRepeat(int step) const { return loopStart >= 0 && step >= loopStart; }
     void paintStep(int step);
 
     std::vector<bool> steps;

@@ -361,7 +361,10 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
     if (steps.empty())
         return;
     const int step = stepAt(e.x);
-    paintValue = !e.mods.isPopupMenu() && !steps[static_cast<std::size_t>(step)];
+    // A greyed (looped) step isn't toggled: left-click keeps or adds a note there, right-click
+    // removes it. Either way the loop becomes real first (see paintStep and ChannelRow).
+    paintValue =
+        !e.mods.isPopupMenu() && (isRepeat(step) || !steps[static_cast<std::size_t>(step)]);
     gestureId = newGestureId ? newGestureId() : 0;
     lastPainted = -1;
     paintStep(step);
@@ -389,7 +392,8 @@ void StepGrid::paintStep(int step)
     if (step == lastPainted || step < 0)
         return;
     lastPainted = step;
-    if (steps[static_cast<std::size_t>(step)] != paintValue && onStepPainted)
+    // Repeats are reported even when they already show `paintValue`, so they become real.
+    if ((steps[static_cast<std::size_t>(step)] != paintValue || isRepeat(step)) && onStepPainted)
         onStepPainted(step, paintValue, gestureId);
 }
 

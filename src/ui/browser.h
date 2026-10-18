@@ -50,6 +50,7 @@ class BrowserPanel final : public juce::Component, private juce::Timer
     std::function<void()> onClose;
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }
     void resized() override;
 
     // Used by the tree items.

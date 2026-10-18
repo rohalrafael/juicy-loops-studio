@@ -8,7 +8,7 @@ FROM archlinux:latest
 # Toolchain, JUCE's Linux dependencies, headless UI testing, audio/MIDI tools, debugging,
 # and test plugins.
 RUN pacman -Syu --noconfirm --needed \
-        base-devel cmake ninja clang ccache git github-cli python sudo which \
+        base-devel cmake ninja clang ccache git github-cli python python-fonttools sudo which \
         alsa-lib freetype2 fontconfig libx11 libxext libxrandr libxinerama libxcursor \
         libxcomposite mesa \
         xorg-server-xvfb xdotool imagemagick \

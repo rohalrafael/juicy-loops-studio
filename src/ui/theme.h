@@ -50,10 +50,23 @@ inline juce::Colour colour(theme::Argb argb)
 // The active theme. Valid while a ThemeManager exists (before that: the default theme).
 const theme::Theme& currentTheme();
 
+// A bundled font family in the weights the UI uses (any of them may be missing).
+struct FontFamily
+{
+    juce::Typeface::Ptr regular, medium, semibold;
+};
+
+// Font weights by style name: FontOptions(size).withStyle("Medium") for control labels,
+// "SemiBold" for titles and headings (ui/controls has helpers).
+juce::FontOptions mediumFont(float size);
+juce::FontOptions semiboldFont(float size);
+
 class LookAndFeel final : public juce::LookAndFeel_V4
 {
   public:
-    void applyTheme(const theme::Theme& theme, juce::Typeface::Ptr bundledFont);
+    void applyTheme(const theme::Theme& theme, const FontFamily* bundledFont);
+    // The theme's bundled font in the weight a font asks for (by style name).
+    juce::Typeface::Ptr getTypefaceForFont(const juce::Font& font) override;
 
     void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour& background,
                               bool highlighted, bool down) override;
@@ -78,6 +91,16 @@ class LookAndFeel final : public juce::LookAndFeel_V4
                                   bool isMouseOver) override;
     juce::Rectangle<int> getTooltipBounds(const juce::String& tipText, juce::Point<int> screenPos,
                                           juce::Rectangle<int> parentArea) override;
+    // Shortcut chips in the Keyboard shortcuts window, and message boxes.
+    void drawKeymapChangeButton(juce::Graphics&, int width, int height, juce::Button&,
+                                const juce::String& keyDescription) override;
+    juce::Font getAlertWindowTitleFont() override;
+    juce::Font getAlertWindowMessageFont() override;
+    juce::Font getAlertWindowFont() override;
+    int getAlertWindowButtonHeight() override;
+
+  private:
+    FontFamily family; // the active theme's bundled font, if it has one
 };
 
 class ThemeManager final : public juce::ChangeBroadcaster
@@ -112,11 +135,11 @@ class ThemeManager final : public juce::ChangeBroadcaster
 
   private:
     void apply();
-    juce::Typeface::Ptr bundledFont(const std::string& family) const;
+    const FontFamily* bundledFont(const std::string& family) const;
 
     LookAndFeel laf;
     std::unique_ptr<juce::PropertiesFile> settings;
-    std::map<juce::String, juce::Typeface::Ptr> fonts; // lower-case family name -> typeface
+    std::map<juce::String, FontFamily> fonts; // lower-case family name -> its weights
     std::vector<theme::Theme> userThemes;
     theme::Theme active;
 };

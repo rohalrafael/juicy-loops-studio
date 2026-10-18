@@ -76,6 +76,7 @@ class MixerView final : public juce::Component
     void editTrack(int track, const std::function<void(model::MixerTrack&)>& change, int gesture);
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }
     void resized() override;
 
   private:

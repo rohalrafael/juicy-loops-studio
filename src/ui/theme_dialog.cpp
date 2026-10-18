@@ -1,5 +1,7 @@
 #include "ui/theme_dialog.h"
 
+#include "ui/controls.h"
+
 namespace jls::ui
 {
 namespace
@@ -10,6 +12,10 @@ constexpr int cardWidth = 200;
 constexpr int cardHeight = 132;
 constexpr int gap = 12;
 constexpr int margin = 20;
+constexpr int headingHeight = 24;
+constexpr int hintHeight = 34;
+const char* const hintText = "Applies instantly and is remembered. Theme files are small JSON "
+                             "files; see docs/themes.md for the format.";
 
 } // namespace
 
@@ -81,7 +87,7 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
     // Name and description in the dialog's own theme.
     auto textArea = bounds.reduced(12.0f, 6.0f);
     g.setColour(colour(ui.colours.text));
-    g.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+    g.setFont(semiboldFont(15.0f));
     g.drawText(getButtonText(), textArea.removeFromTop(20.0f), juce::Justification::centredLeft);
     g.setColour(colour(ui.colours.textDim));
     g.setFont(juce::FontOptions(12.0f));
@@ -112,11 +118,6 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
 
 ThemeDialog::ThemeDialog(ThemeManager& manager) : themes(manager)
 {
-    title.setFont(juce::FontOptions(18.0f, juce::Font::bold));
-    hint.setFont(juce::FontOptions(13.0f));
-    addAndMakeVisible(title);
-    addAndMakeVisible(hint);
-
     importButton.onClick = [this] { importTheme(); };
     exportButton.onClick = [this] { exportTheme(); };
     folderButton.onClick = [this]
@@ -139,7 +140,7 @@ ThemeDialog::~ThemeDialog()
 
 void ThemeDialog::changeListenerCallback(juce::ChangeBroadcaster*)
 {
-    hint.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
+    // Import is the main action: drawn in the accent colour.
     importButton.setColour(juce::TextButton::buttonColourId, colour(currentTheme().colours.accent));
     importButton.setColour(juce::TextButton::textColourOffId,
                            colour(currentTheme().colours.background));
@@ -164,7 +165,8 @@ void ThemeDialog::rebuildCards()
 
     const int rows = std::max(1, (static_cast<int>(cards.size()) + columns - 1) / columns);
     setSize(margin * 2 + columns * cardWidth + (columns - 1) * gap,
-            margin * 2 + 30 + 24 + rows * cardHeight + (rows - 1) * gap + 20 + 36);
+            margin * 2 + headingHeight + hintHeight + rows * cardHeight + (rows - 1) * gap +
+                dialogFooterHeight);
     changeListenerCallback(nullptr);
     resized();
 }
@@ -172,21 +174,22 @@ void ThemeDialog::rebuildCards()
 void ThemeDialog::paint(juce::Graphics& g)
 {
     g.fillAll(colour(currentTheme().colours.panel));
+    auto area = getLocalBounds().withTrimmedBottom(dialogFooterHeight).reduced(margin);
+    paintSectionHeading(g, "Themes", area.removeFromTop(headingHeight));
+    paintNote(g, hintText, area.removeFromTop(hintHeight).withTrimmedTop(6));
+    paintDialogFooter(g, getLocalBounds().removeFromBottom(dialogFooterHeight));
 }
 
 void ThemeDialog::resized()
 {
-    auto area = getLocalBounds().reduced(margin);
-    title.setBounds(area.removeFromTop(30));
-    hint.setBounds(area.removeFromTop(24));
-    area.removeFromTop(8);
+    auto all = getLocalBounds();
+    HeaderLayout footer(all.removeFromBottom(dialogFooterHeight));
+    for (auto* button : {&importButton, &exportButton, &folderButton})
+        button->setBounds(
+            footer.fromLeft(buttonWidth(button->getButtonText(), metrics::controlHeight)));
 
-    auto buttons = area.removeFromBottom(36);
-    importButton.setBounds(buttons.removeFromLeft(190));
-    buttons.removeFromLeft(8);
-    exportButton.setBounds(buttons.removeFromLeft(200));
-    buttons.removeFromLeft(8);
-    folderButton.setBounds(buttons.removeFromLeft(180));
+    auto area = all.reduced(margin);
+    area.removeFromTop(headingHeight + hintHeight);
 
     for (std::size_t i = 0; i < cards.size(); ++i)
     {

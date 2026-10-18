@@ -149,6 +149,7 @@ class PlaylistView final : public juce::Component, private juce::Timer
     bool isPickerVisible() const;
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }
     void resized() override;
 
     void setZoom(float pixelsPerStep, float anchorGridX);

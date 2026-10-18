@@ -150,6 +150,7 @@ class PianoRollView final : public juce::Component, private juce::Timer
     float pixelsPerTick() const { return zoom; }
 
     void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }
     void resized() override;
 
   private:

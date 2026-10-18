@@ -1,5 +1,7 @@
 #include "ui/settings_dialog.h"
 
+#include "ui/controls.h"
+
 #include "ui/theme.h"
 
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -48,135 +50,54 @@ void launch(std::unique_ptr<juce::Component> content, const juce::String& title,
     options.launchAsync();
 }
 
-// One row: a label and a number box with -/+ buttons, saved to the settings file on change.
-class NumberSetting final : public juce::Component
+// Options > Settings, as a form: each control saves to the settings file when it changes.
+class SettingsPanel final : public FormPanel
 {
   public:
-    NumberSetting(juce::PropertiesFile& f, const char* k, const juce::String& text, double value,
-                  const juce::String& suffix = " BPM")
-        : file(f), key(k)
+    explicit SettingsPanel(juce::PropertiesFile& f) : file(f)
     {
-        label.setText(text, juce::dontSendNotification);
-        addAndMakeVisible(label);
-        box.setSliderStyle(juce::Slider::IncDecButtons);
-        box.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 70, 24);
-        box.setRange(0.1, 100.0, 0.1);
-        box.setTextValueSuffix(suffix);
-        box.setValue(value, juce::dontSendNotification);
-        box.onValueChange = [this] { file.setValue(key, box.getValue()); };
-        addAndMakeVisible(box);
-    }
+        number(tempoStep, settings::tempoStepKey, settings::tempoStep(file));
+        number(tempoStepFine, settings::tempoStepFineKey, settings::tempoStepFine(file));
+        number(previewLength, settings::previewSecondsKey, settings::previewSeconds(file));
 
-    void resized() override
-    {
-        auto area = getLocalBounds();
-        box.setBounds(area.removeFromRight(170).reduced(0, 2));
-        label.setBounds(area);
+        const juce::StringArray values{"fixed", "recent"};
+        focusOrder.addItemList({"Fixed", "Last used first"}, 1);
+        focusOrder.setSelectedItemIndex(
+            std::max(0, values.indexOf(file.getValue(settings::focusOrderKey, values[0]))),
+            juce::dontSendNotification);
+        focusOrder.onChange = [this, values]
+        { file.setValue(settings::focusOrderKey, values[focusOrder.getSelectedItemIndex()]); };
+
+        const int field = tempoStep.preferredWidth(metrics::controlHeight);
+        addSection("Tempo");
+        addRow("Tempo step", {{&tempoStep, field}});
+        addRow("Fine tempo step", {{&tempoStepFine, field}});
+        addNote("How far Tempo up / down and Tempo up / down (fine) change the tempo (see "
+                "Options > Keyboard shortcuts).");
+        addSection("Browser");
+        addRow("Click preview length", {{&previewLength, field}});
+        addNote("Clicking a sample plays this much of it; Shift+click plays it all.");
+        addSection("Focus");
+        addRow("Ctrl+Tab order", {{&focusOrder, 160}});
+        addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
+                "keep the modifier held to go further back.");
+        setSize(440, preferredHeight(440));
     }
 
   private:
+    void number(NumberField& field, const char* key, double value)
+    {
+        field.setRange(0.1, 100.0);
+        field.step = 0.1;
+        field.setValue(value);
+        field.onChange = [this, key](double v) { file.setValue(key, v); };
+    }
+
     juce::PropertiesFile& file;
-    const char* key;
-    juce::Label label;
-    juce::Slider box;
-};
-
-// One row: a label and a choice, saved to the settings file as one of `values`.
-class ChoiceSetting final : public juce::Component
-{
-  public:
-    ChoiceSetting(juce::PropertiesFile& f, const char* k, const juce::String& text,
-                  const juce::StringArray& labels, const juce::StringArray& v)
-        : file(f), key(k), values(v)
-    {
-        label.setText(text, juce::dontSendNotification);
-        addAndMakeVisible(label);
-        box.addItemList(labels, 1);
-        box.setSelectedItemIndex(std::max(0, values.indexOf(file.getValue(key, values[0]))),
-                                 juce::dontSendNotification);
-        box.onChange = [this] { file.setValue(key, values[box.getSelectedItemIndex()]); };
-        addAndMakeVisible(box);
-    }
-
-    void resized() override
-    {
-        auto area = getLocalBounds();
-        box.setBounds(area.removeFromRight(170).reduced(0, 3));
-        label.setBounds(area);
-    }
-
-  private:
-    juce::PropertiesFile& file;
-    const char* key;
-    juce::StringArray values;
-    juce::Label label;
-    juce::ComboBox box;
-};
-
-class SettingsPanel final : public juce::Component
-{
-  public:
-    explicit SettingsPanel(juce::PropertiesFile& file)
-        : tempoStep(file, settings::tempoStepKey, "Tempo step", settings::tempoStep(file)),
-          tempoStepFine(file, settings::tempoStepFineKey, "Fine tempo step",
-                        settings::tempoStepFine(file)),
-          previewLength(file, settings::previewSecondsKey, "Click preview length",
-                        settings::previewSeconds(file), " s"),
-          focusOrder(file, settings::focusOrderKey, "Ctrl+Tab order", {"Fixed", "Last used first"},
-                     {"fixed", "recent"})
-    {
-        focusHeading.setText("Focus", juce::dontSendNotification);
-        focusHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
-        focusNote.setText("Last used first works like Alt+Tab: press once to go back to the "
-                          "previous area, keep the modifier held to go further back.",
-                          juce::dontSendNotification);
-        focusNote.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
-        browserHeading.setText("Browser", juce::dontSendNotification);
-        browserHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
-        browserNote.setText("Clicking a sample plays this much of it; Shift+click plays it all.",
-                            juce::dontSendNotification);
-        browserNote.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
-        heading.setText("Tempo", juce::dontSendNotification);
-        heading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
-        note.setText("How far the Tempo up / down and Tempo up / down (fine) shortcuts change the "
-                     "tempo (see Options > Keyboard shortcuts).",
-                     juce::dontSendNotification);
-        note.setColour(juce::Label::textColourId, colour(currentTheme().colours.textDim));
-        for (auto* c : std::initializer_list<juce::Component*>{
-                 &heading, &tempoStep, &tempoStepFine, &note, &browserHeading, &previewLength,
-                 &browserNote, &focusHeading, &focusOrder, &focusNote})
-            addAndMakeVisible(c);
-        setSize(420, 380);
-    }
-
-    void resized() override
-    {
-        auto area = getLocalBounds().reduced(16, 12);
-        heading.setBounds(area.removeFromTop(24));
-        tempoStep.setBounds(area.removeFromTop(32));
-        tempoStepFine.setBounds(area.removeFromTop(32));
-        note.setBounds(area.removeFromTop(40));
-        area.removeFromTop(8);
-        browserHeading.setBounds(area.removeFromTop(24));
-        previewLength.setBounds(area.removeFromTop(32));
-        browserNote.setBounds(area.removeFromTop(36));
-        area.removeFromTop(8);
-        focusHeading.setBounds(area.removeFromTop(24));
-        focusOrder.setBounds(area.removeFromTop(32));
-        focusNote.setBounds(area);
-    }
-
-  private:
-    juce::Label heading;
-    NumberSetting tempoStep;
-    NumberSetting tempoStepFine;
-    juce::Label note;
-    juce::Label browserHeading;
-    NumberSetting previewLength;
-    juce::Label browserNote;
-    juce::Label focusHeading;
-    ChoiceSetting focusOrder;
-    juce::Label focusNote;
+    NumberField tempoStep{"BPM", 1, "00.0"};
+    NumberField tempoStepFine{"BPM", 1, "00.0"};
+    NumberField previewLength{"s", 1, "00.0"};
+    juce::ComboBox focusOrder;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).
@@ -198,14 +119,19 @@ class ShortcutsPanel final : public juce::Component
         setSize(560, 640);
     }
 
+    void paint(juce::Graphics& g) override
+    {
+        g.fillAll(colour(currentTheme().colours.panel));
+        paintDialogFooter(g, getLocalBounds().removeFromBottom(dialogFooterHeight));
+    }
+
     void resized() override
     {
         auto area = getLocalBounds();
-        auto bar = area.removeFromBottom(40).reduced(10, 6);
-        importButton.setBounds(bar.removeFromLeft(90));
-        bar.removeFromLeft(6);
-        exportButton.setBounds(bar.removeFromLeft(90));
-        editor.setBounds(area);
+        HeaderLayout footer(area.removeFromBottom(dialogFooterHeight));
+        importButton.setBounds(footer.fromLeft(buttonWidth("Import...", metrics::controlHeight)));
+        exportButton.setBounds(footer.fromLeft(buttonWidth("Export...", metrics::controlHeight)));
+        editor.setBounds(area.reduced(6, 4));
     }
 
   private:

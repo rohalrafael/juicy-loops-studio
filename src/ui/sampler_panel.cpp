@@ -19,9 +19,6 @@ juce::String seconds(double s)
 SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
     : doc(document), id(channel)
 {
-    fileLabel.setFont(juce::FontOptions(12.5f));
-    stretchHeading.setFont(juce::FontOptions(15.0f, juce::Font::bold));
-
     modeBox.addItem("Off", 1);
     modeBox.addItem("Resample", 2);
     modeBox.addItem("Stretch", 3);
@@ -40,17 +37,11 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
             });
     };
 
-    tempoBox.setSliderStyle(juce::Slider::IncDecButtons);
-    tempoBox.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 80, 24);
-    tempoBox.setRange(10.0, 999.0, 0.01);
-    tempoBox.setTextValueSuffix(" BPM");
+    tempoBox.setRange(10.0, 999.0);
     tempoBox.setTooltip("The tempo the sample was made at: Resample and Stretch fit it to the "
                         "project tempo from there");
-    tempoBox.onValueChange = [this]
-    {
-        const double bpm = tempoBox.getValue();
-        edit([bpm](model::SamplerSettings& s) { s.originalTempo = bpm; });
-    };
+    tempoBox.onChange = [this](double bpm)
+    { edit([bpm](model::SamplerSettings& s) { s.originalTempo = bpm; }); };
     fromProject.setTooltip("Treat the sample as being at the project's tempo (no change now)");
     fromProject.onClick = [this]
     {
@@ -58,27 +49,31 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
         edit([tempo](model::SamplerSettings& s) { s.originalTempo = tempo; });
     };
 
-    pitchBox.setSliderStyle(juce::Slider::IncDecButtons);
-    pitchBox.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 80, 24);
-    pitchBox.setRange(-24.0, 24.0, 1.0);
-    pitchBox.setTextValueSuffix(" st");
+    pitchBox.setRange(-24.0, 24.0);
+    pitchBox.showPlus = true;
     pitchBox.setTooltip("Transpose in semitones. In Stretch mode the length stays; otherwise the "
                         "sample also gets faster or slower.");
-    pitchBox.onValueChange = [this]
-    {
-        const double pitch = pitchBox.getValue();
-        edit([pitch](model::SamplerSettings& s) { s.pitch = pitch; });
-    };
+    pitchBox.onChange = [this](double pitch)
+    { edit([pitch](model::SamplerSettings& s) { s.pitch = pitch; }); };
 
-    info.setFont(juce::FontOptions(12.5f));
-    for (auto* c : std::initializer_list<juce::Component*>{
-             &fileLabel, &stretchHeading, &modeLabel, &modeBox, &tempoLabel, &tempoBox,
-             &fromProject, &pitchLabel, &pitchBox, &info})
+    for (auto* c : std::initializer_list<juce::Component*>{&modeBox, &fromProject})
     {
         c->setWantsKeyboardFocus(false);
-        addAndMakeVisible(c);
+        c->setMouseClickGrabsKeyboardFocus(false);
     }
-    setSize(460, 330);
+    const int field = tempoBox.preferredWidth(metrics::controlHeight);
+    addSection("Sample");
+    fileNote = addNote(" ");
+    addPainted(waveformHeight,
+               [this](juce::Graphics& g, juce::Rectangle<int> area) { paintWaveform(g, area); });
+    infoNote = addNote(" ");
+    addSection("Time stretching");
+    addRow("Mode", {{&modeBox, 150}});
+    addRow("Original tempo",
+           {{&tempoBox, field},
+            {&fromProject, buttonWidth("Use project tempo", metrics::controlHeight)}});
+    addRow("Pitch", {{&pitchBox, pitchBox.preferredWidth(metrics::controlHeight)}});
+    setSize(480, preferredHeight(480));
     refresh();
 }
 
@@ -110,17 +105,18 @@ bool SamplerPanel::refresh()
         repaint();
     }
     const auto file = juce::File(juce::String::fromUTF8(channel->samplePath.c_str()));
-    fileLabel.setText(channel->samplePath.empty()
+    setNote(fileNote, channel->samplePath.empty()
                           ? juce::String("Built-in sound: ") +
                                 juce::String::fromUTF8(channel->builtinSample.c_str())
-                          : file.getFileName(),
-                      juce::dontSendNotification);
+                          : file.getFileName());
+    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+        window->setName(juce::String::fromUTF8("Sampler \xc2\xb7 ") +
+                        juce::String::fromUTF8(channel->name.c_str()));
 
     const auto& s = channel->sampler;
     modeBox.setSelectedId(static_cast<int>(s.mode) + 1, juce::dontSendNotification);
-    tempoBox.setValue(s.originalTempo > 0.0 ? s.originalTempo : project.tempo,
-                      juce::dontSendNotification);
-    pitchBox.setValue(s.pitch, juce::dontSendNotification);
+    tempoBox.setValue(s.originalTempo > 0.0 ? s.originalTempo : project.tempo);
+    pitchBox.setValue(s.pitch);
     const bool follows = s.mode != model::StretchMode::off;
     tempoBox.setEnabled(follows);
     fromProject.setEnabled(follows);
@@ -143,22 +139,19 @@ bool SamplerPanel::refresh()
                  << juce::String(project.tempo, 1) << " BPM";
             break;
         }
-        info.setText(text, juce::dontSendNotification);
+        setNote(infoNote, text);
     }
     else
     {
-        info.setText("No sample loaded", juce::dontSendNotification);
+        setNote(infoNote, "No sample loaded");
     }
     return true;
 }
 
-void SamplerPanel::paint(juce::Graphics& g)
+void SamplerPanel::paintWaveform(juce::Graphics& g, juce::Rectangle<int> area)
 {
     const auto& t = currentTheme();
-    g.fillAll(colour(t.colours.panel));
-    auto area = getLocalBounds().reduced(14).removeFromTop(waveformHeight + 24).withTrimmedTop(24);
-    g.setColour(colour(t.colours.display));
-    g.fillRoundedRectangle(area.toFloat(), 4.0f);
+    paintDisplayBox(g, area.toFloat());
     if (peaks.empty())
         return;
     const auto wave = area.toFloat().reduced(6.0f);
@@ -174,26 +167,6 @@ void SamplerPanel::paint(juce::Graphics& g)
     }
 }
 
-void SamplerPanel::resized()
-{
-    auto area = getLocalBounds().reduced(14);
-    fileLabel.setBounds(area.removeFromTop(24));
-    area.removeFromTop(waveformHeight + 10);
-    stretchHeading.setBounds(area.removeFromTop(26));
-    const auto row = [&area](juce::Label& label, juce::Component& control, int width)
-    {
-        auto line = area.removeFromTop(32);
-        label.setBounds(line.removeFromLeft(120));
-        control.setBounds(line.removeFromLeft(width).reduced(0, 3));
-        return line;
-    };
-    row(modeLabel, modeBox, 150);
-    auto tempoLine = row(tempoLabel, tempoBox, 170);
-    fromProject.setBounds(tempoLine.removeFromLeft(140).reduced(6, 4));
-    row(pitchLabel, pitchBox, 170);
-    info.setBounds(area.removeFromTop(26));
-}
-
 SamplerWindow::SamplerWindow(model::Document& document, model::ChannelId channel)
     : juce::DocumentWindow("Sampler",
                            juce::LookAndFeel::getDefaultLookAndFeel().findColour(
@@ -203,6 +176,7 @@ SamplerWindow::SamplerWindow(model::Document& document, model::ChannelId channel
 {
     setUsingNativeTitleBar(true);
     setContentOwned(content, true);
+    content->refresh(); // now that it's in the window: names the window after the channel
     setResizable(false, false);
     centreWithSize(getWidth(), getHeight());
     setVisible(true);

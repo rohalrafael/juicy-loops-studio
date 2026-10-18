@@ -48,10 +48,6 @@ class ThemeDialog final : public juce::Component, private juce::ChangeListener
 
     ThemeManager& themes;
     std::vector<std::unique_ptr<ThemeCard>> cards;
-    juce::Label title{{}, "Choose a theme"};
-    juce::Label hint{{},
-                     "Applies instantly and is remembered. Theme files are small JSON files; "
-                     "see docs/themes.md for the format."};
     juce::TextButton importButton{"Import theme file..."};
     juce::TextButton exportButton{"Export current theme..."};
     juce::TextButton folderButton{"Open themes folder"};

@@ -695,7 +695,7 @@ class PlaylistView::Picker final : public juce::Component
         const auto heading = [&](const char* text)
         {
             g.setColour(colour(t.colours.textDim));
-            g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            g.setFont(semiboldFont(11.0f));
             g.drawText(text, 8, y, getWidth() - 12, rowHeight, juce::Justification::centredLeft);
             y += rowHeight;
         };
@@ -1142,8 +1142,7 @@ void PlaylistView::resized()
     snapBox.setBounds(header.fromRight(metrics::comboWidth));
     snapLabelArea = header.fromRight(headerLabelWidth("Snap"));
     // Right after the title.
-    header.fromLeft(textWidth(juce::FontOptions(13.0f, juce::Font::bold), "Playlist") +
-                    metrics::controlGap);
+    header.fromLeft(textWidth(semiboldFont(13.0f), "Playlist") + metrics::controlGap);
     pickerButton.setBounds(header.fromLeft(pickerButton.preferredWidth(metrics::controlHeight)));
 
     if (picker->isVisible())

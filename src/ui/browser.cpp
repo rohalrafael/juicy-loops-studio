@@ -71,7 +71,7 @@ class BrowserPanel::Item final : public juce::TreeViewItem
         }
         const bool folder = file.isDirectory();
         g.setColour(colour(folder ? t.colours.text : t.colours.textDim));
-        g.setFont(juce::FontOptions(13.0f, root ? juce::Font::bold : juce::Font::plain));
+        g.setFont(root ? semiboldFont(13.0f) : juce::FontOptions(13.0f));
         g.drawText(file.getFileName(), 4, 0, width - 6, height, juce::Justification::centredLeft,
                    true);
     }
@@ -457,9 +457,6 @@ void BrowserPanel::paint(juce::Graphics& g)
         g.drawFittedText("Add a folder with + to browse its samples.", tree.getBounds().reduced(12),
                          juce::Justification::centredTop, 3);
     }
-    // Separator on the side facing the rest of the app.
-    g.setColour(colour(t.colours.outline));
-    g.fillRect(right ? 0 : getWidth() - 1, 0, 1, getHeight());
 }
 
 void BrowserPanel::resized()

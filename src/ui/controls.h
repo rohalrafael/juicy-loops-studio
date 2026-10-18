@@ -36,7 +36,8 @@ enum class Icon
 // Draws `icon` centred in `area`, scaled to fit, stroked (or filled) in `colour`.
 void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::Colour colour);
 
-// Label font for a control of the given height: 12 px in panels, 13 px in the transport bar.
+// Label font for a control of the given height (Medium weight): 12 px in panels, 13 px in the
+// transport bar.
 juce::FontOptions controlFont(int controlHeight);
 // Font for numbers in displays (tempo, clock): the bundled IBM Plex Mono, whose digits all
 // have the same width so values don't jitter while they change.
@@ -100,24 +101,33 @@ class HeaderLayout
     int height;
 };
 
+// Docked panels are cards: rounded corners (masked in the window background) and a thin border,
+// in the accent colour while the panel has the keyboard focus (its "focused" property, set by
+// MainComponent). Call from the panel's paintOverChildren() so it's drawn over its children.
+void paintCardFrame(juce::Graphics& g, juce::Component& panel);
+
 // A recessed box for numbers (the tempo and the clock).
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area);
 
-// The transport's tempo: [−] 130.000 BPM [+] in a display box. The buttons step by `step`
-// BPM; click the number to type a tempo (kept to three decimals); the mouse wheel steps too.
-class TempoDisplay final : public juce::Component, public juce::SettableTooltipClient
+// A number in a recessed display box: [−] 130.000 BPM [+] (the transport's tempo, the
+// Sampler's tempo and pitch, settings). The buttons and the mouse wheel step by `step`; click the
+// number to type one. The font scales with the height.
+class NumberField final : public juce::Component, public juce::SettableTooltipClient
 {
   public:
-    TempoDisplay();
+    // `widest` is the longest text the number can show (sizes the field), e.g. "000.000".
+    NumberField(const juce::String& unit = {}, int decimals = 0,
+                const juce::String& widest = "000");
 
     void setRange(double minimum, double maximum);
-    void setValue(double bpm); // doesn't call onChange
+    void setValue(double newValue); // doesn't call onChange
     double getValue() const { return value; }
     void setTooltip(const juce::String& tooltip) override; // shown on all its parts
     int preferredWidth(int height) const;
 
-    std::function<void(double bpm)> onChange;
+    std::function<void(double)> onChange;
     double step = 1.0;
+    bool showPlus = false; // "+3" for positive values (semitones)
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -125,15 +135,73 @@ class TempoDisplay final : public juce::Component, public juce::SettableTooltipC
     void lookAndFeelChanged() override;
 
   private:
-    void change(double bpm);
+    void change(double newValue);
     void updateLabel();
+    float numberHeight() const;
 
-    double value = 120.0;
-    double minimum = 10.0;
-    double maximum = 999.0;
+    juce::String unit;
+    int decimals;
+    juce::String widest;
+    double value = 0.0;
+    double minimum = 0.0;
+    double maximum = 100.0;
     IconButton down{Icon::minus};
     IconButton up{Icon::add};
     juce::Label number;
+};
+
+// Section headings ("TEMPO"), dim notes and dialog footers, as on the panels.
+void paintSectionHeading(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area);
+void paintNote(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area);
+int noteHeight(const juce::String& text, int width);
+void paintDialogFooter(juce::Graphics& g, juce::Rectangle<int> area);
+inline constexpr int dialogFooterHeight = 44;
+
+// A settings form: sections with a heading, rows of a label and controls, notes and painted
+// areas, laid out top to bottom. It paints its own text, so theme changes restyle it.
+class FormPanel : public juce::Component
+{
+  public:
+    static constexpr int margin = 16;
+    static constexpr int labelWidth = 140;
+
+    void addSection(const juce::String& heading);
+    // Controls with their widths, left to right after the label.
+    void addRow(const juce::String& label,
+                std::initializer_list<std::pair<juce::Component*, int>> controls);
+    // Returns an index for setNote().
+    int addNote(const juce::String& text);
+    void setNote(int index, const juce::String& text);
+    void addPainted(int height, std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter);
+    // The height the items need at `width` (plus `extra` below, e.g. a footer).
+    int preferredHeight(int width) const;
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+  protected:
+    // Below the items (for a footer); laid out by subclasses.
+    juce::Rectangle<int> itemsArea() const;
+    int footerHeight = 0;
+
+  private:
+    struct Item
+    {
+        enum class Kind
+        {
+            section,
+            row,
+            note,
+            painted
+        } kind;
+        juce::String text;
+        std::vector<std::pair<juce::Component*, int>> controls;
+        int height = 0;
+        std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter;
+        juce::Rectangle<int> bounds;
+    };
+    int heightOf(const Item& item, int width) const;
+    std::vector<Item> items;
 };
 
 } // namespace jls::ui

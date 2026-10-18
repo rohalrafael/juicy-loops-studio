@@ -22,7 +22,32 @@ const theme::Theme& currentTheme()
 
 // -------------------------------------------------------------------------------- LookAndFeel
 
-void LookAndFeel::applyTheme(const theme::Theme& t, juce::Typeface::Ptr bundledFont)
+juce::FontOptions mediumFont(float size)
+{
+    return juce::FontOptions(size).withStyle("Medium");
+}
+
+juce::FontOptions semiboldFont(float size)
+{
+    return juce::FontOptions(size).withStyle("SemiBold");
+}
+
+juce::Typeface::Ptr LookAndFeel::getTypefaceForFont(const juce::Font& font)
+{
+    if (family.regular != nullptr &&
+        font.getTypefaceName() == juce::Font::getDefaultSansSerifFontName())
+    {
+        const auto style = font.getTypefaceStyle().toLowerCase();
+        if ((style.contains("semibold") || style.contains("bold")) && family.semibold != nullptr)
+            return family.semibold;
+        if (style.contains("medium") && family.medium != nullptr)
+            return family.medium;
+        return family.regular;
+    }
+    return juce::LookAndFeel_V4::getTypefaceForFont(font);
+}
+
+void LookAndFeel::applyTheme(const theme::Theme& t, const FontFamily* bundledFont)
 {
     const auto& c = t.colours;
     setColour(juce::ResizableWindow::backgroundColourId, colour(c.background));
@@ -82,9 +107,10 @@ void LookAndFeel::applyTheme(const theme::Theme& t, juce::Typeface::Ptr bundledF
     getCurrentColourScheme().setUIColour(ColourScheme::highlightedFill, colour(c.activeBackground));
     getCurrentColourScheme().setUIColour(ColourScheme::menuText, colour(c.text));
 
+    family = bundledFont != nullptr ? *bundledFont : FontFamily{};
     if (bundledFont != nullptr)
     {
-        setDefaultSansSerifTypeface(bundledFont);
+        setDefaultSansSerifTypeface(bundledFont->regular);
     }
     else
     {
@@ -156,7 +182,9 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool, i
 
 juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& box)
 {
-    return juce::Font(controlFont(box.getHeight()));
+    // Regular weight: a value, not an action.
+    return juce::Font(
+        juce::FontOptions(box.getHeight() >= metrics::transportControlHeight ? 13.0f : 12.0f));
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
@@ -195,6 +223,50 @@ void LookAndFeel::drawTreeviewPlusMinusBox(juce::Graphics& g, const juce::Rectan
         g.addTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi,
                                                        box.getCentreX(), box.getCentreY()));
     drawIcon(g, Icon::chevronDown, box, colour(isMouseOver ? c.text : c.textDim));
+}
+
+void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int height,
+                                         juce::Button& button, const juce::String& keyDescription)
+{
+    const auto& t = currentTheme();
+    const auto& c = t.colours;
+    auto bounds = juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
+                      .reduced(1.0f, 2.0f);
+    if (keyDescription.isEmpty())
+    {
+        // The "+" that adds a key.
+        drawIcon(g, Icon::add, bounds.withSizeKeepingCentre(12.0f, 12.0f),
+                 colour(button.isOver() ? c.text : c.textDim));
+        return;
+    }
+    g.setColour(colour(c.panelRaised).contrasting(button.isOver() ? 0.07f : 0.0f));
+    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    g.setColour(colour(c.outline));
+    g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
+    g.setColour(colour(c.text));
+    g.setFont(mediumFont(11.5f));
+    g.drawFittedText(keyDescription, bounds.toNearestInt().reduced(4, 0),
+                     juce::Justification::centred, 1);
+}
+
+juce::Font LookAndFeel::getAlertWindowTitleFont()
+{
+    return juce::Font(semiboldFont(15.0f));
+}
+
+juce::Font LookAndFeel::getAlertWindowMessageFont()
+{
+    return juce::Font(juce::FontOptions(13.0f));
+}
+
+juce::Font LookAndFeel::getAlertWindowFont()
+{
+    return juce::Font(juce::FontOptions(13.0f));
+}
+
+int LookAndFeel::getAlertWindowButtonHeight()
+{
+    return metrics::controlHeight + 2;
 }
 
 void LookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text, int width, int height)
@@ -268,16 +340,24 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
 
 ThemeManager::ThemeManager() : active(theme::defaultTheme())
 {
-    auto addFont = [this](const char* data, int size)
-    {
-        if (auto typeface =
-                juce::Typeface::createSystemTypefaceFor(data, static_cast<size_t>(size)))
-            fonts[typeface->getName().toLowerCase()] = typeface;
-    };
-    addFont(BinaryData::IBMPlexSans_ttf, BinaryData::IBMPlexSans_ttfSize);
-    addFont(BinaryData::BricolageGrotesque_ttf, BinaryData::BricolageGrotesque_ttfSize);
-    addFont(BinaryData::Sora_ttf, BinaryData::Sora_ttfSize);
-    addFont(BinaryData::Outfit_ttf, BinaryData::Outfit_ttfSize);
+    // Each family in the weights the UI uses. The Medium and SemiBold files are cut from the
+    // variable fonts and keep the family's name, so they're filed by family here, not by name.
+    const auto load = [](const char* data, int size)
+    { return juce::Typeface::createSystemTypefaceFor(data, static_cast<size_t>(size)); };
+    const auto add = [this](const char* name, juce::Typeface::Ptr regular,
+                            juce::Typeface::Ptr medium, juce::Typeface::Ptr semibold)
+    { fonts[juce::String(name).toLowerCase()] = {regular, medium, semibold}; };
+    using namespace BinaryData;
+    add("IBM Plex Sans", load(IBMPlexSans_ttf, IBMPlexSans_ttfSize),
+        load(IBMPlexSansMedium_ttf, IBMPlexSansMedium_ttfSize),
+        load(IBMPlexSansSemiBold_ttf, IBMPlexSansSemiBold_ttfSize));
+    add("Bricolage Grotesque", load(BricolageGrotesque_ttf, BricolageGrotesque_ttfSize),
+        load(BricolageGrotesqueMedium_ttf, BricolageGrotesqueMedium_ttfSize),
+        load(BricolageGrotesqueSemiBold_ttf, BricolageGrotesqueSemiBold_ttfSize));
+    add("Sora", load(Sora_ttf, Sora_ttfSize), load(SoraMedium_ttf, SoraMedium_ttfSize),
+        load(SoraSemiBold_ttf, SoraSemiBold_ttfSize));
+    add("Outfit", load(Outfit_ttf, Outfit_ttfSize), load(OutfitMedium_ttf, OutfitMedium_ttfSize),
+        load(OutfitSemiBold_ttf, OutfitSemiBold_ttfSize));
 
     juce::PropertiesFile::Options options;
     options.applicationName = "JuicyLoopsStudio";
@@ -345,10 +425,10 @@ void ThemeManager::select(const std::string& id)
     apply();
 }
 
-juce::Typeface::Ptr ThemeManager::bundledFont(const std::string& family) const
+const FontFamily* ThemeManager::bundledFont(const std::string& family) const
 {
     const auto it = fonts.find(juce::String::fromUTF8(family.c_str()).toLowerCase());
-    return it != fonts.end() ? it->second : nullptr;
+    return it != fonts.end() && it->second.regular != nullptr ? &it->second : nullptr;
 }
 
 void ThemeManager::apply()

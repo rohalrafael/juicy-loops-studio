@@ -213,7 +213,7 @@ class MixerView::Slots final : public juce::Component
             project.mixer.tracks[static_cast<std::size_t>(project.selectedMixerTrack)];
 
         g.setColour(colour(t.colours.text));
-        g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
+        g.setFont(semiboldFont(13.0f));
         g.drawText(juce::String::fromUTF8(track.name.c_str()) + " effects",
                    juce::Rectangle<int>(10, 0, getWidth() - 20, 24),
                    juce::Justification::centredLeft);
@@ -445,7 +445,6 @@ void MixerView::paint(juce::Graphics& g)
     paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Mixer",
                      selected == 0 ? juce::String("Master") : "Insert " + juce::String(selected));
     g.setColour(colour(t.colours.outline));
-    g.fillRect(0, 0, getWidth(), 1);
     g.fillRect(getWidth() - slotsWidth, headerHeight, 1, getHeight() - headerHeight);
 }
 

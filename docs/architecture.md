@@ -414,8 +414,13 @@ Only layout sizes are fixed (`ui::metrics`). The theme file format is in
 - `joinSegments()`: buttons drawn as one segmented control (PAT | SONG, 16 | 32 | 64)
 - `paintPanelHeader()` + `HeaderLayout`: every panel's header (title, dim subtitle, controls
   from the right)
-- `paintDisplayBox()` and `TempoDisplay`: the transport's recessed number boxes, with the
-  bundled IBM Plex Mono so digits keep their width
+- `paintDisplayBox()` and `NumberField`: recessed number boxes (tempo, settings, the Sampler),
+  with the bundled IBM Plex Mono so digits keep their width
+- `paintCardFrame()`: docked panels are cards (rounded, bordered; accent border while focused,
+  from the "focused" property MainComponent sets)
+- `FormPanel`: dialogs and the Sampler window as sections of label + control rows and notes
+- fonts: `mediumFont()` / `semiboldFont()` ask for a weight by style name; `ThemeManager` loads
+  each bundled family in Regular, Medium and SemiBold
 The `LookAndFeel` draws the rest to match: drop-downs, segment edges, scrollbars, tooltips and
 tree arrows. Mockups of the layout are on the design canvas (option A, "Compact").
 

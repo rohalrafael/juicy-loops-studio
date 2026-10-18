@@ -23,6 +23,7 @@ namespace
 constexpr int menuBarHeight = 24;
 constexpr int transportHeight = ui::metrics::transportControlHeight + 16; // the bar around them
 constexpr int margin = 12;
+constexpr int panelGap = 8; // between the docked panels (cards)
 
 // Keep keyboard focus on the main component so shortcuts always work.
 void noFocus(juce::Component& c)
@@ -188,6 +189,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     commandManager.getKeyMappings()->addChangeListener(this);
     setApplicationCommandManagerToWatch(&commandManager);
     lookAndFeelChanged();
+    updateFocusFrames();
     updateShortcutHints();
 
     document.onChange = [this] { documentChanged(); };
@@ -541,6 +543,7 @@ void MainComponent::setFocusArea(Area area)
 
 void MainComponent::raiseFocusedArea()
 {
+    updateFocusFrames();
     // The floating Channel Rack sits in front of the Playlist / Piano Roll only while it has the
     // focus; focusing the main view puts the rack behind it, like windows in FL.
     if (focusArea == Area::channelRack)
@@ -550,6 +553,24 @@ void MainComponent::raiseFocusedArea()
                                      getIndexOfChildComponent(&pianoRoll)
                                  ? static_cast<juce::Component*>(&playlist)
                                  : &pianoRoll);
+}
+
+void MainComponent::updateFocusFrames()
+{
+    // Docked panels draw their own frame (ui::paintCardFrame), accented while focused.
+    const std::array<std::pair<juce::Component*, Area>, 4> panels{{{&browser, Area::browser},
+                                                                   {&playlist, Area::mainView},
+                                                                   {&pianoRoll, Area::mainView},
+                                                                   {&mixer, Area::mixer}}};
+    for (const auto& [panel, area] : panels)
+    {
+        const bool focused = area == focusArea;
+        if (static_cast<bool>(panel->getProperties()["focused"]) != focused)
+        {
+            panel->getProperties().set("focused", focused);
+            panel->repaint();
+        }
+    }
 }
 
 void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
@@ -634,8 +655,9 @@ void MainComponent::navigate(juce::CommandID command)
 
 void MainComponent::paintOverChildren(juce::Graphics& g)
 {
+    // The floating Channel Rack's focus outline; docked panels draw their own (raiseFocusedArea).
     auto* c = areaComponent(focusArea);
-    if (c == nullptr || !c->isVisible())
+    if (focusArea != Area::channelRack || c == nullptr || !c->isVisible())
         return;
     const auto& t = ui::currentTheme();
     g.setColour(ui::colour(t.colours.accent).withAlpha(0.85f));
@@ -825,15 +847,15 @@ void MainComponent::resized()
                               ? area.removeFromRight(ui::BrowserPanel::preferredWidth)
                               : area.removeFromLeft(ui::BrowserPanel::preferredWidth));
         if (browser.onRight())
-            area.removeFromRight(margin / 2);
+            area.removeFromRight(panelGap);
         else
-            area.removeFromLeft(margin / 2);
+            area.removeFromLeft(panelGap);
     }
     if (mixer.isVisible())
     {
         const int height = std::min(ui::MixerView::preferredHeight, area.getHeight() / 2);
         mixer.setBounds(area.removeFromBottom(height));
-        area.removeFromBottom(margin / 2);
+        area.removeFromBottom(panelGap);
     }
     playlist.setBounds(area);
     pianoRoll.setBounds(area);

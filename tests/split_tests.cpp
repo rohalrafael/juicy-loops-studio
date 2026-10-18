@@ -48,8 +48,9 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     REQUIRE(project.lengthInSteps(project.current()) == 64);
 
     const auto parts = project.splitByChannel(original);
-    REQUIRE(parts.size() == 3);                        // the hat has no notes
-    REQUIRE(project.findPattern(original) != nullptr); // kept
+    REQUIRE(parts.size() == 3);                      // the hat has no notes
+    CHECK(project.findPattern(original) == nullptr); // only the parts remain
+    CHECK(project.currentPattern == parts[0]);       // the first part is selected instead
     const auto* kick = byName(project, "Pattern 1 - Kick");
     const auto* clap = byName(project, "Pattern 1 - Clap");
     const auto* snare = byName(project, "Pattern 1 - Snare");
@@ -62,14 +63,13 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     CHECK(kick->notesFor(project.channels[0].id).size() == 16);
     // The snare didn't loop: still one hit, the length is fixed instead.
     CHECK(snare->notesFor(project.channels[3].id).size() == 1);
-    // Right after the original, in Channel Rack order.
-    CHECK(project.patterns[1].id == kick->id);
-    CHECK(project.patterns[3].id == snare->id);
+    // In the original's place, in Channel Rack order.
+    CHECK(project.patterns[0].id == kick->id);
+    CHECK(project.patterns[2].id == snare->id);
 
     // Their clips are labelled with just the channel; other patterns keep their names.
     CHECK(project.clipLabel(*kick) == "Kick");
     CHECK(project.clipLabel(*snare) == "Snare");
-    CHECK(project.clipLabel(*project.findPattern(original)) == "Pattern 1");
 
     // A pattern with one channel isn't split.
     const auto single = project.addPattern();

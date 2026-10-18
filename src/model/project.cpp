@@ -373,6 +373,9 @@ std::vector<PatternId> Project::splitByChannel(PatternId id)
                 clips.push_back(copy);
             }
     }
+    // Only the parts remain (the maintainer's choice; FL keeps the original). Selects the
+    // first part if the original was selected: it sits where the original was.
+    removePattern(id);
     return created;
 }
 

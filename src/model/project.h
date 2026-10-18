@@ -304,7 +304,8 @@ struct Project
     // Copy of a pattern (notes and length) right after it, named "<name> (copy)".
     PatternId clonePattern(PatternId id);
     // Split by channel, done so the arrangement stays tidy and sounds the same: one new pattern
-    // per channel with notes, right after the original (kept), named "<pattern> - <channel>".
+    // per channel with notes, in the original's place (the original is removed; if it was the
+    // selected pattern, the first part is), named "<pattern> - <channel>".
     // Each is exactly as long as the original: a looping channel's repeats are written out, and
     // the length is fixed even where its notes end early. The original's Playlist clips are
     // replaced by one clip per part, each part on its own track: the first takes the original

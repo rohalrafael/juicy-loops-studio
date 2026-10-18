@@ -239,8 +239,8 @@ installed, the channel stays silent and keeps them.
 | Double-click an item in the picker | A pattern: open it in the Channel Rack; an audio clip: its Sampler |
 | Right-click a pattern in the picker | **Split by channel** (also in the Patterns menu, for the selected pattern) |
 
-**Split by channel** turns a pattern into one pattern per channel ("Pattern 1 - Kick", ...),
-right after it in the list (the original stays). Unlike FL it keeps the arrangement tidy and
+**Split by channel** replaces a pattern with one pattern per channel ("Pattern 1 - Kick", ...),
+in its place in the list (the original is removed). Unlike FL it keeps the arrangement tidy and
 sounding the same:
 - each part is exactly as long as the original: a channel that looped a shorter part gets its
   repeats written out, and a part whose notes end early keeps the full length

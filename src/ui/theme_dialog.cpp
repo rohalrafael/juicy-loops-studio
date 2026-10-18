@@ -91,7 +91,7 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
     g.setFont(semiboldFont(15.0f));
     g.drawText(getButtonText(), textArea.removeFromTop(20.0f), juce::Justification::centredLeft);
     g.setColour(colour(ui.colours.textDim));
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(juce::FontOptions(12.0f));
     const bool custom = cardTheme.id.rfind("custom:", 0) == 0;
     const auto subtitle = custom
                               ? juce::String("Imported") +

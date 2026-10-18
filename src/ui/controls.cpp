@@ -165,7 +165,7 @@ void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::C
 
 juce::FontOptions controlFont(int controlHeight)
 {
-    return mediumFont(controlHeight >= metrics::transportControlHeight ? 14.0f : 13.0f);
+    return mediumFont(controlHeight >= metrics::transportControlHeight ? 13.0f : 12.0f);
 }
 
 juce::FontOptions displayFont(float height)
@@ -352,7 +352,7 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
     auto text = header.withTrimmedLeft(metrics::controlPadding);
     if (textRight >= 0)
         text.setRight(std::min(text.getRight(), textRight));
-    const auto titleFont = semiboldFont(14.0f);
+    const auto titleFont = semiboldFont(13.0f);
     const int titleWidth = std::min(text.getWidth(), textWidth(titleFont, title) + 2);
     g.setColour(colour(t.colours.text));
     g.setFont(titleFont);
@@ -361,7 +361,7 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
     {
         text.removeFromLeft(metrics::controlGap + 2);
         g.setColour(colour(t.colours.textDim));
-        g.setFont(juce::FontOptions(13.0f));
+        g.setFont(juce::FontOptions(12.0f));
         g.drawText(subtitle, text, juce::Justification::centredLeft, true);
     }
 }
@@ -369,13 +369,13 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
 void paintHeaderLabel(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area)
 {
     g.setColour(colour(currentTheme().colours.textDim));
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawText(text, area, juce::Justification::centredRight, false);
 }
 
 int headerLabelWidth(const juce::String& text)
 {
-    return textWidth(juce::FontOptions(13.0f), text) + 6;
+    return textWidth(juce::FontOptions(12.0f), text) + 6;
 }
 
 HeaderLayout::HeaderLayout(juce::Rectangle<int> header, int controlHeight)
@@ -495,7 +495,7 @@ float NumberField::numberHeight() const
 int NumberField::preferredWidth(int height) const
 {
     const int nudge = height - 10;
-    const int unitWidth = unit.isEmpty() ? 0 : textWidth(juce::FontOptions(11.0f), unit) + 10;
+    const int unitWidth = unit.isEmpty() ? 0 : textWidth(juce::FontOptions(10.0f), unit) + 10;
     return 2 * displayInset + 2 * nudge +
            textWidth(displayFont(std::round(static_cast<float>(height) * 0.5f)), widest) + 10 +
            unitWidth;
@@ -528,7 +528,7 @@ void NumberField::paint(juce::Graphics& g)
         return;
     const auto& c = currentTheme().colours;
     g.setColour(colour(c.displayDim));
-    g.setFont(juce::FontOptions(11.0f));
+    g.setFont(juce::FontOptions(10.0f));
     g.drawText(unit, number.getRight() + 4, 0, up.getX() - number.getRight() - 6, getHeight(),
                juce::Justification::centredLeft);
 }
@@ -540,7 +540,7 @@ void NumberField::resized()
     down.setBounds(area.removeFromLeft(nudge).withSizeKeepingCentre(nudge, nudge));
     up.setBounds(area.removeFromRight(nudge).withSizeKeepingCentre(nudge, nudge));
     if (unit.isNotEmpty())
-        area.removeFromRight(textWidth(juce::FontOptions(11.0f), unit) + 10);
+        area.removeFromRight(textWidth(juce::FontOptions(10.0f), unit) + 10);
     number.setBounds(area);
     number.setFont(displayFont(numberHeight()));
 }
@@ -567,7 +567,7 @@ void NumberField::lookAndFeelChanged()
 void paintSectionHeading(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area)
 {
     const auto& c = currentTheme().colours;
-    const auto font = semiboldFont(12.0f).withKerningFactor(0.08f);
+    const auto font = semiboldFont(11.0f).withKerningFactor(0.08f);
     g.setColour(colour(c.textDim));
     g.setFont(font);
     const auto upper = text.toUpperCase();
@@ -584,14 +584,14 @@ void paintSectionHeading(juce::Graphics& g, const juce::String& text, juce::Rect
 void paintNote(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area)
 {
     g.setColour(colour(currentTheme().colours.textDim));
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawFittedText(text, area, juce::Justification::topLeft, 6, 1.0f);
 }
 
 int noteHeight(const juce::String& text, int width)
 {
     juce::AttributedString attributed(text);
-    attributed.setFont(juce::FontOptions(13.0f));
+    attributed.setFont(juce::FontOptions(12.0f));
     juce::TextLayout layout;
     layout.createLayout(attributed, static_cast<float>(std::max(40, width)));
     return static_cast<int>(std::ceil(layout.getHeight())) + 4;
@@ -748,7 +748,7 @@ void FormPanel::paint(juce::Graphics& g)
             break;
         case Item::Kind::row:
             g.setColour(colour(c.text));
-            g.setFont(juce::FontOptions(13.5f));
+            g.setFont(juce::FontOptions(12.5f));
             g.drawText(item.text, item.bounds.withWidth(labelWidth - 8),
                        juce::Justification::centredLeft, true);
             break;

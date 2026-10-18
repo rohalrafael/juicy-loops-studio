@@ -185,7 +185,7 @@ juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& box)
 {
     // Regular weight: a value, not an action.
     return juce::Font(
-        juce::FontOptions(box.getHeight() >= metrics::transportControlHeight ? 14.0f : 13.0f));
+        juce::FontOptions(box.getHeight() >= metrics::transportControlHeight ? 13.0f : 12.0f));
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
@@ -245,7 +245,7 @@ void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int heigh
     g.setColour(colour(c.outline));
     g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
     g.setColour(colour(c.text));
-    g.setFont(mediumFont(12.5f));
+    g.setFont(mediumFont(11.5f));
     g.drawFittedText(keyDescription, bounds.toNearestInt().reduced(4, 0),
                      juce::Justification::centred, 1);
 }
@@ -283,7 +283,7 @@ void LookAndFeel::drawTableHeaderColumn(juce::Graphics& g, juce::TableHeaderComp
         drawIcon(g, Icon::chevronDown, arrow, colour(c.textDim));
     }
     g.setColour(colour(sorted ? c.text : c.textDim));
-    g.setFont(semiboldFont(12.5f));
+    g.setFont(semiboldFont(11.5f));
     g.drawFittedText(columnName, area, juce::Justification::centredLeft, 1);
 }
 
@@ -361,7 +361,7 @@ void LookAndFeel::drawMenuBarItem(juce::Graphics& g, int width, int height, int,
 
 juce::Font LookAndFeel::getMenuBarFont(juce::MenuBarComponent&, int, const juce::String&)
 {
-    return juce::Font(mediumFont(13.0f));
+    return juce::Font(mediumFont(12.0f));
 }
 
 void LookAndFeel::drawDocumentWindowTitleBar(juce::DocumentWindow& window, juce::Graphics& g, int w,
@@ -373,7 +373,7 @@ void LookAndFeel::drawDocumentWindowTitleBar(juce::DocumentWindow& window, juce:
     g.setColour(colour(t.colours.outline));
     g.fillRect(0, h - 1, w, 1);
     g.setColour(colour(t.colours.text));
-    g.setFont(semiboldFont(14.0f));
+    g.setFont(semiboldFont(13.0f));
     g.drawText(window.getName(), 12, 0, w - 12 - 3 * h, h, juce::Justification::centredLeft, true);
 }
 
@@ -420,12 +420,12 @@ juce::Font LookAndFeel::getAlertWindowTitleFont()
 
 juce::Font LookAndFeel::getAlertWindowMessageFont()
 {
-    return juce::Font(juce::FontOptions(14.0f));
+    return juce::Font(juce::FontOptions(13.0f));
 }
 
 juce::Font LookAndFeel::getAlertWindowFont()
 {
-    return juce::Font(juce::FontOptions(14.0f));
+    return juce::Font(juce::FontOptions(13.0f));
 }
 
 int LookAndFeel::getAlertWindowButtonHeight()
@@ -444,7 +444,7 @@ void LookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text, int w
     g.setColour(colour(t.colours.outline));
     g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
     g.setColour(colour(t.colours.text));
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4),
                      juce::Justification::centredLeft, 6);
 }
@@ -455,7 +455,7 @@ juce::Rectangle<int> LookAndFeel::getTooltipBounds(const juce::String& tipText,
 {
     juce::TextLayout layout;
     juce::AttributedString text(tipText);
-    text.setFont(juce::FontOptions(13.0f));
+    text.setFont(juce::FontOptions(12.0f));
     layout.createLayoutWithBalancedLineLengths(text, 360.0f);
     const int w = static_cast<int>(std::ceil(layout.getWidth())) + 18;
     const int h = static_cast<int>(std::ceil(layout.getHeight())) + 10;

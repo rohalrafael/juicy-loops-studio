@@ -141,7 +141,7 @@ void MixerStrip::paint(juce::Graphics& g)
     g.drawRoundedRectangle(bounds.reduced(0.5f), t.shape.cornerRadius, selected ? 1.5f : 1.0f);
 
     g.setColour(colour(t.colours.text));
-    g.setFont(juce::FontOptions(12.0f));
+    g.setFont(juce::FontOptions(11.0f));
     g.drawText(name, getLocalBounds().removeFromTop(20).reduced(4, 0), juce::Justification::centred,
                true);
 
@@ -168,7 +168,7 @@ void MixerStrip::paint(juce::Graphics& g)
     }
 
     g.setColour(colour(t.colours.textDim));
-    g.setFont(juce::FontOptions(11.0f));
+    g.setFont(juce::FontOptions(10.0f));
     g.drawText(index == 0 ? juce::String("M") : juce::String(index),
                getLocalBounds().removeFromBottom(16), juce::Justification::centred);
 }
@@ -213,12 +213,12 @@ class MixerView::Slots final : public juce::Component
             project.mixer.tracks[static_cast<std::size_t>(project.selectedMixerTrack)];
 
         g.setColour(colour(t.colours.text));
-        g.setFont(semiboldFont(14.0f));
+        g.setFont(semiboldFont(13.0f));
         g.drawText(juce::String::fromUTF8(track.name.c_str()) + " effects",
                    juce::Rectangle<int>(10, 0, getWidth() - 20, 24),
                    juce::Justification::centredLeft);
 
-        g.setFont(juce::FontOptions(13.0f));
+        g.setFont(juce::FontOptions(12.0f));
         for (int i = 0; i < model::MixerTrack::maxEffects; ++i)
         {
             const auto row = slotBounds(i).toFloat();
@@ -548,7 +548,7 @@ void EffectPanel::rebuild()
         const auto& param = info->params[i];
         auto label = std::make_unique<juce::Label>(juce::String(), param.name);
         label->setJustificationType(juce::Justification::centred);
-        label->setFont(juce::FontOptions(13.0f));
+        label->setFont(juce::FontOptions(12.0f));
         addAndMakeVisible(*label);
         labels.push_back(std::move(label));
 

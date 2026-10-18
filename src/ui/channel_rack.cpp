@@ -90,7 +90,7 @@ void InsertBox::paint(juce::Graphics& g)
     g.setColour(colour(t.colours.display));
     g.fillRoundedRectangle(r, std::min(4.0f, t.shape.cornerRadius));
     g.setColour(colour(value == 0 ? t.colours.displayDim : t.colours.displayText));
-    g.setFont(juce::FontOptions(12.0f));
+    g.setFont(juce::FontOptions(11.0f));
     g.drawText(value == 0 ? juce::String("--") : juce::String(value), r,
                juce::Justification::centred);
 }

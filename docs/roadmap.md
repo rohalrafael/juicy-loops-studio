@@ -31,8 +31,9 @@ To discuss before working on them.
 
 - **Text sharpness on Windows** (2026-10-18). The maintainer finds our text blurrier than FL's
   at 100 % display scaling. Cause: JUCE draws text with grayscale anti-aliasing; FL gets
-  Windows' ClearType (subpixel) rendering. Done so far: real Medium / SemiBold weights, all UI
-  text 1 px larger, Settings > Interface size. Options left:
+  Windows' ClearType (subpixel) rendering. Done so far: real Medium / SemiBold weights, Settings
+  > Interface size. Tried and reverted: all UI text 1 px larger (the UI felt too big). Options
+  left:
   - a theme option to use the system UI font (Segoe UI on Windows), which is hinted for small
     sizes on screen
   - patching JUCE's Direct2D text rendering to use ClearType where the background is opaque

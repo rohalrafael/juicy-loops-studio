@@ -105,7 +105,7 @@ void TitleBar::paint(juce::Graphics& g)
         if (area.getWidth() < 80) // not enough room in the middle: whatever is free
             area = getLocalBounds().withLeft(menuBar.getRight() + 8).withRight(minimise.getX() - 8);
         g.setColour(colour(t.colours.textDim));
-        g.setFont(mediumFont(13.0f));
+        g.setFont(mediumFont(12.0f));
         g.drawText(w->getName(), area, juce::Justification::centred, true);
     }
 }

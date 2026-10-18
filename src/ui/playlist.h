@@ -128,6 +128,10 @@ class PlaylistView final : public juce::Component, private juce::Timer
     int trackAtY(float y) const;
     // Playhead position in steps, or -1 when it shouldn't be shown.
     double playheadStep() const;
+    // Where the playhead is drawn (grid x, -1 = hidden): the position the timer last repainted
+    // around, so a paint that runs a moment later draws it there and not where playback has
+    // got to since (that left bits of line behind).
+    float shownPlayheadX() const { return lastPlayheadX; }
 
     model::Document& document() { return doc; }
 

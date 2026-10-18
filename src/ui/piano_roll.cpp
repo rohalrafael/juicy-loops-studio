@@ -152,9 +152,9 @@ class PianoRollView::Ruler final : public juce::Component, public juce::Settable
         g.setColour(colour(t.colours.accent).withAlpha(0.6f));
         g.fillRect(end - 1.0f, 0.0f, 2.0f, static_cast<float>(getHeight()));
 
-        if (const double tick = view.playheadTick(); tick >= 0.0)
+        if (const float shown = view.shownPlayheadX(); shown >= 0.0f)
         {
-            const float x = view.xForTick(tick) - offset;
+            const float x = shown - offset;
             juce::Path marker;
             marker.addTriangle(x - 5.0f, 0.0f, x + 5.0f, 0.0f, x, 8.0f);
             g.setColour(colour(t.colours.accent));
@@ -353,6 +353,11 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
     }
     if (dragNote >= 0)
     {
+        // As in FL: new notes take the length of the note clicked last.
+        view.newNoteLength = view.notes()[static_cast<std::size_t>(dragNote)].lengthTicks;
+    }
+    if (dragNote >= 0)
+    {
         const auto& note = view.notes()[static_cast<std::size_t>(dragNote)];
         drag = onRightEdge(dragNote, e.position.x) ? Drag::resizeSelection : Drag::moveSelection;
         moveOriginals.clear();
@@ -509,18 +514,21 @@ void NoteGrid::paint(juce::Graphics& g)
         const float y = view.yForPitch(pitch);
         if (y > clip.getBottom() || y + PianoRollView::rowHeight < clip.getY())
             continue;
-        // Without a scale: black-key rows a little darker. With one: notes outside it darker,
-        // its notes lighter, and the root tinted with the accent.
+        // Light rows: white keys without a scale, the scale's notes with one (the same shade
+        // either way, so switching a scale on doesn't change how the grid reads). Dark rows:
+        // black keys, or notes outside the scale. The scale's root is tinted with the accent.
         const auto lane = colour(t.colours.lane);
-        juce::Colour rowColour = isBlackKey(pitch) ? lane.darker(0.25f) : lane;
+        const auto light = lane.brighter(0.18f);
+        const auto dark = lane.darker(0.3f);
+        juce::Colour rowColour = isBlackKey(pitch) ? dark : light;
         if (project.scale != model::Scale::none)
         {
             if (!model::isInScale(pitch, project.scaleRoot, project.scale))
-                rowColour = lane.darker(0.45f);
+                rowColour = dark;
             else if ((pitch - project.scaleRoot) % 12 == 0)
-                rowColour = lane.interpolatedWith(colour(t.colours.accent), 0.14f);
+                rowColour = light.interpolatedWith(colour(t.colours.accent), 0.14f);
             else
-                rowColour = lane.brighter(0.12f);
+                rowColour = light;
         }
         g.setColour(rowColour);
         g.fillRect(static_cast<float>(clip.getX()), y, static_cast<float>(clip.getWidth()),
@@ -538,17 +546,19 @@ void NoteGrid::paint(juce::Graphics& g)
     const bool showSteps = view.xForTick(model::ticksPerStep) >= 8.0f;
     const int first = view.tickAtX(static_cast<float>(clip.getX())) / model::ticksPerStep;
     const int last = view.tickAtX(static_cast<float>(clip.getRight())) / model::ticksPerStep + 1;
+    // Lines a little lighter than the theme's grid colour, so they show on the light rows too.
+    const auto lineColour = colour(t.colours.grid).brighter(0.35f);
     for (int step = first; step <= last; ++step)
     {
         const int tick = step * model::ticksPerStep;
-        float alpha = 0.2f;
+        float alpha = 0.35f;
         if (tick % barTicks == 0)
             alpha = 1.0f;
         else if (tick % model::ticksPerBeat == 0)
-            alpha = 0.5f;
+            alpha = 0.65f;
         else if (!showSteps)
             continue;
-        g.setColour(colour(t.colours.grid).withMultipliedAlpha(alpha));
+        g.setColour(lineColour.withMultipliedAlpha(alpha));
         g.fillRect(view.xForTick(tick), static_cast<float>(clip.getY()), 1.0f,
                    static_cast<float>(clip.getHeight()));
     }
@@ -602,10 +612,10 @@ void NoteGrid::paint(juce::Graphics& g)
                    juce::Justification::centred);
     }
 
-    if (const double tick = view.playheadTick(); tick >= 0.0)
+    if (const float x = view.shownPlayheadX(); x >= 0.0f)
     {
         g.setColour(colour(t.colours.accent));
-        g.fillRect(view.xForTick(tick) - 1.0f, static_cast<float>(clip.getY()), 2.0f,
+        g.fillRect(x - 1.0f, static_cast<float>(clip.getY()), 2.0f,
                    static_cast<float>(clip.getHeight()));
     }
 }
@@ -1094,10 +1104,11 @@ void PianoRollView::timerCallback()
     const float x = tick >= 0.0 ? xForTick(tick) : -1.0f;
     if (std::abs(x - lastPlayheadX) < 0.5f)
         return;
-    for (float px : {lastPlayheadX, x})
+    const float previous = lastPlayheadX;
+    lastPlayheadX = x; // the paint draws it here
+    for (float px : {previous, x})
         if (px >= 0.0f)
-            grid.repaint(static_cast<int>(px) - 2, 0, 5, grid.getHeight());
-    lastPlayheadX = x;
+            grid.repaint(static_cast<int>(std::floor(px)) - 3, 0, 7, grid.getHeight());
     ruler->repaint();
 }
 

@@ -708,6 +708,9 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
                          io::SampleLoader& sampleLoader)
     : doc(document), transport(transportToShow), loader(sampleLoader)
 {
+    // Cached as an image so dragging the rack doesn't redraw every row each frame.
+    setBufferedToImage(true);
+
     closeButton.setTooltip("Hide");
     closeButton.onClick = [this] { setVisible(false); };
     noFocus(closeButton);

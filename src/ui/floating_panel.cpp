@@ -28,6 +28,9 @@ FloatingPanel::FloatingPanel(std::unique_ptr<juce::Component> content)
     };
     addAndMakeVisible(*closeButton);
     addAndMakeVisible(*held);
+    // Kept as an image: dragging the panel then only copies it instead of drawing every label,
+    // knob and waveform again for each frame (measured: ~9 ms per frame for the Sampler).
+    setBufferedToImage(true);
     held->addComponentListener(this);
     held->addMouseListener(this, true); // a click anywhere in it brings the panel to the front
     fitToContent();

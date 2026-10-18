@@ -107,6 +107,8 @@ class PianoRollView final : public juce::Component, private juce::Timer
     int snap(double tick) const; // nearest snap point
     int snapDown(double tick) const;
     double playheadTick() const; // within the pattern, or -1 when not shown
+    // Where the playhead is drawn (grid x, -1 = hidden): see PlaylistView::shownPlayheadX().
+    float shownPlayheadX() const { return lastPlayheadX; }
 
     model::Document& document() { return doc; }
     model::ChannelId channel() const { return doc.project().selectedChannel; }

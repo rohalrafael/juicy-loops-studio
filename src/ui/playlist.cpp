@@ -72,9 +72,9 @@ class PlaylistView::Ruler final : public juce::Component, public juce::SettableT
             }
         }
 
-        if (const double step = view.playheadStep(); step >= 0.0)
+        if (const float shown = view.shownPlayheadX(); shown >= 0.0f)
         {
-            const float x = view.xForStep(step) - offset;
+            const float x = shown - offset;
             juce::Path marker;
             marker.addTriangle(x - 5.0f, 0.0f, x + 5.0f, 0.0f, x, 8.0f);
             g.setColour(colour(t.colours.accent));
@@ -470,10 +470,10 @@ void PlaylistGrid::paint(juce::Graphics& g)
                    juce::Justification::centredLeft);
     }
 
-    if (const double step = view.playheadStep(); step >= 0.0)
+    if (const float x = view.shownPlayheadX(); x >= 0.0f)
     {
         g.setColour(colour(t.colours.accent));
-        g.fillRect(view.xForStep(step) - 1.0f, 0.0f, 2.0f, static_cast<float>(getHeight()));
+        g.fillRect(x - 1.0f, 0.0f, 2.0f, static_cast<float>(getHeight()));
     }
 }
 
@@ -1163,11 +1163,12 @@ void PlaylistView::timerCallback()
     if (std::abs(x - lastPlayheadX) < 0.5f)
         return;
 
-    // Repaint just the old and new playhead strips.
-    for (float px : {lastPlayheadX, x})
-        if (px >= 0.0f)
-            grid.repaint(static_cast<int>(px) - 2, 0, 5, grid.getHeight());
+    // Repaint just the old and new playhead strips (the paint draws it at lastPlayheadX).
+    const float previous = lastPlayheadX;
     lastPlayheadX = x;
+    for (float px : {previous, x})
+        if (px >= 0.0f)
+            grid.repaint(static_cast<int>(std::floor(px)) - 3, 0, 7, grid.getHeight());
     ruler->repaint();
 }
 

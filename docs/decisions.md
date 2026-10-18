@@ -258,6 +258,16 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Playhead artifacts (Piano Roll, Playlist): the timer repainted strips around the
+  position it computed, but the paint asked the transport again a moment later and drew the line
+  where playback had got to, outside the cleared strip. Now the paint draws it where the timer
+  recorded it (`shownPlayheadX()`). Laggy panel dragging: measured on Xvfb with temporary paint
+  timers, ~22 fps because the Sampler panel was redrawn from scratch every frame (~9 ms); floating
+  panels and the Channel Rack are now cached images (`setBufferedToImage`), so a drag only copies
+  them. Piano Roll: white-key rows (no scale) and scale rows share one lighter shade, black /
+  out-of-scale rows are darker, grid lines are lighter so they show on both; clicking a note
+  makes new notes that long (FL).
+
 - 2026-10-18: From the maintainer's FL-vs-JLS comparison on Windows:
   - **Loud and gritty:** a busy default beat peaked at +4.6 dBFS before the Master's Soft
     Clipper, whose knee 0.5 also saturated everything above about -6 dB. Built-in drums are now

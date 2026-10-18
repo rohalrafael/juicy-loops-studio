@@ -279,7 +279,7 @@ The right-hand column has cutting and the envelope:
 | Do this | To |
 |---|---|
 | Left-click empty space | Add a note (same length as the last one), then drag to move it |
-| Click a note | Select it (just it); drag to move it in time and pitch |
+| Click a note | Select it (just it); drag to move it in time and pitch. New notes take its length, as in FL |
 | Shift + click a note | Add it to the selection, or take it out |
 | Drag a note's right end | Change its length (new notes use it too) |
 | Right-click / drag | Deselect, and delete the notes under the mouse |

@@ -317,3 +317,12 @@ not). Older entries describe the project as it was then; later entries may super
   pattern clip (or a pattern in the picker) selects it and brings the Channel Rack to the front
   (FL); double-clicking an audio clip in the picker opens its Sampler. "Split by channel" is in
   the backlog.
+
+- 2026-10-18: First Windows build since the early milestones (maintainer wanted an .exe to try):
+  `gh workflow run ci.yml -f platforms=windows` builds only Windows and uploads a single
+  self-contained `.exe` (static MSVC runtime; imports only system DLLs). Fixes it needed: the
+  Signalsmith headers as system includes (also what had broken Linux CI since the
+  time-stretching commits: Ubuntu's GCC flagged `-Wpedantic` in them), C4324 disabled around
+  `SpscQueue`'s intended `alignas(64)` padding, missing `<algorithm>` includes, JACK only on
+  Linux. All tests pass on Windows. Development stays Linux-first; dispatch Windows only when
+  needed.

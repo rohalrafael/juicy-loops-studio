@@ -14,6 +14,12 @@ mouse actions follow FL wherever FL has one.
 | Browser | Alt+F8 | Your sample folders, with previews (docked at the left or right) |
 | Sampler | (click a sample channel) | A sample's time-stretching and pitch (a floating panel; reopens where you left it) |
 
+The main window has its own title bar, as in FL (Windows and Linux; macOS keeps its native one):
+the menus on the left, the project name in the middle, minimize / maximize / close on the right.
+Drag the empty part of the bar to move the window, double-click it to maximize or restore, and
+drag the window's edges to resize it. Dialogs and separate plugin windows have the same style of
+title bar.
+
 Plugin editors and the Sampler float inside the main window: drag them by their title bar,
 close them with ×, and click one to bring it to the front. Plugin panels always stay in front
 (on Linux a plugin draws in its own native window, which the app can't draw over). If a plugin

@@ -27,7 +27,8 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../ui/settings_dialog.cpp
     ../ui/piano_roll.cpp
     ../ui/playlist.cpp
-    ../ui/theme_dialog.cpp)
+    ../ui/theme_dialog.cpp
+    ../ui/title_bar.cpp)
 
 target_include_directories(JuicyLoopsStudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 

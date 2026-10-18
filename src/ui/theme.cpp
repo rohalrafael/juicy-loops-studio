@@ -2,6 +2,7 @@
 
 #include "BinaryData.h"
 #include "ui/controls.h"
+#include "ui/title_bar.h"
 
 namespace jls::ui
 {
@@ -333,6 +334,83 @@ void LookAndFeel::drawLevelMeter(juce::Graphics& g, int width, int height, float
         g.setColour(i < lit ? on : colour(c.ledOff));
         g.fillRoundedRectangle(segment, 1.5f);
     }
+}
+
+void LookAndFeel::drawMenuBarBackground(juce::Graphics&, int, int, bool, juce::MenuBarComponent&)
+{
+    // Transparent: the title bar behind it is the background.
+}
+
+void LookAndFeel::drawMenuBarItem(juce::Graphics& g, int width, int height, int,
+                                  const juce::String& itemText, bool isMouseOverItem,
+                                  bool isMenuOpen, bool, juce::MenuBarComponent& bar)
+{
+    const auto& t = currentTheme();
+    if (isMenuOpen || isMouseOverItem)
+    {
+        g.setColour(colour(t.colours.panelRaised));
+        g.fillRoundedRectangle(
+            juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
+                .reduced(1.0f, 0.0f),
+            t.shape.cornerRadius);
+    }
+    g.setColour(colour(isMenuOpen ? t.colours.activeText : t.colours.text));
+    g.setFont(getMenuBarFont(bar, 0, itemText));
+    g.drawText(itemText, 0, 0, width, height, juce::Justification::centred, false);
+}
+
+juce::Font LookAndFeel::getMenuBarFont(juce::MenuBarComponent&, int, const juce::String&)
+{
+    return juce::Font(mediumFont(13.0f));
+}
+
+void LookAndFeel::drawDocumentWindowTitleBar(juce::DocumentWindow& window, juce::Graphics& g, int w,
+                                             int h, int, int, const juce::Image*, bool)
+{
+    const auto& t = currentTheme();
+    g.setColour(colour(t.colours.header));
+    g.fillRect(0, 0, w, h);
+    g.setColour(colour(t.colours.outline));
+    g.fillRect(0, h - 1, w, 1);
+    g.setColour(colour(t.colours.text));
+    g.setFont(semiboldFont(14.0f));
+    g.drawText(window.getName(), 12, 0, w - 12 - 3 * h, h, juce::Justification::centredLeft, true);
+}
+
+juce::Button* LookAndFeel::createDocumentWindowButton(int buttonType)
+{
+    switch (buttonType)
+    {
+    case juce::DocumentWindow::minimiseButton:
+        return new TitleButton(Icon::windowMinimize, false);
+    case juce::DocumentWindow::maximiseButton:
+        return new TitleButton(Icon::windowMaximize, false);
+    default:
+        return new TitleButton(Icon::close, true);
+    }
+}
+
+void LookAndFeel::positionDocumentWindowButtons(juce::DocumentWindow&, int titleBarX, int titleBarY,
+                                                int titleBarW, int titleBarH,
+                                                juce::Button* minimiseButton,
+                                                juce::Button* maximiseButton,
+                                                juce::Button* closeButton, bool)
+{
+    // Right-aligned, full height, like the main window's title bar.
+    const int width = titleBarH * 11 / 8;
+    int x = titleBarX + titleBarW;
+    for (auto* button : {closeButton, maximiseButton, minimiseButton})
+        if (button != nullptr)
+        {
+            x -= width;
+            button->setBounds(x, titleBarY, width, titleBarH - 1);
+        }
+}
+
+void LookAndFeel::drawResizableFrame(juce::Graphics& g, int w, int h, const juce::BorderSize<int>&)
+{
+    g.setColour(colour(currentTheme().colours.outline));
+    g.drawRect(0, 0, w, h, 1);
 }
 
 juce::Font LookAndFeel::getAlertWindowTitleFont()

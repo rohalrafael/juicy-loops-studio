@@ -21,6 +21,7 @@
 #include "ui/playlist.h"
 #include "ui/sampler_panel.h"
 #include "ui/theme.h"
+#include "ui/title_bar.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
@@ -195,7 +196,8 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::ChannelRack channelRack;
     bool channelRackPlaced = false;
     juce::TooltipWindow tooltips{this, 600};
-    std::unique_ptr<juce::MenuBarComponent> menuBar; // not used on macOS (native menu bar)
+    // Menus, window name and window buttons (not on macOS: native title bar and menu bar).
+    std::unique_ptr<ui::TitleBar> titleBar;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

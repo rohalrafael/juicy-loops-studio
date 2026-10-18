@@ -31,6 +31,9 @@ enum class Icon
     slice,
     list, // the Playlist's picker
     chevronDown,
+    windowMinimize,
+    windowMaximize,
+    windowRestore, // un-maximize
 };
 
 // Draws `icon` centred in `area`, scaled to fit, stroked (or filled) in `colour`.

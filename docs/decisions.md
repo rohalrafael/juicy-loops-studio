@@ -258,6 +258,13 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Own window frame (backlog item, FL-like): the main window has no system title bar;
+  `ui::TitleBar` holds the menus (only as wide as they are, so the rest drags the window), the
+  name and the window buttons. Maximize uses JUCE's setFullScreen (the screen's usable area; a
+  real maximize on Windows). Dialogs and separate plugin windows use LookAndFeel-drawn title
+  bars. macOS keeps the native title bar and menu bar. On Hyprland, tiled windows ignore move /
+  maximize / minimize requests (the compositor decides), which is expected.
+
 - 2026-10-18: All UI text one pixel larger (12 -> 13 px in panels, 13 -> 14 px in the transport
   bar, and so on), the first step against soft text on Windows; the rest is an open question in
   roadmap.md. **No VST2 hosting**: it needs Steinberg's VST2 headers (no longer licensed) or a

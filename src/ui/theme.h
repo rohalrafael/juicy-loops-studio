@@ -103,6 +103,24 @@ class LookAndFeel final : public juce::LookAndFeel_V4
                      bool ticked, bool isEnabled, bool isMouseOverButton,
                      bool isButtonDown) override;
     void drawLevelMeter(juce::Graphics&, int width, int height, float level) override;
+    // Window frames we draw ourselves (no system title bars): the menu bar in our title bar, and
+    // the title bar, buttons and border of dialogs and separate plugin windows.
+    void drawMenuBarBackground(juce::Graphics&, int width, int height, bool isMouseOverBar,
+                               juce::MenuBarComponent&) override;
+    void drawMenuBarItem(juce::Graphics&, int width, int height, int itemIndex,
+                         const juce::String& itemText, bool isMouseOverItem, bool isMenuOpen,
+                         bool isMouseOverBar, juce::MenuBarComponent&) override;
+    juce::Font getMenuBarFont(juce::MenuBarComponent&, int itemIndex,
+                              const juce::String& itemText) override;
+    void drawDocumentWindowTitleBar(juce::DocumentWindow&, juce::Graphics&, int w, int h,
+                                    int titleSpaceX, int titleSpaceW, const juce::Image* icon,
+                                    bool drawTitleTextOnLeft) override;
+    juce::Button* createDocumentWindowButton(int buttonType) override;
+    void positionDocumentWindowButtons(juce::DocumentWindow&, int titleBarX, int titleBarY,
+                                       int titleBarW, int titleBarH, juce::Button* minimiseButton,
+                                       juce::Button* maximiseButton, juce::Button* closeButton,
+                                       bool positionTitleBarButtonsOnLeft) override;
+    void drawResizableFrame(juce::Graphics&, int w, int h, const juce::BorderSize<int>&) override;
     juce::Font getAlertWindowTitleFont() override;
     juce::Font getAlertWindowMessageFont() override;
     juce::Font getAlertWindowFont() override;

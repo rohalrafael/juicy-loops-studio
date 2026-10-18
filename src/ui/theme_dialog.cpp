@@ -1,4 +1,5 @@
 #include "ui/theme_dialog.h"
+#include "ui/title_bar.h"
 
 #include "ui/controls.h"
 
@@ -251,10 +252,10 @@ void ThemeDialog::show(ThemeManager& manager)
         juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(new ThemeDialog(manager));
     options.dialogTitle = "Theme";
-    options.useNativeTitleBar = true;
+    options.useNativeTitleBar = false; // ours: ui::useOwnTitleBar
     options.resizable = false;
     options.escapeKeyTriggersCloseButton = true;
-    options.launchAsync();
+    useOwnTitleBar(options.launchAsync());
 }
 
 } // namespace jls::ui

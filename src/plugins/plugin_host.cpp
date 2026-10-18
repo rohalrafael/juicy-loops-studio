@@ -1,4 +1,5 @@
 #include "plugins/plugin_host.h"
+#include "ui/title_bar.h"
 
 #include "ui/controls.h"
 
@@ -246,7 +247,7 @@ PluginWindow::PluginWindow(std::shared_ptr<void> owner, juce::AudioPluginInstanc
 {
     auto* editor = createEditor(plugin);
 
-    setUsingNativeTitleBar(true);
+    ui::useOwnTitleBar(this);
     setContentOwned(editor, true);
     setResizable(editor->isResizable(), false);
     centreWithSize(getWidth(), getHeight());
@@ -400,10 +401,10 @@ void PluginHost::showManager()
         juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(frame.release());
     options.dialogTitle = "Plugins";
-    options.useNativeTitleBar = true;
+    options.useNativeTitleBar = false; // ours: ui::useOwnTitleBar
     options.resizable = true;
     options.escapeKeyTriggersCloseButton = true;
-    options.launchAsync();
+    ui::useOwnTitleBar(options.launchAsync());
 }
 
 } // namespace jls::plugins

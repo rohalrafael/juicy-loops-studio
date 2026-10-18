@@ -3,6 +3,7 @@
 // dialogs and clicks (see mouseDown, menuBarActivated, timerCallback).
 
 #include "main_component.h"
+#include "ui/title_bar.h"
 
 #include "app/commands.h"
 #include "ui/settings_dialog.h"
@@ -20,7 +21,6 @@ namespace jls
 namespace
 {
 
-constexpr int menuBarHeight = 24;
 constexpr int transportHeight = ui::metrics::transportControlHeight + 16; // the bar around them
 constexpr int margin = 12;
 constexpr int panelGap = 8; // between the docked panels (cards)
@@ -177,8 +177,8 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 #if JUCE_MAC
     juce::MenuBarModel::setMacMainMenu(this);
 #else
-    menuBar = std::make_unique<juce::MenuBarComponent>(this);
-    addAndMakeVisible(*menuBar);
+    titleBar = std::make_unique<ui::TitleBar>(*this);
+    addAndMakeVisible(*titleBar);
 #endif
 
     // Shortcuts: defaults from app/commands, then the user's changes on top.
@@ -907,8 +907,8 @@ void MainComponent::paint(juce::Graphics& g)
 void MainComponent::resized()
 {
     auto bounds = getLocalBounds();
-    if (menuBar)
-        menuBar->setBounds(bounds.removeFromTop(menuBarHeight));
+    if (titleBar)
+        titleBar->setBounds(bounds.removeFromTop(ui::TitleBar::height));
 
     auto area = bounds.reduced(margin);
     transportBarBounds = area.removeFromTop(transportHeight);
@@ -1555,6 +1555,8 @@ void MainComponent::updateTitle()
                                                   : currentFile.getFileNameWithoutExtension();
     window->setName(name + (document.isModified() ? "*" : "") +
                     juce::String::fromUTF8(" \xe2\x80\x93 ") + "Juicy Loops Studio");
+    if (titleBar)
+        titleBar->titleChanged();
 }
 
 void MainComponent::confirmDiscard(std::function<void()> then)
@@ -1849,9 +1851,9 @@ void MainComponent::showAudioSettings()
         juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(frame.release());
     options.dialogTitle = "Audio settings";
-    options.useNativeTitleBar = true;
+    options.useNativeTitleBar = false; // ours: ui::useOwnTitleBar
     options.resizable = false;
-    options.launchAsync();
+    ui::useOwnTitleBar(options.launchAsync());
 }
 
 } // namespace jls

@@ -1,4 +1,5 @@
 #include "ui/settings_dialog.h"
+#include "ui/title_bar.h"
 
 #include "ui/controls.h"
 
@@ -59,10 +60,10 @@ void launch(std::unique_ptr<juce::Component> content, const juce::String& title,
         juce::ResizableWindow::backgroundColourId);
     options.content.setOwned(content.release());
     options.dialogTitle = title;
-    options.useNativeTitleBar = true;
+    options.useNativeTitleBar = false; // ours: ui::useOwnTitleBar
     options.resizable = resizable;
     options.escapeKeyTriggersCloseButton = true;
-    options.launchAsync();
+    useOwnTitleBar(options.launchAsync());
 }
 
 // Options > Settings, as a form: each control saves to the settings file when it changes.

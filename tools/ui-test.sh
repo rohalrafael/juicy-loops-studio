@@ -33,7 +33,7 @@ start)
     "$APP" >"$OUT/app.log" 2>&1 &
     echo $! >"$OUT/app.pid"
     sleep 3
-    xdotool windowmove "$(xdotool search --name "Juicy Loops Studio" | head -1)" 0 0
+    xdotool windowmove "$(xdotool search --name "Juicy Loops Studio" | tail -1)" 0 0  # the last: our own frame recreates the window
     sleep 0.5
     ;;
 stop)

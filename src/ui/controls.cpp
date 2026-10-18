@@ -119,6 +119,21 @@ juce::Path iconPath(Icon icon, bool& filled)
         p.lineTo(12, 15);
         p.lineTo(18, 9);
         break;
+    case Icon::windowMinimize:
+        p.startNewSubPath(6, 16);
+        p.lineTo(18, 16);
+        break;
+    case Icon::windowMaximize:
+        p.addRectangle(6.0f, 6.0f, 12.0f, 12.0f);
+        break;
+    case Icon::windowRestore:
+        p.addRectangle(5.0f, 9.0f, 10.0f, 10.0f);
+        p.startNewSubPath(9, 9);
+        p.lineTo(9, 5);
+        p.lineTo(19, 5);
+        p.lineTo(19, 15);
+        p.lineTo(15, 15);
+        break;
     case Icon::none:
         break;
     }

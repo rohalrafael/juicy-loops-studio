@@ -16,12 +16,18 @@ class MainWindow final : public juce::DocumentWindow
     MainWindow(const juce::String& name, ui::ThemeManager& themes)
         : DocumentWindow(name, ui::colour(ui::currentTheme().colours.background), allButtons)
     {
+#if JUCE_MAC
         setUsingNativeTitleBar(true);
+#else
+        // Our own title bar (menus, name, window buttons) is part of the content, as in FL.
+        setUsingNativeTitleBar(false);
+        setTitleBarHeight(0);
+#endif
         auto* content = new MainComponent(themes);
         setContentOwned(content, true);
         // Keys that reach the window itself (focus not on the content yet) still run shortcuts.
         content->forwardShortcuts(*this);
-        setResizable(true, true);
+        setResizable(true, false); // without the native frame: JUCE's own resizable border
         centreWithSize(getWidth(), getHeight());
         setVisible(true);
         // Start with the keyboard, so shortcuts work before the first click.

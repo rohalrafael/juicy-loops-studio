@@ -399,6 +399,13 @@ which gives:
   separate `PluginWindow` (Settings › Plugin windows).
 - separate windows: the Settings / Keyboard shortcuts / Theme / Plugins / Audio settings
   dialogs, and plugin editors when set to separate windows
+- window frames: no system title bars (except on macOS). The main window's top row is
+  `ui::TitleBar` (menus, name, minimize / maximize / close, drag to move, double-click to
+  maximize; the window keeps JUCE's resizable border). Other windows call
+  `ui::useOwnTitleBar()` and get the title bar the LookAndFeel draws
+  (`drawDocumentWindowTitleBar`, `createDocumentWindowButton` -> `ui::TitleButton`).
+  Turning the native title bar off makes JUCE create a new native window, so UI tests pick the
+  last window with the app's name.
 
 Views are plain JUCE components that read the `Document` in `refresh()` and change it only
 through `Document::apply()` / `setViewState()`.

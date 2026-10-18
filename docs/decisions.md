@@ -265,7 +265,11 @@ not). Older entries describe the project as it was then; later entries may super
   30 Hz-16 kHz, -72-0 dB, peaks fall 1.5 dB per frame), remembered as `scopeMode`. Shortcuts
   now also work in the Sampler and plugin windows (`forwardShortcuts`: the key-mapping set as
   a key listener), and the main window takes the keyboard at startup: opening a channel's
-  window used to leave Ctrl+A / Ctrl+Tab dead until the main window was clicked.
+  window used to leave Ctrl+A / Ctrl+Tab dead until the main window was clicked. Follow-up: on
+  Hyprland (focus follows the mouse) moving back to the main window focused it without a click
+  while JUCE's focused component stayed in the Sampler, so keys were dropped. Now the main window
+  forwards shortcuts too, and the 30 Hz safety net takes the keyboard back whenever our window
+  is focused but JUCE's focus is elsewhere. Reproduced on Xvfb with `xdotool windowfocus`.
 
 - 2026-10-18: Oscilloscope at the right of the transport bar (from the mockups): the engine copies
   the final output (mono mix) into `engine::ScopeBuffer`, a ring of atomics (lock-free, no

@@ -1739,10 +1739,14 @@ void MainComponent::timerCallback()
     if (mixer.isVisible())
         mixer.updateMeters([this](int track, int side) { return engine.takePeak(track, side); });
 
-    // Safety net for shortcuts: if focus ended up nowhere (e.g. a dialog or popup closed)
-    // while our window is the active one, take it back. Never steals focus from other apps.
-    if (getCurrentlyFocusedComponent() == nullptr && isShowing())
-        if (auto* peer = getPeer(); peer != nullptr && peer->isFocused())
+    // Safety net for shortcuts: while our window is the focused one, the keyboard must be ours.
+    // Focus can end up nowhere (a dialog or popup closed) or stay in another of our windows:
+    // with focus-follows-mouse (Hyprland's default) moving the mouse back from the Sampler
+    // focuses this window without a click, and JUCE kept sending keys to the Sampler's
+    // component. Never steals focus from other apps.
+    if (auto* peer = getPeer(); peer != nullptr && peer->isFocused() && isShowing())
+        if (auto* focused = getCurrentlyFocusedComponent();
+            focused == nullptr || (focused != this && !isParentOf(focused)))
             grabKeyboardFocus();
     // Typed notes can't hang if the window loses focus without a focusLost() (e.g. alt-tab
     // while a child window had focus).

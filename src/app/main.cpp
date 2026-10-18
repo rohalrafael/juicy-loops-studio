@@ -16,14 +16,16 @@ class MainWindow final : public juce::DocumentWindow
         : DocumentWindow(name, ui::colour(ui::currentTheme().colours.background), allButtons)
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new MainComponent(themes), true);
+        auto* content = new MainComponent(themes);
+        setContentOwned(content, true);
+        // Keys that reach the window itself (focus not on the content yet) still run shortcuts.
+        content->forwardShortcuts(*this);
         setResizable(true, true);
         centreWithSize(getWidth(), getHeight());
         setVisible(true);
         // Start with the keyboard, so shortcuts work before the first click.
         toFront(true);
-        if (auto* content = getContentComponent())
-            content->grabKeyboardFocus();
+        content->grabKeyboardFocus();
     }
 
     void closeButtonPressed() override

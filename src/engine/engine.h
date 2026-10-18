@@ -8,6 +8,7 @@
 #include "engine/metronome.h"
 #include "engine/preview_player.h"
 #include "engine/sampler.h"
+#include "engine/scope.h"
 #include "engine/spsc_queue.h"
 #include "engine/step_sequencer.h"
 #include "engine/transport.h"
@@ -55,7 +56,8 @@ class Engine
 
     Transport& transport() { return transportState; }
     Metronome& metronome() { return metronomeState; }
-    PreviewPlayer& preview() { return previewPlayer; } // the Browser's sample previews
+    PreviewPlayer& preview() { return previewPlayer; }       // the Browser's sample previews
+    const ScopeBuffer& scope() const { return scopeBuffer; } // the output, for the oscilloscope
 
     // UI thread. Publishes a new snapshot; if the queue is full it's retried by collectGarbage().
     void setState(std::unique_ptr<EngineState> state);
@@ -129,6 +131,7 @@ class Engine
     Transport transportState;
     Metronome metronomeState;
     PreviewPlayer previewPlayer;
+    ScopeBuffer scopeBuffer;
     Sampler sampler;
 
     SpscQueue<EngineState*, 128> incoming; // UI -> audio

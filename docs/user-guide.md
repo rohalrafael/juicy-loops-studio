@@ -116,7 +116,9 @@ Details of the file format: [project-format.md](project-format.md).
   minutes:seconds.milliseconds. In SONG mode that's the song (the Playlist); in PAT mode, the
   selected pattern.
 
-In a narrow window, Metronome and Keys show only their icons, then the clock's time and the
+- **Oscilloscope** (right end): the output as you hear it, steady on a zero crossing.
+
+In a narrow window the oscilloscope goes first, then Metronome and Keys show only their icons, then the clock's time and the
 time signature are hidden.
 - **Time signature:** beats per bar (n/4).
 - **Metronome:** on/off.

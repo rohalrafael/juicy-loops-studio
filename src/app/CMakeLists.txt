@@ -19,6 +19,7 @@ target_sources(JuicyLoopsStudio PRIVATE
     ../ui/controls.cpp
     ../ui/theme.cpp
     ../ui/mixer.cpp
+    ../ui/oscilloscope.cpp
     ../ui/plugin_menu.cpp
     ../ui/sampler_panel.cpp
     ../ui/settings_dialog.cpp

@@ -510,6 +510,7 @@ void Engine::renderChunk(float* const* channels, int numChannels, int offset, in
                               numChannels > 1 ? channels[1] + offset : nullptr};
     metronomeState.render(out.data(), std::min(numChannels, 2), numSamples, block);
     previewPlayer.render(out.data(), std::min(numChannels, 2), numSamples);
+    scopeBuffer.write(out[0], out[1], numSamples); // everything that's heard
 }
 
 void Engine::updatePlayPosition(const BlockPosition& block)

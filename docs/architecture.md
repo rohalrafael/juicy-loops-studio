@@ -40,7 +40,8 @@ comments with the details. This page covers how the pieces fit together.
    ┌───────────▼─────────────────────────────────────────────┐
    │ src/engine  (no JUCE): Engine, Transport, StepSequencer, │
    │ Sampler, Metronome, effects, instruments, EffectPool,    │
-   │ PreviewPlayer, time-stretching, DrumSynth, SpscQueue,    │
+   │ PreviewPlayer, ScopeBuffer, time-stretching, DrumSynth,  │
+   │ SpscQueue,                                               │
    │ EngineState snapshot types                               │
    └──────────────────────────────────────────────────────────┘
 ```
@@ -163,6 +164,8 @@ for each chunk:
 5. Master: effects → fader/pan → peak → add to the device output.
 6. Metronome clicks and the Browser's sample preview go straight to the output, bypassing the
    mixer.
+7. The finished output (mono mix) is copied into `ScopeBuffer`, a lock-free ring of atomics
+   that the transport bar's oscilloscope (`ui::Oscilloscope`) reads at 30 Hz.
 
 ### Effects
 

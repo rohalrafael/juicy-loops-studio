@@ -6,6 +6,7 @@ add_library(jls_engine STATIC
     metronome.cpp
     preview_player.cpp
     sampler.cpp
+    scope.cpp
     step_sequencer.cpp
     time_stretch.cpp
     transport.cpp)

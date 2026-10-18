@@ -13,6 +13,7 @@ add_executable(jls_tests
     project_file_tests.cpp
     theme_tests.cpp
     sampler_tests.cpp
+    scope_tests.cpp
     sequencer_tests.cpp
     transport_tests.cpp)
 

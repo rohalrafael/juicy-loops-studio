@@ -16,6 +16,7 @@
 #include "ui/channel_rack.h"
 #include "ui/controls.h"
 #include "ui/mixer.h"
+#include "ui/oscilloscope.h"
 #include "ui/piano_roll.h"
 #include "ui/playlist.h"
 #include "ui/sampler_panel.h"
@@ -152,7 +153,8 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::IconButton metronomeButton{ui::Icon::metronome, "Metronome"};
     ui::IconButton typingButton{ui::Icon::keys, "Keys"}; // typing keyboard to piano (Ctrl+T)
     juce::Label positionLabel;                           // bar:beat:step, in the clock display
-    juce::Label timeLabel; // next to it: current / total time of what's looping
+    juce::Label timeLabel;                  // next to it: current / total time of what's looping
+    ui::Oscilloscope scope{engine.scope()}; // right end of the transport bar, when there's room
     // Painted by paint(): the transport bar's background, its dividers and the clock's box.
     juce::Rectangle<int> transportBarBounds, clockBounds;
     std::vector<int> transportDividers; // x positions

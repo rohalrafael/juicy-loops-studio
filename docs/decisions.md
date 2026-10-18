@@ -258,6 +258,12 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Oscilloscope at the right of the transport bar (from the mockups): the engine copies
+  the final output (mono mix) into `engine::ScopeBuffer`, a ring of atomics (lock-free, no
+  allocation); `ui::Oscilloscope` reads the newest 4096 samples at 30 Hz, starts at the last
+  rising zero crossing (`findScopeTrigger`) and draws ~43 ms in the second accent colour. It
+  takes the room left in the bar and is the first thing hidden when the window is narrow.
+
 - 2026-10-18: Right-click / right-drag over greyed steps only acts on looped *notes*; empty greyed
   steps stay looped (they used to make the whole loop real). Plugins and Audio settings dialogs
   framed like the others (`ui::DialogFrame`), with themed table headers, check boxes and level

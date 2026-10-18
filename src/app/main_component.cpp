@@ -113,7 +113,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
              &tempoDisplay, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
-             &timeLabel, &playlist})
+             &scope, &timeLabel, &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
     addChildComponent(mixer);
@@ -797,6 +797,17 @@ void MainComponent::layoutTransportBar(juce::Rectangle<int> bar)
             timeSignatureBox.setBounds(take(ui::metrics::comboWidth - 4));
         metronomeButton.setBounds(take(metronomeButton.preferredWidth(h)));
         typingButton.setBounds(take(typingButton.preferredWidth(h)));
+    }
+
+    // The oscilloscope takes the room that's left at the right end; it's the first to go.
+    constexpr int minScopeWidth = 120;
+    constexpr int maxScopeWidth = 220;
+    const bool roomForScope = stage == 0 && bar.getWidth() >= minScopeWidth;
+    scope.setVisible(roomForScope);
+    if (roomForScope)
+    {
+        const int width = std::min(maxScopeWidth, bar.getWidth());
+        scope.setBounds(bar.removeFromRight(width).withSizeKeepingCentre(width, h));
     }
 }
 

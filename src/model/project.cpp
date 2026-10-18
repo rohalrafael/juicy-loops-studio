@@ -376,6 +376,26 @@ std::vector<PatternId> Project::splitByChannel(PatternId id)
     return created;
 }
 
+std::string Project::clipLabel(const Pattern& pattern) const
+{
+    const Channel* only = nullptr;
+    for (const auto& [channel, list] : pattern.notes)
+    {
+        if (list.empty())
+            continue;
+        if (only != nullptr)
+            return pattern.name; // more than one channel
+        only = findChannel(channel);
+    }
+    if (only == nullptr)
+        return pattern.name;
+    const auto suffix = " - " + only->name;
+    const auto& name = pattern.name;
+    const bool isPart = name.size() > suffix.size() &&
+                        name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return isPart ? only->name : name;
+}
+
 void Project::removePattern(PatternId id)
 {
     if (patterns.size() <= 1)

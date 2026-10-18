@@ -248,7 +248,8 @@ sounding the same:
   track: the first on the original clip's track, the others on the nearest tracks below that
   are free for that stretch of time (tracks are added at the bottom if needed). Copies of the
   pattern on the same track all use the same tracks.
-It's one step to undo.
+The parts' clips are labelled with just the channel ("Kick"); the full names are in the
+picker. It's one step to undo.
 | Drag an item from the picker | Place it where you drop it |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |

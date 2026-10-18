@@ -66,10 +66,16 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     CHECK(project.patterns[1].id == kick->id);
     CHECK(project.patterns[3].id == snare->id);
 
+    // Their clips are labelled with just the channel; other patterns keep their names.
+    CHECK(project.clipLabel(*kick) == "Kick");
+    CHECK(project.clipLabel(*snare) == "Snare");
+    CHECK(project.clipLabel(*project.findPattern(original)) == "Pattern 1");
+
     // A pattern with one channel isn't split.
     const auto single = project.addPattern();
     project.findPattern(single)->set(project.channels[0].id, 0, true);
     CHECK(project.splitByChannel(single).empty());
+    CHECK(project.clipLabel(*project.findPattern(single)) == "Pattern 2"); // not a part
 }
 
 TEST_CASE("Split by channel puts each part on its own free track")

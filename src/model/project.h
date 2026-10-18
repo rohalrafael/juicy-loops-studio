@@ -312,6 +312,9 @@ struct Project
     // needed). Every clip of the pattern on the same track uses the same set of tracks. Returns
     // the new patterns (none when fewer than two channels have notes).
     std::vector<PatternId> splitByChannel(PatternId id);
+    // A short label for a pattern's clips: a part made by Split by channel (notes on one channel,
+    // named "<pattern> - <that channel>") shows just the channel's name; others their own name.
+    std::string clipLabel(const Pattern& pattern) const;
     // Removes the pattern and its clips. The last remaining pattern can't be removed.
     void removePattern(PatternId id);
     Pattern* findPattern(PatternId id);

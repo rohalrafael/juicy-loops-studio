@@ -631,8 +631,8 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
     g.fillRect(strip);
     g.setColour(colour(t.colours.clipText));
     g.setFont(juce::FontOptions(12.0f));
-    g.drawText(juce::String::fromUTF8(pattern->name.c_str()), strip.reduced(4.0f, 0.0f),
-               juce::Justification::centredLeft, true);
+    g.drawText(juce::String::fromUTF8(project.clipLabel(*pattern).c_str()),
+               strip.reduced(4.0f, 0.0f), juce::Justification::centredLeft, true);
 
     // Miniature of the notes, one thin row per channel; repeats when the clip is longer.
     const int numChannels = static_cast<int>(project.channels.size());

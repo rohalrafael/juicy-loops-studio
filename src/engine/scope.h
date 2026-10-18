@@ -1,9 +1,9 @@
 #pragma once
 
-// The output for the UI's oscilloscope. The audio thread writes what it outputs (left and right
-// mixed to mono) into a ring of atomics; the UI copies the newest samples whenever it repaints.
-// Lock-free and allocation-free. A reader may get a few samples from the next block mixed in,
-// which a scope can live with.
+// The output for the UI's oscilloscope and spectrum. The audio thread writes what it outputs (left
+// and right mixed to mono) into a ring of atomics; the UI copies the newest samples whenever it
+// repaints. Lock-free and allocation-free. A reader may get a few samples from the next block mixed
+// in, which a scope can live with.
 
 #include <array>
 #include <atomic>
@@ -31,5 +31,10 @@ class ScopeBuffer
 // the last rising zero crossing that still leaves `window` samples after it, or the newest
 // window when there's none (silence, noise).
 int findScopeTrigger(const float* samples, int count, int window) noexcept;
+
+// The spectrum view: magnitudes of `samples[0, n)` (n a power of two) through a Hann window, in
+// dB relative to a full-scale sine (0 dB), for bins 0 .. n/2 - 1 (bin k is k * sampleRate / n Hz).
+// `work` needs room for 2 * n floats. No allocation; meant for the UI thread.
+void spectrumDb(const float* samples, int n, float* work, float* magnitudesDb) noexcept;
 
 } // namespace jls::engine

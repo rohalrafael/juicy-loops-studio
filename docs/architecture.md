@@ -165,7 +165,8 @@ for each chunk:
 6. Metronome clicks and the Browser's sample preview go straight to the output, bypassing the
    mixer.
 7. The finished output (mono mix) is copied into `ScopeBuffer`, a lock-free ring of atomics
-   that the transport bar's oscilloscope (`ui::Oscilloscope`) reads at 30 Hz.
+   that the transport bar's oscilloscope (`ui::Oscilloscope`) reads at 30 Hz; its spectrum mode
+   runs `engine::spectrumDb` (a small radix-2 FFT, Hann window) on the UI thread.
 
 ### Effects
 

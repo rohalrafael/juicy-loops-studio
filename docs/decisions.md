@@ -258,6 +258,15 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: Ctrl+click or right-click a channel's light = solo (`Project::soloChannel`, FL's
+  toggle: again unmutes all; audio-clip channels untouched). Channel menu › Fill every 1/2/4/8
+  steps **replaces** the steps (maintainer's choice) across the shown grid; disabled for melodic
+  channels. Clicking the output display switches to a spectrum (own FFT in the engine, log axis
+  30 Hz-16 kHz, -72-0 dB, peaks fall 1.5 dB per frame), remembered as `scopeMode`. Shortcuts
+  now also work in the Sampler and plugin windows (`forwardShortcuts`: the key-mapping set as
+  a key listener), and the main window takes the keyboard at startup: opening a channel's
+  window used to leave Ctrl+A / Ctrl+Tab dead until the main window was clicked.
+
 - 2026-10-18: Oscilloscope at the right of the transport bar (from the mockups): the engine copies
   the final output (mono mix) into `engine::ScopeBuffer`, a ring of atomics (lock-free, no
   allocation); `ui::Oscilloscope` reads the newest 4096 samples at 30 Hz, starts at the last

@@ -169,6 +169,9 @@ struct Pattern
     bool hasOnlySteps(ChannelId channel) const; // false once a channel has melodic notes
     bool isOn(ChannelId channel, int step) const;
     void set(ChannelId channel, int step, bool on);
+    // FL's "Fill each N steps": replaces the channel's notes with a step on every `every`th
+    // step in [0, lengthInSteps) (hi-hats: every 2 or 4).
+    void fillSteps(ChannelId channel, int every, int lengthInSteps);
 };
 
 // A pattern placed in the Playlist. Positions are in steps (16ths) from the song start.
@@ -263,6 +266,10 @@ struct Project
     // A channel played by a hosted plugin instrument, named after it.
     ChannelId addInstrumentChannel(const std::string& pluginId, const std::string& pluginName);
     void removeChannel(ChannelId id); // also removes its notes from every pattern
+    // Solo, as Ctrl+click on a mute light in FL: mutes every other channel and unmutes this one;
+    // if it's already the only one playing, unmutes them all. Audio-clip channels (hidden in the
+    // Channel Rack) aren't touched.
+    void soloChannel(ChannelId id);
     Channel* findChannel(ChannelId id);
     const Channel* findChannel(ChannelId id) const;
 

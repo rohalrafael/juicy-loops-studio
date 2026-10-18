@@ -20,6 +20,10 @@ class MainWindow final : public juce::DocumentWindow
         setResizable(true, true);
         centreWithSize(getWidth(), getHeight());
         setVisible(true);
+        // Start with the keyboard, so shortcuts work before the first click.
+        toFront(true);
+        if (auto* content = getContentComponent())
+            content->grabKeyboardFocus();
     }
 
     void closeButtonPressed() override

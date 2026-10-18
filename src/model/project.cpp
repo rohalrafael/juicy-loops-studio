@@ -102,6 +102,19 @@ void Pattern::set(ChannelId channel, int step, bool on)
     }
 }
 
+void Pattern::fillSteps(ChannelId channel, int every, int lengthInSteps)
+{
+    auto& list = notes[channel];
+    list.clear();
+    every = std::max(1, every);
+    for (int step = 0; step < std::min(lengthInSteps, maxSteps); step += every)
+    {
+        Note note;
+        note.startTick = step * ticksPerStep;
+        list.push_back(note);
+    }
+}
+
 float MixerTrack::gain() const
 {
     return volumeDb <= minVolumeDb ? 0.0f : std::pow(10.0f, volumeDb / 20.0f);
@@ -217,6 +230,15 @@ void Channel::setSample(std::shared_ptr<const engine::SampleBuffer> buffer, std:
     pluginId.clear();
     pluginName.clear();
     pluginState.clear();
+}
+
+void Project::soloChannel(ChannelId id)
+{
+    const bool alreadySolo = std::all_of(channels.begin(), channels.end(), [id](const Channel& c)
+                                         { return c.audioClip || (c.id == id) != c.muted; });
+    for (auto& c : channels)
+        if (!c.audioClip)
+            c.muted = alreadySolo ? false : c.id != id;
 }
 
 void Project::removeChannel(ChannelId id)

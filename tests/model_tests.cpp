@@ -472,6 +472,38 @@ TEST_CASE("Slicing a note into rolls keeps pitch, velocity and the overall span"
     CHECK(sliceNote(note, 0).size() == 1);
 }
 
+TEST_CASE("Solo mutes the other channels, and again unmutes them all")
+{
+    auto project = makeDefaultProject();
+    const auto kick = project.channels[0].id;
+    project.channels[2].muted = true; // a channel muted before stays part of the toggle
+    project.soloChannel(kick);
+    for (const auto& c : project.channels)
+        CHECK(c.muted == (c.id != kick));
+    project.soloChannel(kick); // already solo: everything plays again
+    for (const auto& c : project.channels)
+        CHECK_FALSE(c.muted);
+    // Soloing a muted channel unmutes it.
+    project.channels[1].muted = true;
+    project.soloChannel(project.channels[1].id);
+    CHECK_FALSE(project.channels[1].muted);
+    CHECK(project.channels[0].muted);
+}
+
+TEST_CASE("Fill each N steps replaces a channel's steps")
+{
+    Pattern pattern;
+    pattern.set(7, 3, true);
+    pattern.fillSteps(7, 2, 16);
+    REQUIRE(pattern.notesFor(7).size() == 8);
+    for (int step = 0; step < 16; ++step)
+        CHECK(pattern.isOn(7, step) == (step % 2 == 0));
+    pattern.fillSteps(7, 4, 32);
+    CHECK(pattern.notesFor(7).size() == 8);
+    CHECK(pattern.isOn(7, 28));
+    CHECK_FALSE(pattern.isOn(7, 2));
+}
+
 TEST_CASE("Moving notes keeps the group together at the edges")
 {
     std::vector<Note> notes = {{ticksPerStep, ticksPerStep, 60, 0.8f},

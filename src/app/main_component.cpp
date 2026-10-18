@@ -188,6 +188,21 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         commandManager.getKeyMappings()->restoreFromXml(*xml);
     commandManager.getKeyMappings()->addChangeListener(this);
     setApplicationCommandManagerToWatch(&commandManager);
+    // The output display remembers waveform / spectrum.
+    scope.setMode(themes.settingsFile().getValue("scopeMode") == "spectrum"
+                      ? ui::Oscilloscope::Mode::spectrum
+                      : ui::Oscilloscope::Mode::waveform);
+    scope.onModeChange = [this](ui::Oscilloscope::Mode mode)
+    {
+        themes.settingsFile().setValue(
+            "scopeMode", mode == ui::Oscilloscope::Mode::spectrum ? "spectrum" : "waveform");
+    };
+    scope.sampleRate = [this]
+    {
+        auto* device = deviceManager.getCurrentAudioDevice();
+        return device != nullptr ? device->getCurrentSampleRate() : 48000.0;
+    };
+
     lookAndFeelChanged();
     updateFocusFrames();
     updateShortcutHints();
@@ -322,6 +337,7 @@ void MainComponent::openEffectEditor(model::EffectId id)
     auto window = std::make_unique<plugins::PluginWindow>(processor, effect->plugin(), title);
     window->onClose = [this, id]
     { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); };
+    forwardShortcuts(*window);
     pluginWindows[id] = std::move(window);
 }
 
@@ -356,6 +372,7 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
     auto window = std::make_unique<plugins::PluginWindow>(instrument, plugin->plugin(), title);
     window->onClose = [this, id]
     { juce::MessageManager::callAsync([this, id] { instrumentWindows.erase(id); }); };
+    forwardShortcuts(*window);
     instrumentWindows[id] = std::move(window);
 }
 
@@ -683,6 +700,15 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     samplerWindow->setName("Sampler - " + juce::String::fromUTF8(channel->name.c_str()));
     samplerWindow->onClose = [this]
     { juce::MessageManager::callAsync([this] { samplerWindow.reset(); }); };
+    forwardShortcuts(*samplerWindow);
+}
+
+void MainComponent::forwardShortcuts(juce::Component& window)
+{
+    // Clicking a channel opens its window, which then has the keyboard: without this, Ctrl+A,
+    // Ctrl+Tab, Space... did nothing until the main window was clicked again. (A plugin's own
+    // editor can still keep keys it uses itself.)
+    window.addKeyListener(commandManager.getKeyMappings());
 }
 
 void MainComponent::toggleBrowser()

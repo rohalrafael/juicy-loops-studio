@@ -98,6 +98,8 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::Component* areaComponent(Area area);
     void setFocusArea(Area area);
     void layoutTransportBar(juce::Rectangle<int> bar);
+    // Shortcuts also work while one of our other windows (Sampler, plugins) has the keyboard.
+    void forwardShortcuts(juce::Component& window);
     void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
     void updateFocusFrames(); // the focused docked panel's accent frame
     void cycleFocus(int direction);

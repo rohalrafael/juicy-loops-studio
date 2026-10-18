@@ -66,10 +66,10 @@ void LedButton::paint(juce::Graphics& g)
     g.drawEllipse(led, 1.0f);
 }
 
-void LedButton::mouseDown(const juce::MouseEvent&)
+void LedButton::mouseDown(const juce::MouseEvent& e)
 {
     if (onClick)
-        onClick();
+        onClick(e.mods.isCommandDown() || e.mods.isPopupMenu());
 }
 
 // ---------------------------------------------------------------------------------- InsertBox
@@ -403,16 +403,18 @@ void StepGrid::paintStep(int step)
 
 ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owner), id(channel)
 {
-    mute.onClick = [this]
+    mute.onClick = [this](bool solo)
     {
         rack.edit(
-            [this](model::Project& p)
+            [this, solo](model::Project& p)
             {
-                if (auto* c = p.findChannel(id))
+                if (solo)
+                    p.soloChannel(id);
+                else if (auto* c = p.findChannel(id))
                     c->muted = !c->muted;
             });
     };
-    mute.setTooltip("Mute");
+    mute.setTooltip("Mute. Ctrl+click or right-click: solo (again: all play)");
 
     auto setupKnob = [this](juce::Slider& knob, double min, double max, double reset,
                             std::function<void(model::Channel&, float)> apply)
@@ -607,8 +609,10 @@ void ChannelRow::showMenu()
         samplerId,
         renameId,
         replaceSampleId,
-        deleteId
+        deleteId,
+        fillFirstId = 100 // + 0..3: every 1, 2, 4, 8 steps
     };
+    static constexpr std::array fillEvery{1, 2, 4, 8};
     std::vector<PluginItem> instruments;
     juce::PopupMenu menu;
     menu.addItem(pianoRollId, "Piano roll");
@@ -616,6 +620,17 @@ void ChannelRow::showMenu()
         menu.addItem(showPluginId, "Show plugin");
     else
         menu.addItem(samplerId, "Sampler...");
+    // Fill each N steps (replaces the steps; not for channels with melodic notes).
+    {
+        const auto& project = rack.document().project();
+        const bool stepsOnly = project.current().hasOnlySteps(id);
+        juce::PopupMenu fill;
+        for (std::size_t i = 0; i < fillEvery.size(); ++i)
+            fill.addItem(fillFirstId + static_cast<int>(i),
+                         fillEvery[i] == 1 ? juce::String("Every step")
+                                           : "Every " + juce::String(fillEvery[i]) + " steps");
+        menu.addSubMenu("Fill", fill, stepsOnly);
+    }
     menu.addSeparator();
     menu.addItem(renameId, "Rename...");
     menu.addItem(replaceSampleId, isInstrument ? "Use a sample instead..." : "Replace sample...");
@@ -628,37 +643,52 @@ void ChannelRow::showMenu()
     // channel), so the callback only uses the rack and the id.
     auto& r = rack;
     const auto channel = id;
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&name),
-                       [&r, channel, instruments](int result)
-                       {
-                           switch (result)
-                           {
-                           case 0:
-                               return;
-                           case pianoRollId:
-                               r.openPianoRoll(channel);
-                               return;
-                           case showPluginId:
-                               if (r.onShowInstrument)
-                                   r.onShowInstrument(channel, false);
-                               return;
-                           case samplerId:
-                               if (r.onShowSampler)
-                                   r.onShowSampler(channel, false);
-                               return;
-                           case renameId:
-                               r.rename(channel);
-                               return;
-                           case replaceSampleId:
-                               r.chooseSampleFor(channel);
-                               return;
-                           case deleteId:
-                               r.edit([channel](model::Project& p) { p.removeChannel(channel); });
-                               return;
-                           default:
-                               r.handleInstrumentMenu(result, channel, instruments);
-                           }
-                       });
+    menu.showMenuAsync(
+        juce::PopupMenu::Options().withTargetComponent(&name),
+        [&r, channel, instruments](int result)
+        {
+            switch (result)
+            {
+            case 0:
+                return;
+            case pianoRollId:
+                r.openPianoRoll(channel);
+                return;
+            case showPluginId:
+                if (r.onShowInstrument)
+                    r.onShowInstrument(channel, false);
+                return;
+            case samplerId:
+                if (r.onShowSampler)
+                    r.onShowSampler(channel, false);
+                return;
+            case renameId:
+                r.rename(channel);
+                return;
+            case replaceSampleId:
+                r.chooseSampleFor(channel);
+                return;
+            case deleteId:
+                r.edit([channel](model::Project& p) { p.removeChannel(channel); });
+                return;
+            case fillFirstId:
+            case fillFirstId + 1:
+            case fillFirstId + 2:
+            case fillFirstId + 3:
+            {
+                const int every = fillEvery[static_cast<std::size_t>(result - fillFirstId)];
+                r.edit(
+                    [channel, every](model::Project& p)
+                    {
+                        auto& pattern = p.current();
+                        pattern.fillSteps(channel, every, p.gridLengthInSteps(pattern));
+                    });
+                return;
+            }
+            default:
+                r.handleInstrumentMenu(result, channel, instruments);
+            }
+        });
 }
 
 // -------------------------------------------------------------------------------- ChannelRack

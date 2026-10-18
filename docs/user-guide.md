@@ -30,6 +30,9 @@ back again), and keeping Ctrl held while pressing Tab again goes further back. I
 Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / → select the previous / next
 track. The selected channel's row is highlighted: that's where the Browser loads samples.
 
+Shortcuts also work while the Sampler or a plugin window has the keyboard (a plugin may keep
+keys it uses itself).
+
 Every shortcut can be changed in **Options › Keyboard shortcuts…** (Ctrl+Shift+K): click **+**
 next to a command and press the keys, click a key to change or remove it, or **reset to
 defaults**. A command can have several keys; if a key is already taken you're asked whether to
@@ -116,7 +119,9 @@ Details of the file format: [project-format.md](project-format.md).
   minutes:seconds.milliseconds. In SONG mode that's the song (the Playlist); in PAT mode, the
   selected pattern.
 
-- **Oscilloscope** (right end): the output as you hear it, steady on a zero crossing.
+- **Oscilloscope** (right end): the output as you hear it, steady on a zero crossing. Click it
+  for the **spectrum** (levels by frequency, 30 Hz to 16 kHz), and again for the waveform; the
+  choice is remembered.
 
 In a narrow window the oscilloscope goes first, then Metronome and Keys show only their icons, then the clock's time and the
 time signature are hidden.
@@ -164,8 +169,10 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Left-click / drag over steps | Turn steps on (or off, if you started on a lit step) |
 | Right-click / drag over steps | Turn steps off |
 | Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
-| Right-click a channel name | Piano roll, show plugin / Sampler, rename, replace sample, use/replace an instrument plugin, delete |
+| Right-click a channel name | Piano roll, show plugin / Sampler, Fill, rename, replace sample, use/replace an instrument plugin, delete |
+| Right-click › Fill | Replace the channel's steps with one on every step, every 2, 4 or 8 steps (hi-hats), across the steps shown |
 | Green light | Mute / unmute |
+| Ctrl+click or right-click the green light | Solo: mute every other channel (again: all play) |
 | Pan and volume knobs | Drag up/down; double-click resets |
 | Mixer track box | Drag up/down or scroll to route the channel to an insert ("--" = Master) |
 | Drop audio files on a row | Replace that channel's sample |

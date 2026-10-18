@@ -24,12 +24,12 @@ namespace jls::ui
 
 class ChannelRack;
 
-// Mute toggle drawn as an LED.
+// Mute toggle drawn as an LED. Ctrl+click or right-click asks for solo instead (as in FL).
 class LedButton final : public juce::Component, public juce::SettableTooltipClient
 {
   public:
     void setOn(bool shouldBeOn);
-    std::function<void()> onClick;
+    std::function<void(bool solo)> onClick;
 
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent&) override;

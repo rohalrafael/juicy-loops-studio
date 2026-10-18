@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <numbers>
 #include <vector>
@@ -36,6 +37,25 @@ TEST_CASE("The scope buffer returns the newest samples, oldest first, across the
     buffer->read(out.data(), 2);
     CHECK(out[0] == 0.25f);
     CHECK(out[1] == -0.5f);
+}
+
+TEST_CASE("The spectrum shows a sine as one peak at its frequency, at its level")
+{
+    constexpr int n = 1024;
+    std::vector<float> wave(n), work(2 * n), db(n / 2);
+    // Bin 64 exactly, at half scale (-6 dB).
+    for (int i = 0; i < n; ++i)
+        wave[static_cast<std::size_t>(i)] =
+            0.5f * static_cast<float>(std::sin(2.0 * std::numbers::pi * 64.0 * i / n));
+    spectrumDb(wave.data(), n, work.data(), db.data());
+    const auto peak = std::max_element(db.begin(), db.end()) - db.begin();
+    CHECK(peak == 64);
+    CHECK(std::abs(db[64] - (-6.02f)) < 0.2f);
+    CHECK(db[200] < -60.0f); // far from the tone: nothing
+
+    std::vector<float> silence(n, 0.0f);
+    spectrumDb(silence.data(), n, work.data(), db.data());
+    CHECK(db[10] <= -119.0f);
 }
 
 TEST_CASE("The scope trigger starts on a rising zero crossing so a steady wave stands still")

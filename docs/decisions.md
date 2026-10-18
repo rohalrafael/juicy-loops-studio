@@ -258,6 +258,15 @@ not). Older entries describe the project as it was then; later entries may super
   press no longer lay in the title bar; the rack also couldn't be dragged under the transport
   bar where its title bar was out of reach (now kept inside the area below it).
 
+- 2026-10-18: **Split by channel**, done better than FL (maintainer's brief): FL stacks the new
+  clips on top of each other and the parts come out at different sizes when channels loop. Here
+  (`Project::splitByChannel`): one part per channel with notes, the original kept; each part as
+  long as the original (looping channels' repeats written out with `fillLoop`, plus the new
+  `Pattern::minLengthSteps`, saved as `minPlayLength`); each part's clips on their own track,
+  the nearest free one below the original's for every clip of the pattern on that track (tracks
+  added if needed). A test renders a song before and after and compares it sample by sample.
+  Patterns menu and right-click in the picker.
+
 - 2026-10-18: Own window frame (backlog item, FL-like): the main window has no system title bar;
   `ui::TitleBar` holds the menus (only as wide as they are, so the rest drags the window), the
   name and the window buttons. Maximize uses JUCE's setFullScreen (the screen's usable area; a

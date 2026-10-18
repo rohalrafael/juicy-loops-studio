@@ -15,6 +15,7 @@ add_executable(jls_tests
     sampler_tests.cpp
     scope_tests.cpp
     sequencer_tests.cpp
+    split_tests.cpp
     transport_tests.cpp)
 
 target_link_libraries(jls_tests PRIVATE jls_model jls_engine jls_theme Catch2::Catch2WithMain)

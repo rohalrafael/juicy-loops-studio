@@ -149,6 +149,8 @@ class PlaylistView final : public juce::Component, private juce::Timer
     std::function<void(model::ChannelId)> onOpenAudioChannel;
     // Set by the owner: open a pattern in the Channel Rack (double-click on a clip or picker row).
     std::function<void(model::PatternId)> onOpenPattern;
+    // Set by the owner: Split by channel (right-click a pattern in the picker).
+    std::function<void(model::PatternId)> onSplitPattern;
     void setPickerVisible(bool shouldShow);
     bool isPickerVisible() const;
 

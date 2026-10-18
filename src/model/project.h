@@ -175,6 +175,9 @@ struct Pattern
     // Steps the Channel Rack shows (16/32/64 or dragged). Doesn't change what plays: the
     // pattern plays only as far as its notes (see lengthInSteps()).
     int gridSteps = defaultLength;
+    // The shortest the pattern plays, in steps (0 = only as far as its notes). Split by channel
+    // sets it so each part stays as long as the pattern it came from.
+    int minLengthSteps = 0;
     std::map<ChannelId, std::vector<Note>> notes;
 
     const std::vector<Note>& notesFor(ChannelId channel) const;
@@ -183,8 +186,8 @@ struct Pattern
     // Makes a looping channel's repeats real: copies its notes in [0, fromSteps) over and over
     // until toSteps, so it sounds the same and can then be edited beyond its old loop.
     void fillLoop(ChannelId channel, int fromSteps, int toSteps);
-    // Length in steps, i.e. what plays and loops: the last note's end rounded up to a whole bar,
-    // at least one bar.
+    // Length in steps, i.e. what plays and loops: the last note's end (or minLengthSteps, if
+    // longer) rounded up to a whole bar, at least one bar.
     int lengthInSteps(int stepsPerBar) const;
     bool isEmpty() const;
 
@@ -300,6 +303,15 @@ struct Project
     PatternId addPattern();
     // Copy of a pattern (notes and length) right after it, named "<name> (copy)".
     PatternId clonePattern(PatternId id);
+    // Split by channel, done so the arrangement stays tidy and sounds the same: one new pattern
+    // per channel with notes, right after the original (kept), named "<pattern> - <channel>".
+    // Each is exactly as long as the original: a looping channel's repeats are written out, and
+    // the length is fixed even where its notes end early. The original's Playlist clips are
+    // replaced by one clip per part, each part on its own track: the first takes the original
+    // clip's track, the others the nearest free tracks below for that stretch of time (added if
+    // needed). Every clip of the pattern on the same track uses the same set of tracks. Returns
+    // the new patterns (none when fewer than two channels have notes).
+    std::vector<PatternId> splitByChannel(PatternId id);
     // Removes the pattern and its clips. The last remaining pattern can't be removed.
     void removePattern(PatternId id);
     Pattern* findPattern(PatternId id);

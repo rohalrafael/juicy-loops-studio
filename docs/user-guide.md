@@ -237,6 +237,18 @@ installed, the channel stays silent and keeps them.
 | **Picker** (title bar) | Show / hide the picker: all patterns and audio clips |
 | Click an item in the picker | Make it what clicking empty space places |
 | Double-click an item in the picker | A pattern: open it in the Channel Rack; an audio clip: its Sampler |
+| Right-click a pattern in the picker | **Split by channel** (also in the Patterns menu, for the selected pattern) |
+
+**Split by channel** turns a pattern into one pattern per channel ("Pattern 1 - Kick", ...),
+right after it in the list (the original stays). Unlike FL it keeps the arrangement tidy and
+sounding the same:
+- each part is exactly as long as the original: a channel that looped a shorter part gets its
+  repeats written out, and a part whose notes end early keeps the full length
+- in the Playlist, every clip of the pattern is replaced by one clip per part, each on its own
+  track: the first on the original clip's track, the others on the nearest tracks below that
+  are free for that stretch of time (tracks are added at the bottom if needed). Copies of the
+  pattern on the same track all use the same tracks.
+It's one step to undo.
 | Drag an item from the picker | Place it where you drop it |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |

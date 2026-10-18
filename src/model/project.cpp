@@ -60,7 +60,7 @@ int Pattern::lengthInSteps(int stepsPerBar) const
         for (const auto& note : list)
             lastTick = std::max(lastTick, note.endTick());
 
-    const int steps = (lastTick + ticksPerStep - 1) / ticksPerStep;
+    const int steps = std::max((lastTick + ticksPerStep - 1) / ticksPerStep, minLengthSteps);
     const int bar = std::max(1, stepsPerBar);
     return std::min(maxSteps, std::max(bar, (steps + bar - 1) / bar * bar));
 }
@@ -289,6 +289,91 @@ PatternId Project::clonePattern(PatternId id)
     copy.id = nextPatternId++;
     copy.name += " (copy)";
     return patterns.insert(it + 1, std::move(copy))->id;
+}
+
+std::vector<PatternId> Project::splitByChannel(PatternId id)
+{
+    const auto source = std::find_if(patterns.begin(), patterns.end(),
+                                     [id](const Pattern& p) { return p.id == id; });
+    if (source == patterns.end())
+        return {};
+    const Pattern original = *source; // `patterns` grows below
+    const int length = lengthInSteps(original);
+
+    // The channels that play in it, in Channel Rack order.
+    std::vector<const Channel*> used;
+    for (const auto& channel : channels)
+        if (!original.notesFor(channel.id).empty())
+            used.push_back(&channel);
+    if (used.size() < 2)
+        return {};
+
+    std::vector<PatternId> created;
+    auto insertAt = source - patterns.begin() + 1;
+    for (const auto* channel : used)
+    {
+        Pattern part;
+        part.id = nextPatternId++;
+        part.name = original.name + " - " + channel->name;
+        part.gridSteps = original.gridSteps;
+        part.notes[channel->id] = original.notesFor(channel->id);
+        // A channel that looped in the original repeats for real now: on its own it would be
+        // a shorter pattern (and a different size).
+        if (const int loop = loopLengthInSteps(original, channel->id); loop > 0)
+            part.fillLoop(channel->id, loop, length);
+        part.minLengthSteps = length;
+        created.push_back(part.id);
+        patterns.insert(patterns.begin() + insertAt++, std::move(part));
+    }
+
+    // The Playlist: take out the original's clips, grouped by track.
+    auto& clips = playlist.clips;
+    std::map<int, std::vector<Clip>> byTrack;
+    for (auto it = clips.begin(); it != clips.end();)
+    {
+        if (!it->isAudio() && it->pattern == id)
+        {
+            byTrack[it->track].push_back(*it);
+            it = clips.erase(it);
+        }
+        else
+            ++it;
+    }
+    constexpr int maxTracks = 500;
+    const auto freeFor = [&clips](int track, const std::vector<Clip>& group)
+    {
+        for (const auto& clip : clips)
+            if (clip.track == track)
+                for (const auto& g : group)
+                    if (clip.startStep < g.endStep() && g.startStep < clip.endStep())
+                        return false;
+        return true;
+    };
+    for (const auto& [track, group] : byTrack)
+    {
+        // One track per part, free wherever this track had the pattern, from the original
+        // track downwards.
+        std::vector<int> targets;
+        for (std::size_t part = 0; part < created.size(); ++part)
+        {
+            int t = track;
+            while (t < maxTracks - 1 &&
+                   (std::find(targets.begin(), targets.end(), t) != targets.end() ||
+                    !freeFor(t, group)))
+                ++t;
+            targets.push_back(t);
+            playlist.numTracks = std::max(playlist.numTracks, t + 1);
+        }
+        for (const auto& clip : group)
+            for (std::size_t part = 0; part < created.size(); ++part)
+            {
+                Clip copy = clip;
+                copy.pattern = created[part];
+                copy.track = targets[part];
+                clips.push_back(copy);
+            }
+    }
+    return created;
 }
 
 void Project::removePattern(PatternId id)

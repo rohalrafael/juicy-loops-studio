@@ -125,6 +125,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
     playlist.loadSample = [this](const juce::File& file) { return sampleLoader.load(file); };
     playlist.onOpenAudioChannel = [this](model::ChannelId id) { showSampler(id, false); };
+    playlist.onSplitPattern = [this](model::PatternId id) { splitPattern(id); };
     playlist.onOpenPattern = [this](model::PatternId id)
     {
         // As in FL: select the pattern and bring the Channel Rack to the front with it.
@@ -750,6 +751,28 @@ void MainComponent::forwardShortcuts(juce::Component& window)
     window.addKeyListener(commandManager.getKeyMappings());
 }
 
+void MainComponent::splitPattern(model::PatternId id)
+{
+    const auto* pattern = document.project().findPattern(id);
+    if (pattern == nullptr)
+        return;
+    int channelsWithNotes = 0;
+    for (const auto& channel : document.project().channels)
+        if (!pattern->notesFor(channel.id).empty())
+            ++channelsWithNotes;
+    if (channelsWithNotes < 2)
+    {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions::makeOptionsOk(
+                juce::MessageBoxIconType::NoIcon, "Split by channel",
+                juce::String::fromUTF8(pattern->name.c_str()) +
+                    " has notes on fewer than two channels: nothing to split."),
+            nullptr);
+        return;
+    }
+    document.apply([id](model::Project& p) { p.splitByChannel(id); });
+}
+
 void MainComponent::toggleBrowser()
 {
     browser.setVisible(!browser.isVisible());
@@ -1027,8 +1050,8 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
         break;
     case 2:
         add({jls::commands::newPattern, jls::commands::clonePattern, jls::commands::renamePattern,
-             jls::commands::deletePattern, 0, jls::commands::nextPattern,
-             jls::commands::previousPattern});
+             jls::commands::deletePattern, jls::commands::splitByChannel, 0,
+             jls::commands::nextPattern, jls::commands::previousPattern});
         break;
     case 3:
     {
@@ -1290,6 +1313,9 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case jls::commands::clonePattern:
         clonePattern();
+        break;
+    case jls::commands::splitByChannel:
+        splitPattern(document.project().currentPattern);
         break;
     case jls::commands::renamePattern:
         renamePattern();

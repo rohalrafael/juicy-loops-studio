@@ -86,6 +86,7 @@ class MainComponent final : public juce::AudioAppComponent,
     void renamePattern();
     void deletePattern();
     void toggleChannelRack();
+    void splitPattern(model::PatternId id); // Split by channel (one undo step)
     void showPlaylist();
     void showPianoRoll();
     void toggleMixer();

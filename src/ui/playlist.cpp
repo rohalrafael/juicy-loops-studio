@@ -736,7 +736,26 @@ class PlaylistView::Picker final : public juce::Component
         }
     }
 
-    void mouseDown(const juce::MouseEvent& e) override { pressed = itemAt(e.y); }
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        pressed = itemAt(e.y);
+        if (e.mods.isPopupMenu() && pressed.startsWith("pattern:"))
+        {
+            // Right-click a pattern: what can be done with it here.
+            const auto id = static_cast<model::PatternId>(
+                pressed.fromFirstOccurrenceOf(":", false, false).getLargeIntValue());
+            pressed.clear();
+            juce::PopupMenu menu;
+            menu.addItem(1, "Split by channel");
+            juce::Component::SafePointer<Picker> self(this);
+            menu.showMenuAsync(juce::PopupMenu::Options().withMousePosition(),
+                               [self, id](int result)
+                               {
+                                   if (self != nullptr && result == 1 && self->view.onSplitPattern)
+                                       self->view.onSplitPattern(id);
+                               });
+        }
+    }
 
     // Double-click: a pattern opens in the Channel Rack, an audio clip in its Sampler.
     void mouseDoubleClick(const juce::MouseEvent& e) override

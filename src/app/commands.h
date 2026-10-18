@@ -55,6 +55,7 @@ enum ID : juce::CommandID
     deletePattern,
     nextPattern,
     previousPattern,
+    splitByChannel,
 
     // View
     showPlaylist = 0x1401,

@@ -142,6 +142,8 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
         }
         patterns.push_back(
             {{"id", p.id}, {"name", p.name}, {"gridLength", p.gridSteps}, {"notes", notes}});
+        if (p.minLengthSteps > 0)
+            patterns.back()["minPlayLength"] = p.minLengthSteps;
     }
 
     json clips = json::array();
@@ -351,6 +353,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
         pattern.gridSteps =
             read.clamped<int>(p, p.contains("gridLength") ? "gridLength" : "minLength",
                               Pattern::defaultLength, 4, Pattern::maxSteps);
+        pattern.minLengthSteps = read.clamped<int>(p, "minPlayLength", 0, 0, Pattern::maxSteps);
         for (const auto& entry : read.array(p, "notes"))
         {
             const auto channel = read.get<ChannelId>(entry, "channel", 0);

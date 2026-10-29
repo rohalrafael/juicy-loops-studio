@@ -42,6 +42,11 @@ bool loopedStepClickCopies(juce::PropertiesFile& file)
     return file.getValue(loopedStepClickKey, "discard") == "copy";
 }
 
+bool pianoRollDarkKeys(juce::PropertiesFile& file)
+{
+    return file.getValue(pianoRollKeysKey, "ivory") == "dark";
+}
+
 double uiScale(juce::PropertiesFile& file)
 {
     return std::clamp(file.getDoubleValue(uiScaleKey, 1.0), 0.75, 2.0);
@@ -118,6 +123,15 @@ class SettingsPanel final : public FormPanel
                           loopedStepClick.getSelectedItemIndex() == 0 ? "discard" : "copy");
         };
 
+        pianoRollKeys.addItemList({"Ivory", "Dark"}, 1);
+        pianoRollKeys.setSelectedItemIndex(settings::pianoRollDarkKeys(file) ? 1 : 0,
+                                           juce::dontSendNotification);
+        pianoRollKeys.onChange = [this]
+        {
+            file.setValue(settings::pianoRollKeysKey,
+                          pianoRollKeys.getSelectedItemIndex() == 0 ? "ivory" : "dark");
+        };
+
         const int field = tempoStep.preferredWidth(metrics::controlHeight);
         addSection("Tempo");
         addRow("Tempo step", {{&tempoStep, field}});
@@ -134,6 +148,11 @@ class SettingsPanel final : public FormPanel
             "a real note and that channel's repeats are dropped (right-click leaves them "
             "alone). Copies: the repeats are copied in first, so nothing else you hear "
             "changes.");
+        addSection("Piano Roll");
+        addRow("Keys", {{&pianoRollKeys, 160}});
+        addNote(
+            "Ivory keys like a piano's, or dark keys in the panel colours. Either way only C and "
+            "the scale's root are labelled; point at a key, or its row, to see its name.");
         addSection("Focus");
         addRow("Ctrl+Tab order", {{&focusOrder, 160}});
         addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
@@ -167,6 +186,7 @@ class SettingsPanel final : public FormPanel
     juce::ComboBox pluginWindows;
     juce::ComboBox interfaceSize;
     juce::ComboBox loopedStepClick;
+    juce::ComboBox pianoRollKeys;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

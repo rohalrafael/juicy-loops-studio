@@ -1,5 +1,6 @@
 #include "ui/piano_roll.h"
 
+#include "ui/controls.h"
 #include "ui/theme.h"
 
 #include <cmath>
@@ -10,6 +11,7 @@ namespace
 {
 
 constexpr float edgeGrabWidth = 6.0f;
+constexpr float minLabelledNoteWidth = 34.0f; // narrower notes go without their name
 constexpr int minimumBars = 4;
 constexpr int spareBars = 2;
 
@@ -37,6 +39,21 @@ bool isBlackKey(int pitch)
     }
 }
 
+// Grid colours derived from the theme: the lane colour moved towards the text colour, so lines
+// keep their weight on any background.
+juce::Colour towardsText(const theme::Theme& t, float amount)
+{
+    return colour(t.colours.lane).interpolatedWith(colour(t.colours.text), amount);
+}
+
+// A note's fill: the step colour, duller and darker for soft notes.
+juce::Colour noteFill(const theme::Theme& t, float velocity)
+{
+    return colour(t.colours.stepOn)
+        .withMultipliedSaturation(0.45f + 0.55f * velocity)
+        .withMultipliedBrightness(0.7f + 0.3f * velocity);
+}
+
 } // namespace
 
 juce::String noteName(int pitch)
@@ -57,48 +74,75 @@ class PianoRollView::Keyboard final : public juce::Component
     void mouseDrag(const juce::MouseEvent& e) override { play(e); }
     void mouseUp(const juce::MouseEvent&) override { view.stopAudition(); }
 
+    // The key under the mouse shows its name (setHoverPitch).
+    void mouseMove(const juce::MouseEvent& e) override
+    {
+        view.setHoverPitch(view.pitchAtY(e.position.y + view.viewport.getViewPositionY()));
+    }
+    void mouseExit(const juce::MouseEvent&) override { view.setHoverPitch(-1); }
+
+    // Ivory keys by default, or dark keys in the panel colours (Settings > Piano roll keys);
+    // both are derived from the theme. Only C and the scale's root are labelled, plus the key
+    // under the mouse (here or in its row of the grid).
     void paint(juce::Graphics& g) override
     {
-        const auto& t = currentTheme();
+        const auto& c = currentTheme().colours;
+        const auto& project = view.doc.project();
+        const bool dark = view.darkKeys && view.darkKeys();
         const int offset = view.viewport.getViewPositionY();
-        g.fillAll(colour(t.colours.panel));
+        const auto white =
+            dark ? colour(c.panelRaised).brighter(0.12f) : colour(c.text).darker(0.1f);
+        const auto black = colour(c.background);
+        const auto seam = dark ? colour(c.outline) : juce::Colours::black.withAlpha(0.22f);
+        const auto label = dark ? colour(c.textDim) : colour(c.background).withAlpha(0.7f);
+        const auto rootLabel = dark ? colour(c.accent) : colour(c.accent).darker(0.6f);
+        const float w = static_cast<float>(getWidth());
+        g.fillAll(colour(c.panel));
         g.setFont(juce::FontOptions(metrics::textTiny));
         for (int pitch = 0; pitch < numPitches; ++pitch)
         {
             const float y = view.yForPitch(pitch) - offset;
             if (y > getHeight() || y < -rowHeight)
                 continue;
-            auto row = juce::Rectangle<float>(0.0f, y, static_cast<float>(getWidth()),
-                                              static_cast<float>(rowHeight));
-            const bool black = isBlackKey(pitch);
-            g.setColour(juce::Colour(0xffeeeeee));
+            const auto row = juce::Rectangle<float>(0.0f, y, w, static_cast<float>(rowHeight));
+            const bool isBlack = isBlackKey(pitch);
+            const auto blackKey = row.withWidth(w * blackKeyLength).reduced(0.0f, 0.5f);
+            g.setColour(white);
             g.fillRect(row);
-            if (black)
+            if (isBlack)
             {
-                g.setColour(juce::Colour(0xff1a1a1a));
-                g.fillRect(row.withTrimmedRight(row.getWidth() * 0.35f));
+                juce::Path key;
+                key.addRectangle(blackKey);
+                fillRaised(g, key, black);
             }
             if (pitch == view.auditionPitch)
             {
-                g.setColour(colour(t.colours.accent));
-                g.fillRect(row.withTrimmedRight(black ? row.getWidth() * 0.35f : 0.0f));
+                g.setColour(colour(c.accent));
+                g.fillRect(isBlack ? blackKey : row);
             }
-            g.setColour(juce::Colours::black.withAlpha(0.25f));
-            g.fillRect(row.removeFromBottom(1.0f));
-            // Every key is labelled (in the white part, right of a black key); C stands out,
-            // and notes outside the highlighted scale are faded.
-            const auto& project = view.doc.project();
-            const bool inScale = model::isInScale(pitch, project.scaleRoot, project.scale);
-            g.setColour(juce::Colour(pitch % 12 == 0 ? 0xff222222 : 0xff666666)
-                            .withMultipliedAlpha(inScale ? 1.0f : 0.35f));
-            g.drawText(
-                noteName(pitch),
-                juce::Rectangle<float>(0.0f, y, getWidth() - 4.0f, static_cast<float>(rowHeight)),
-                juce::Justification::centredRight);
+            // White keys meet without a black key between them at E-F and B-C, as on a piano.
+            if (pitch % 12 == 4 || pitch % 12 == 11)
+            {
+                g.setColour(seam);
+                g.fillRect(row.withHeight(1.0f));
+            }
+            const bool root =
+                project.scale != model::Scale::none && (pitch - project.scaleRoot + 120) % 12 == 0;
+            if (pitch % 12 == 0 || root || pitch == view.hoverPitch)
+            {
+                // On a black key the name sits in the white part beside it.
+                g.setColour(root ? rootLabel : label);
+                g.drawText(noteName(pitch), row.withTrimmedRight(5.0f),
+                           juce::Justification::centredRight);
+            }
         }
+        g.setColour(colour(c.outline));
+        g.fillRect(getWidth() - 1, 0, 1, getHeight());
     }
 
   private:
+    static constexpr float blackKeyLength = 0.62f; // of the keyboard's width
+
     void play(const juce::MouseEvent& e)
     {
         const int pitch = view.pitchAtY(e.position.y + view.viewport.getViewPositionY());
@@ -191,6 +235,13 @@ class PianoRollView::VelocityLane final : public juce::Component
 
         const float offset = static_cast<float>(view.viewport.getViewPositionX());
         const float usable = static_cast<float>(getHeight() - 8);
+        // Guides at 25 / 50 / 75 / 100 %, then each note's stem in its colour (as in the grid).
+        for (int i = 1; i <= 4; ++i)
+        {
+            g.setColour(towardsText(t, i == 4 ? 0.10f : 0.05f));
+            g.fillRect(0.0f, getHeight() - 2.0f - usable * static_cast<float>(i) / 4.0f,
+                       static_cast<float>(getWidth()), 1.0f);
+        }
         for (const auto& note : view.notes())
         {
             const float x = view.xForTick(note.startTick) - offset;
@@ -198,9 +249,12 @@ class PianoRollView::VelocityLane final : public juce::Component
                 continue;
             const float h = usable * note.velocity;
             const float top = getHeight() - 2.0f - h;
-            g.setColour(colour(t.colours.accent));
+            const auto fill = noteFill(t, note.velocity);
+            g.setColour(fill.withAlpha(0.55f));
             g.fillRect(x, top, 2.0f, h);
-            g.fillEllipse(x - 3.0f, top - 3.0f, 8.0f, 8.0f);
+            juce::Path head;
+            head.addRoundedRectangle(x - 3.0f, top - 3.0f, 8.0f, 6.0f, 1.5f);
+            fillRaised(g, head, fill);
         }
     }
 
@@ -291,6 +345,12 @@ void NoteGrid::mouseMove(const juce::MouseEvent& e)
     setMouseCursor(onRightEdge(noteAt(e.position), e.position.x)
                        ? juce::MouseCursor::LeftRightResizeCursor
                        : juce::MouseCursor::NormalCursor);
+    view.setHoverPitch(view.pitchAtY(e.position.y)); // the keyboard names the row's key
+}
+
+void NoteGrid::mouseExit(const juce::MouseEvent&)
+{
+    view.setHoverPitch(-1);
 }
 
 juce::Rectangle<float> NoteGrid::noteBounds(const model::Note& note) const
@@ -514,19 +574,19 @@ void NoteGrid::paint(juce::Graphics& g)
         const float y = view.yForPitch(pitch);
         if (y > clip.getBottom() || y + PianoRollView::rowHeight < clip.getY())
             continue;
-        // Light rows: white keys without a scale, the scale's notes with one (the same shade
-        // either way, so switching a scale on doesn't change how the grid reads). Dark rows:
-        // black keys, or notes outside the scale. The scale's root is tinted with the accent.
-        const auto lane = colour(t.colours.lane);
-        const auto light = lane.brighter(0.18f);
-        const auto dark = lane.darker(0.3f);
+        // Quiet rows: white keys (or the scale's notes, with a scale on) only a touch lighter
+        // than black keys (or notes outside the scale), the scale's root faintly tinted, and a
+        // line under each C. Light rows are the same shade with or without a scale, so switching
+        // one on doesn't change how the grid reads.
+        const auto light = towardsText(t, 0.045f);
+        const auto dark = colour(t.colours.lane);
         juce::Colour rowColour = isBlackKey(pitch) ? dark : light;
         if (project.scale != model::Scale::none)
         {
             if (!model::isInScale(pitch, project.scaleRoot, project.scale))
                 rowColour = dark;
             else if ((pitch - project.scaleRoot) % 12 == 0)
-                rowColour = light.interpolatedWith(colour(t.colours.accent), 0.14f);
+                rowColour = light.interpolatedWith(colour(t.colours.accent), 0.06f);
             else
                 rowColour = light;
         }
@@ -535,7 +595,7 @@ void NoteGrid::paint(juce::Graphics& g)
                    static_cast<float>(PianoRollView::rowHeight));
         if (pitch % 12 == 0)
         {
-            g.setColour(colour(t.colours.grid));
+            g.setColour(towardsText(t, 0.16f));
             g.fillRect(static_cast<float>(clip.getX()), y + PianoRollView::rowHeight - 1.0f,
                        static_cast<float>(clip.getWidth()), 1.0f);
         }
@@ -546,19 +606,16 @@ void NoteGrid::paint(juce::Graphics& g)
     const bool showSteps = view.xForTick(model::ticksPerStep) >= 8.0f;
     const int first = view.tickAtX(static_cast<float>(clip.getX())) / model::ticksPerStep;
     const int last = view.tickAtX(static_cast<float>(clip.getRight())) / model::ticksPerStep + 1;
-    // Lines a little lighter than the theme's grid colour, so they show on the light rows too.
-    const auto lineColour = colour(t.colours.grid).brighter(0.35f);
+    // Lines by weight: bars, then beats, then steps, moved towards the text colour so they keep
+    // their weight on any theme.
     for (int step = first; step <= last; ++step)
     {
         const int tick = step * model::ticksPerStep;
-        float alpha = 0.35f;
-        if (tick % barTicks == 0)
-            alpha = 1.0f;
-        else if (tick % model::ticksPerBeat == 0)
-            alpha = 0.65f;
-        else if (!showSteps)
+        const bool bar = tick % barTicks == 0;
+        const bool beat = tick % model::ticksPerBeat == 0;
+        if (!bar && !beat && !showSteps)
             continue;
-        g.setColour(lineColour.withMultipliedAlpha(alpha));
+        g.setColour(towardsText(t, bar ? 0.24f : beat ? 0.11f : 0.055f));
         g.fillRect(view.xForTick(tick), static_cast<float>(clip.getY()), 1.0f,
                    static_cast<float>(clip.getHeight()));
     }
@@ -572,8 +629,8 @@ void NoteGrid::paint(juce::Graphics& g)
                    static_cast<float>(clip.getHeight()));
     }
 
-    // Notes: brighter for higher velocity.
-    const float radius = metrics::cornerRadius;
+    // Notes: lit from above like the other controls, duller and darker when soft; a dark label
+    // only where it fits.
     g.setFont(juce::FontOptions(metrics::textTiny));
     const auto& notes = view.notes();
     for (std::size_t i = 0; i < notes.size(); ++i)
@@ -583,15 +640,15 @@ void NoteGrid::paint(juce::Graphics& g)
         if (!clip.toFloat().intersects(r))
             continue;
         const bool selected = view.isSelected(static_cast<int>(i));
-        g.setColour(colour(t.colours.stepOn).withMultipliedBrightness(0.6f + 0.4f * note.velocity));
-        g.fillRoundedRectangle(r, radius);
-        g.setColour(selected ? colour(t.colours.accentAlt)
-                             : colour(t.colours.outline).withAlpha(0.8f));
-        g.drawRoundedRectangle(selected ? r.reduced(0.5f) : r, radius, selected ? 2.0f : 1.0f);
-        if (r.getWidth() > 28.0f)
+        juce::Path shape;
+        shape.addRoundedRectangle(r, metrics::stepRadius);
+        fillRaised(g, shape, noteFill(t, note.velocity).brighter(selected ? 0.25f : 0.0f));
+        g.setColour(selected ? colour(t.colours.text) : juce::Colours::black.withAlpha(0.55f));
+        g.strokePath(shape, juce::PathStrokeType(selected ? 1.5f : 1.0f));
+        if (r.getWidth() > minLabelledNoteWidth)
         {
-            g.setColour(colour(t.colours.clipText));
-            g.drawText(noteName(note.pitch), r.reduced(3.0f, 0.0f),
+            g.setColour(juce::Colours::black.withAlpha(0.72f));
+            g.drawText(noteName(note.pitch), r.reduced(4.0f, 0.0f),
                        juce::Justification::centredLeft, false);
         }
     }
@@ -780,6 +837,17 @@ void PianoRollView::audition(int pitch, float velocity)
     if (onAuditionStart)
         onAuditionStart(pitch, velocity);
     keyboard->repaint();
+}
+
+void PianoRollView::setHoverPitch(int pitch)
+{
+    if (pitch < 0 || pitch >= numPitches)
+        pitch = -1;
+    if (pitch != hoverPitch)
+    {
+        hoverPitch = pitch;
+        keyboard->repaint();
+    }
 }
 
 void PianoRollView::stopAudition()

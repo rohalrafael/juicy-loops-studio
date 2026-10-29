@@ -30,6 +30,8 @@ inline constexpr const char* pluginWindowsKey = "pluginWindows";
 // step is real, that channel's repeats are dropped) or "copy" (the repeats are copied in first,
 // so nothing else changes).
 inline constexpr const char* loopedStepClickKey = "loopedStepClick";
+// The Piano Roll's keyboard: "ivory" (the default) or "dark" (in the panel colours).
+inline constexpr const char* pianoRollKeysKey = "pianoRollKeys";
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
@@ -37,6 +39,7 @@ double previewSeconds(juce::PropertiesFile& file);
 bool focusOrderRecent(juce::PropertiesFile& file);
 bool pluginsInsideApp(juce::PropertiesFile& file);
 bool loopedStepClickCopies(juce::PropertiesFile& file);
+bool pianoRollDarkKeys(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

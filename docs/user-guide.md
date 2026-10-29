@@ -340,9 +340,13 @@ With a selection, a click elsewhere only deselects (it doesn't add a note), as i
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
 while you drag it up or down you hear the new pitch.
 
-Every key is labelled; note names follow FL: C5 is middle C (MIDI 60) and plays a sample at its
-original pitch. With a scale chosen, its notes' rows are lighter, the others darker (their key
-labels faded), and the root's rows are tinted. The scale is saved with the project. For
+The keyboard labels each C and, with a scale on, the scale's root (in the accent colour); point
+at any key, or at its row in the grid, to see its name. Note names follow FL: C5 is middle C
+(MIDI 60) and plays a sample at its original pitch. The keys are ivory by default; Settings ›
+Keys switches to dark keys. The grid is quiet on purpose: rows differ only slightly (with a
+scale chosen, its notes' rows are a touch lighter and the root's faintly tinted), and the lines
+get stronger from steps to beats to bars. Notes are brighter the louder they are, and show their
+name when they're wide enough. The scale is saved with the project. For
 samples, note length only matters with the Sampler's volume envelope on; otherwise they play to
 their end, like FL's default sampler.
 
@@ -375,6 +379,7 @@ their end, like FL's default sampler.
 | Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
 | Plugin windows | Inside the app (panels, the default) or separate windows |
 | Clicking a looped step | Discards the loop (as in FL, the default) or copies the loop in first (see *Channel Rack*) |
+| Keys (Piano Roll) | Ivory (the default) or dark keys in the panel colours |
 | Interface size | Scales the whole interface, text included: 100, 110, 125 or 150 % |
 
 Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio

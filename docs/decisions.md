@@ -446,3 +446,12 @@ not). Older entries describe the project as it was then; later entries may super
   the others (no image files, nothing from FL). Labels only when the oscilloscope still fits
   beside them (the maintainer wanted the buttons next to it), so a 1600 px window shows icons and
   a wider one icons and labels.
+
+- 2026-10-29: **Piano Roll look** (maintainer's pick from four prototype designs, "A"): the pure
+  white keys with every key labelled and the high-contrast striped grid felt rough. Now: ivory
+  keys (from the theme's text colour; the black keys in its background colour), labels only on C
+  and the scale's root, plus the key under the mouse, on the keyboard or its row in the grid
+  (maintainer's idea); dark keys as a setting (Settings › Keys). A quiet grid: rows a touch apart,
+  the root faintly tinted, line weights by bar / beat / step, all moved towards the theme's text
+  colour so they work on any theme. Notes lit from above (`fillRaised`), duller and darker when
+  soft, a dark label only from 34 px wide; the velocity lane with guides and the notes' colours.

@@ -41,6 +41,7 @@ class NoteGrid final : public juce::Component
 
     void paint(juce::Graphics& g) override;
     void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -145,6 +146,14 @@ class PianoRollView final : public juce::Component, private juce::Timer
     void audition(int pitch, float velocity);
     void stopAudition();
     int auditionPitch = -1; // sounding now, or -1
+
+    // The key under the mouse, on the keyboard or in its row of the grid: the keyboard shows its
+    // name (only C and the scale's root are labelled otherwise). -1 for none.
+    void setHoverPitch(int pitch);
+    int hoverPitch = -1;
+    // Set by the owner (Settings > Piano roll keys): dark keys in the panel colours instead of
+    // ivory ones.
+    std::function<bool()> darkKeys;
     std::function<void(int pitch, float velocity)> onAuditionStart;
     std::function<void(int pitch)> onAuditionStop;
 

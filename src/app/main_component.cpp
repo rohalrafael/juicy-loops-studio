@@ -148,6 +148,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         setFocusArea(Area::channelRack);
         menuItemsChanged();
     };
+    pianoRoll.darkKeys = [this] { return ui::settings::pianoRollDarkKeys(themes.settingsFile()); };
     channelRack.loopedClickCopies = [this]
     { return ui::settings::loopedStepClickCopies(themes.settingsFile()); };
     channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)

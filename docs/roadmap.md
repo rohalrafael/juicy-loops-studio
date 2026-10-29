@@ -19,6 +19,12 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- A click in empty space deselects and adds a note (2026-10-29, maintainer's request): with notes
+  selected in the Piano Roll, a left-click elsewhere should both clear the selection and place a
+  note, instead of only deselecting. This reverses the 2026-10-17 choice ("a click outside a
+  selection only deselects, as in FL"; user guide, *Piano Roll*). To check when building it:
+  whether the Playlist, which behaves the same way with clips, should follow.
+
 - No note preview while playing (2026-10-29, maintainer's request): in the Piano Roll, clicking,
   adding or dragging notes plays them (`PianoRollView::audition`). While the pattern or song is
   playing that should stay silent; while stopped or paused it stays as it is. A preview still

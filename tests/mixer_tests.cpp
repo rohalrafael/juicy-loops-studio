@@ -313,6 +313,26 @@ TEST_CASE("Channels play through their insert and the Master")
     }
 }
 
+TEST_CASE("Soloing a mixer track turns the other inserts off, and again all on")
+{
+    model::Mixer mixer;
+    mixer.tracks[4].muted = true;
+    mixer.tracks[5].solo = true; // the older solo flag: soloing clears it
+    mixer.soloTrack(2);
+    for (int i = 1; i <= model::Mixer::numInserts; ++i)
+    {
+        CHECK(mixer.tracks[static_cast<std::size_t>(i)].muted == (i != 2));
+        CHECK_FALSE(mixer.tracks[static_cast<std::size_t>(i)].solo);
+    }
+    CHECK_FALSE(mixer.tracks[0].muted); // the Master stays on
+    mixer.soloTrack(2);                 // already solo: all on again
+    for (const auto& t : mixer.tracks)
+        CHECK_FALSE(t.muted);
+    mixer.soloTrack(0); // the Master: nothing happens
+    for (const auto& t : mixer.tracks)
+        CHECK_FALSE(t.muted);
+}
+
 TEST_CASE("A track's width narrows to mono or widens the stereo image")
 {
     // A channel panned hard left: all left, nothing right, through insert 1.

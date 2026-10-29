@@ -1,7 +1,7 @@
 #pragma once
 
-// The docked Mixer panel (strips with meters, faders, pan, mute/solo and effect slots for the
-// selected track) and the floating EffectPanel that edits one effect's parameters.
+// The docked Mixer panel (strips with meters, faders, pan, width, on lights and effect slots for
+// the selected track) and the floating EffectPanel that edits one effect's parameters.
 
 #include "model/document.h"
 #include "ui/plugin_menu.h"
@@ -22,7 +22,8 @@ namespace jls::ui
 class MixerView;
 
 // One mixer track, drawn like a console strip: number and name, stereo peak meter with a dB
-// scale, fader with its level, pan, mute and solo. Click it to select it.
+// scale, fader with its level, pan and width, and its on light (mute, solo). Click it to select
+// it.
 class MixerStrip final : public juce::Component
 {
   public:
@@ -46,8 +47,7 @@ class MixerStrip final : public juce::Component
     juce::Slider fader;
     juce::Slider pan;
     juce::Slider stereoWidth;
-    juce::TextButton mute{"M"};
-    LedToggle solo;               // lit while soloed
+    LedButton onLight;            // lit while the track plays: click mutes, right-click solos
     std::array<float, 2> shown{}; // meter levels with fall-off, in dB
     bool selected = false;
     juce::Rectangle<int> readout; // the fader's level, under it

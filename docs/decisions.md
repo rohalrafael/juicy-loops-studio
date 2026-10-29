@@ -555,7 +555,11 @@ not). Older entries describe the project as it was then; later entries may super
 
 - 2026-10-30: **Mixer width, solo light, Esc closes windows** (maintainer's requests). Each
   mixer track has a stereo width knob, from mono through unchanged (100 %, the middle) to twice
-  as wide, done mid/side after the track's effects and before fader and pan. Solo is a light
-  like the app's other on/off switches. Esc closes the Sampler (after opening or clicking it) or
+  as wide, done mid/side after the track's effects and before fader and pan. Mute and solo are
+  one green light per strip, as in FL and like the Channel Rack's: lit while the track plays,
+  click to mute, right-click or Ctrl+click to solo, which turns the other inserts off
+  (`Mixer::soloTrack`) instead of setting the older solo flags (still read from files and
+  honoured; soloing clears them). Unlit lights are now dark recessed lamps, visible on a
+  highlighted strip or row too. Esc closes the Sampler (after opening or clicking it) or
   the focused plugin panel, as in FL, and otherwise deselects as before; the action is also the
   "Close window" command (no default key besides Esc).

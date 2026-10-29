@@ -369,7 +369,9 @@ their end, like FL's default sampler.
 
 - **Strips:** Master plus 16 inserts, drawn like a console: the track's number and name, a
   stereo meter with a dB scale, the fader (double-click = 0 dB) with its level below it, **pan**
-  and **width** knobs, **M**ute, and the solo light (lit while soloed). Click a strip to select it.
+  and **width** knobs, and the track's green **on light**, as in FL: click it to turn the track
+  off (mute) or on; right-click or Ctrl+click it to solo the track (every other insert off;
+  again: all on). Click a strip to select it.
 - **Width** makes a track's stereo image narrower or wider: all the way left is mono, the middle
   (100 %, double-click) leaves it as it comes in, all the way right (200 %) is twice as wide.
 - **Effect slots** (right side, for the selected track):

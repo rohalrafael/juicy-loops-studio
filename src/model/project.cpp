@@ -135,6 +135,21 @@ bool Mixer::anySolo() const
                        [](const MixerTrack& t) { return t.solo; });
 }
 
+void Mixer::soloTrack(int track)
+{
+    if (track <= 0 || track >= static_cast<int>(tracks.size()))
+        return;
+    bool alreadySolo = true;
+    for (int i = 1; i < static_cast<int>(tracks.size()); ++i)
+        alreadySolo = alreadySolo && (i == track) != tracks[static_cast<std::size_t>(i)].muted;
+    for (int i = 1; i < static_cast<int>(tracks.size()); ++i)
+    {
+        auto& t = tracks[static_cast<std::size_t>(i)];
+        t.muted = alreadySolo ? false : i != track;
+        t.solo = false;
+    }
+}
+
 Project::Project()
 {
     currentPattern = addPattern();

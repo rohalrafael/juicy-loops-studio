@@ -105,21 +105,24 @@ MixerStrip::MixerStrip(MixerView& owner, int track) : mixer(owner), index(track)
         mixer.editTrack(index, [value](model::MixerTrack& t) { t.width = value; }, gesture);
     };
 
-    mute.setClickingTogglesState(false);
-    mute.setTooltip("Mute");
-    mute.onClick = [this]
-    { mixer.editTrack(index, [](model::MixerTrack& t) { t.muted = !t.muted; }, 0); };
-    solo.setTooltip("Solo");
-    solo.onClick = [this]
-    { mixer.editTrack(index, [](model::MixerTrack& t) { t.solo = !t.solo; }, 0); };
+    // The track's on light, as in FL: click to turn it off (mute); right-click or Ctrl+click to
+    // solo it (every other insert off; again: all on).
+    onLight.setTooltip(index == 0 ? "On: click to mute the Master"
+                                  : "On: click to mute. Right-click or Ctrl+click: solo (again: "
+                                    "all on)");
+    onLight.onClick = [this](bool solo)
+    {
+        if (solo && index != 0)
+            mixer.document().apply([this](model::Project& p) { p.mixer.soloTrack(index); });
+        else
+            mixer.editTrack(index, [](model::MixerTrack& t) { t.muted = !t.muted; }, 0);
+    };
 
-    for (auto* c :
-         std::initializer_list<juce::Component*>{&fader, &pan, &stereoWidth, &mute, &solo})
+    for (auto* c : std::initializer_list<juce::Component*>{&fader, &pan, &stereoWidth, &onLight})
     {
         noFocus(*c);
         addAndMakeVisible(c);
     }
-    solo.setVisible(index != 0); // soloing the Master means nothing
     shown.fill(meterFloorDb);
 }
 
@@ -128,8 +131,7 @@ void MixerStrip::update(const model::MixerTrack& track, bool isSelected)
     fader.setValue(track.volumeDb, juce::dontSendNotification);
     pan.setValue(track.pan, juce::dontSendNotification);
     stereoWidth.setValue(track.width, juce::dontSendNotification);
-    mute.setToggleState(track.muted, juce::dontSendNotification);
-    solo.setToggleState(track.solo, juce::dontSendNotification);
+    onLight.setOn(!track.muted);
     name = juce::String::fromUTF8(track.name.c_str());
     if (isSelected != selected)
         selected = isSelected;
@@ -234,15 +236,7 @@ void MixerStrip::resized()
     auto area = getLocalBounds().reduced(4, 0);
     area.removeFromTop(nameHeight);
     area.removeFromBottom(6);
-    auto buttons = area.removeFromBottom(22);
-    // Mute, and solo as a light next to it (none on the Master).
-    if (index == 0)
-        mute.setBounds(buttons.reduced(8, 1));
-    else
-    {
-        solo.setBounds(buttons.removeFromRight(metrics::ledWidth + 6));
-        mute.setBounds(buttons.reduced(1));
-    }
+    onLight.setBounds(area.removeFromBottom(20).withSizeKeepingCentre(metrics::ledWidth + 12, 20));
     auto knobs = area.removeFromBottom(30);
     pan.setBounds(knobs.removeFromLeft(knobs.getWidth() / 2).withSizeKeepingCentre(26, 26));
     stereoWidth.setBounds(knobs.withSizeKeepingCentre(26, 26));

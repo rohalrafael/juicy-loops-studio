@@ -36,28 +36,6 @@ constexpr int rowFixedWidth = nameX + metrics::nameWidth + loopWidth;
 
 } // namespace
 
-// ---------------------------------------------------------------------------------- LedButton
-
-void LedButton::setOn(bool shouldBeOn)
-{
-    if (on != shouldBeOn)
-    {
-        on = shouldBeOn;
-        repaint();
-    }
-}
-
-void LedButton::paint(juce::Graphics& g)
-{
-    paintLed(g, getLocalBounds().toFloat(), on);
-}
-
-void LedButton::mouseDown(const juce::MouseEvent& e)
-{
-    if (onClick)
-        onClick(e.mods.isCommandDown() || e.mods.isPopupMenu());
-}
-
 // ---------------------------------------------------------------------------------- InsertBox
 
 void InsertBox::setValue(int track)

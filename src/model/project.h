@@ -147,6 +147,10 @@ struct Mixer
 
     Mixer();
     bool anySolo() const;
+    // Solo, as right-click on a track's light in FL: turns every other insert off (mutes it) and
+    // this one on; if it's already the only one on, turns them all on. Also clears the older
+    // solo flags, which this replaces. The Master isn't an insert: soloing it does nothing.
+    void soloTrack(int track);
 };
 
 struct Note

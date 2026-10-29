@@ -89,6 +89,22 @@ class IconButton : public juce::Button
 // led colour when on, ledOff when off, centred in `area`. `hovered` brightens its rim.
 void paintLed(juce::Graphics& g, juce::Rectangle<float> area, bool on, bool hovered = false);
 
+// A track's on light, as in FL (a channel in the Channel Rack, a mixer track): lit while it plays.
+// A click calls onClick(false) (mute or unmute); Ctrl+click or right-click calls onClick(true)
+// (solo). The owner sets the state with setOn().
+class LedButton final : public juce::Component, public juce::SettableTooltipClient
+{
+  public:
+    void setOn(bool shouldBeOn);
+    std::function<void(bool solo)> onClick;
+
+    void paint(juce::Graphics& g) override;
+    void mouseDown(const juce::MouseEvent&) override;
+
+  private:
+    bool on = true;
+};
+
 // An on/off switch drawn as a round light, like a channel's mute light: lit while on; a click
 // toggles it. Used instead of buttons labelled "On" (the Sampler, the effect panel's bypass).
 class LedToggle final : public juce::Button

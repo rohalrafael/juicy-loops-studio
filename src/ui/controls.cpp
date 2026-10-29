@@ -287,10 +287,32 @@ void paintLed(juce::Graphics& g, juce::Rectangle<float> area, bool on, bool hove
     const auto& c = currentTheme().colours;
     constexpr float size = 9.0f;
     const auto led = area.withSizeKeepingCentre(size, size);
-    g.setColour(colour(on ? c.led : c.ledOff));
+    // Unlit, a dark recessed lamp with a rim, so it shows on any background (a highlighted row
+    // or strip can be as light as the rim).
+    g.setColour(colour(on ? c.led : c.display));
     g.fillEllipse(led);
-    g.setColour(hovered ? colour(c.textDim) : colour(c.outline));
+    g.setColour(hovered ? colour(c.textDim) : colour(on ? c.outline : c.ledOff));
     g.drawEllipse(led, 1.0f);
+}
+
+void LedButton::setOn(bool shouldBeOn)
+{
+    if (on != shouldBeOn)
+    {
+        on = shouldBeOn;
+        repaint();
+    }
+}
+
+void LedButton::paint(juce::Graphics& g)
+{
+    paintLed(g, getLocalBounds().toFloat(), on);
+}
+
+void LedButton::mouseDown(const juce::MouseEvent& e)
+{
+    if (onClick)
+        onClick(e.mods.isCommandDown() || e.mods.isPopupMenu());
 }
 
 LedToggle::LedToggle() : juce::Button({})

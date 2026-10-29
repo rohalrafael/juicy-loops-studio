@@ -96,6 +96,17 @@ void FloatingPanel::keepReachable()
     keepTitleBarReachable(*this, movableArea);
 }
 
+void PanelDragger::start(const juce::Component& panel)
+{
+    panelStart = panel.getPosition();
+    mouseStart = juce::Desktop::getMousePosition();
+}
+
+void PanelDragger::drag(juce::Component& panel) const
+{
+    panel.setTopLeftPosition(panelStart + juce::Desktop::getMousePosition() - mouseStart);
+}
+
 void keepTitleBarReachable(juce::Component& panel, juce::Rectangle<int> area)
 {
     // JUCE's constrainer only keeps a few pixels on screen and lets the title bar leave the top
@@ -178,14 +189,14 @@ void FloatingPanel::mouseDown(const juce::MouseEvent& e)
     // Clicks in the content arrive here too (mouse listener); only the title bar drags.
     moving = e.eventComponent == this && e.y < metrics::panelHeaderHeight;
     if (moving)
-        dragger.startDraggingComponent(this, e);
+        dragger.start(*this);
 }
 
-void FloatingPanel::mouseDrag(const juce::MouseEvent& e)
+void FloatingPanel::mouseDrag(const juce::MouseEvent&)
 {
     if (!moving)
         return;
-    dragger.dragComponent(this, e, nullptr);
+    dragger.drag(*this);
     keepReachable();
 }
 

@@ -320,12 +320,14 @@ void MainComponent::openEffectEditor(model::EffectId id)
 
     if (!slot->isPlugin())
     {
-        effectPanel.show(id);
+        // Placed before it shows: a native window shown first would flash where it was.
+        effectPanel.load(id);
         if (!effectPanelPlaced)
         {
             effectPanel.setCentrePosition(areas.toAreaSpace(getLocalBounds()).getCentre());
             effectPanelPlaced = true;
         }
+        effectPanel.setVisible(true);
         effectPanel.toFront(false);
         return;
     }
@@ -862,8 +864,7 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     sampler = content.get();
     samplerPanel = std::make_unique<ui::FloatingPanel>(std::move(content));
     samplerPanel->onClose = [this] { juce::MessageManager::callAsync([this] { closeSampler(); }); };
-    areas.add(*samplerPanel);
-    samplerPanel->setVisible(true);
+    // Placed before it shows: a native window shown first would flash at the window's corner.
     samplerPanel->setMovableArea(floatingArea);
     if (samplerPosition)
         samplerPanel->setTopLeftPosition(*samplerPosition);
@@ -871,6 +872,8 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
         samplerPanel->placeInitially(0);
     samplerPanel->setMovableArea(floatingArea); // keeps a remembered position reachable
     sampler->refresh();                         // its title names the channel
+    areas.add(*samplerPanel);
+    samplerPanel->setVisible(true);
     samplerPanel->toFront(false);
 }
 
@@ -1096,6 +1099,7 @@ void MainComponent::lookAndFeelChanged()
     const auto& c = ui::currentTheme().colours;
     positionLabel.setColour(juce::Label::textColourId, ui::colour(c.displayText));
     timeLabel.setColour(juce::Label::textColourId, ui::colour(c.displayDim));
+    areas.setBackground(ui::colour(c.background)); // what the seams show
 
     // A shadow only when the rack is an ordinary child component: a native child window can't be
     // see-through over its siblings (no compositing between child windows).
@@ -1183,6 +1187,7 @@ void MainComponent::resized()
     // Floating areas move in the areas' own coordinates (the main window's, when native).
     floatingArea = areas.toAreaSpace(panelsArea);
     channelRack.setMovableArea(floatingArea);
+    effectPanel.setMovableArea(floatingArea);
     if (samplerPanel != nullptr)
         samplerPanel->setMovableArea(floatingArea);
     for (auto& [id, view] : pluginWindows)

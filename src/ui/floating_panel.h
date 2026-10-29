@@ -16,6 +16,22 @@
 namespace jls::ui
 {
 
+// Drags a panel (a FloatingPanel, the Channel Rack, the effect panel) by its title bar: moves it
+// as far as the mouse has moved since start(). JUCE's ComponentDragger puts a component that has
+// its own window at the mouse's *screen* position, but on Linux the panels are native child
+// windows placed relative to the main window (app/area_stack), so they jumped away by the main
+// window's offset. The mouse is read from the system, not the events: those can be stale while
+// the window under them moves.
+class PanelDragger
+{
+  public:
+    void start(const juce::Component& panel);
+    void drag(juce::Component& panel) const;
+
+  private:
+    juce::Point<int> panelStart, mouseStart;
+};
+
 class FloatingPanel : public juce::Component, private juce::ComponentListener
 {
   public:
@@ -55,7 +71,7 @@ class FloatingPanel : public juce::Component, private juce::ComponentListener
     juce::String title, subtitle;
     IconButton closeButton{Icon::close};
     IconButton keyboardButton{Icon::keys}; // shown with setKeyboardReturn()
-    juce::ComponentDragger dragger;
+    PanelDragger dragger;
     juce::Rectangle<int> movableArea;
     bool moving = false;
 };

@@ -491,15 +491,24 @@ EffectPanel::EffectPanel(model::Document& document) : doc(document)
         noFocus(*c);
         addAndMakeVisible(c);
     }
-    // The title bar never leaves the top, or the panel couldn't be grabbed again.
-    dragBounds.setMinimumOnscreenAmounts(0x10000, 80, 40, 80);
 }
 
-void EffectPanel::show(model::EffectId id)
+void EffectPanel::setMovableArea(juce::Rectangle<int> area)
+{
+    movableArea = area;
+    keepTitleBarReachable(*this, movableArea);
+}
+
+void EffectPanel::load(model::EffectId id)
 {
     effectId = id;
     builtFor.clear();
     refresh();
+}
+
+void EffectPanel::show(model::EffectId id)
+{
+    load(id);
     setVisible(true);
     toFront(false);
 }
@@ -645,13 +654,16 @@ void EffectPanel::mouseDown(const juce::MouseEvent& e)
     // Remembered: e.mouseDownPosition is relative to where the panel is now (see ChannelRack).
     movingPanel = e.y < panelHeaderHeight;
     if (movingPanel)
-        dragger.startDraggingComponent(this, e);
+        dragger.start(*this);
 }
 
-void EffectPanel::mouseDrag(const juce::MouseEvent& e)
+void EffectPanel::mouseDrag(const juce::MouseEvent&)
 {
     if (movingPanel)
-        dragger.dragComponent(this, e, &dragBounds);
+    {
+        dragger.drag(*this);
+        keepTitleBarReachable(*this, movableArea); // so it can always be grabbed again
+    }
 }
 
 } // namespace jls::ui

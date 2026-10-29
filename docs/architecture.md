@@ -418,6 +418,12 @@ which gives:
   Keys still go to whichever component has JUCE's focus, in any of our windows; the shortcut
   safety net spares text fields inside areas (`holds`). Child windows can't be
   semi-transparent, so floating panels are opaque and the Channel Rack has no shadow there.
+  Rules that keep them from glitching (seen on GNOME's XWayland, not on Xvfb): place a panel
+  before it shows (`EffectPanel::load`, the Sampler), or it flashes where it was; panels drag
+  with `ui::PanelDragger`, since JUCE's `ComponentDragger` puts a window at the mouse's screen
+  position while ours are placed relative to the main window; when an area hides or closes,
+  `repaintBelow` repaints what it covered, and the main window's X background is the seams'
+  colour (`setBackground`), so nothing stale shows meanwhile.
   Elsewhere (and with `JLS_NO_NATIVE_AREAS=1`) the areas are ordinary children and plugin
   panels stay in front.
 - separate windows: the Settings / Keyboard shortcuts / Theme / Plugins / Audio settings

@@ -8,6 +8,7 @@
 #include "io/sample_loader.h"
 #include "model/document.h"
 #include "ui/controls.h"
+#include "ui/floating_panel.h"
 #include "ui/plugin_menu.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -315,7 +316,7 @@ class ChannelRack final : public juce::Component,
                                                   juce::TextButton{"64"}};
     LengthHandle lengthHandle;
     IconButton closeButton{Icon::close};
-    juce::ComponentDragger dragger;
+    PanelDragger dragger;
     juce::Rectangle<int> movableArea;
     bool movingRack = false; // the current mouse press started on the title bar
     std::unique_ptr<juce::FileChooser> chooser;

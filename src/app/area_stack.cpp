@@ -63,6 +63,8 @@ void AreaStack::remove(juce::Component& area)
     if (native)
     {
         area.removeMouseListener(&host);
+        if (area.isShowing())
+            repaintBelow(area);
         area.removeFromDesktop();
     }
     else
@@ -160,6 +162,13 @@ bool AreaStack::holds(const juce::Component* component) const
                        { return area == component || area->isParentOf(component); });
 }
 
+void AreaStack::setBackground(juce::Colour colour)
+{
+    background = colour;
+    if (native && attachedTo != nullptr)
+        setNativeWindowBackground(attachedTo, background.getARGB() & 0xffffffu);
+}
+
 void AreaStack::update()
 {
     if (!native)
@@ -171,6 +180,7 @@ void AreaStack::update()
     attachedTo = handle;
     if (handle == nullptr)
         return;
+    setBackground(background);
     for (auto* area : order)
         attach(*area);
     restack();
@@ -180,7 +190,9 @@ void AreaStack::attach(juce::Component& area)
 {
     // Keys stay with the main window (shortcuts, typed notes): JUCE hands them to whichever
     // component has the keyboard focus, in any of our windows.
+    // Hidden until it's in place, or it would show for a moment where it was.
     const bool visible = area.isVisible();
+    area.setVisible(false);
     area.addToDesktop(juce::ComponentPeer::windowIgnoresKeyPresses, attachedTo);
     if (const auto it = wanted.find(&area); it != wanted.end())
         area.setBounds(toAreaSpace(it->second));
@@ -208,8 +220,27 @@ void AreaStack::componentBroughtToFront(juce::Component& component)
     }
 }
 
+void AreaStack::componentVisibilityChanged(juce::Component& component)
+{
+    if (native && !component.isVisible() && component.isOnDesktop())
+        repaintBelow(component);
+}
+
+void AreaStack::repaintBelow(const juce::Component& gone)
+{
+    const auto covered = gone.getScreenBounds();
+    for (auto* area : order)
+        if (area != &gone && area->isShowing())
+            if (const auto local = area->getLocalArea(nullptr, covered);
+                local.intersects(area->getLocalBounds()))
+                area->repaint(local);
+    host.repaint(host.getLocalArea(nullptr, covered));
+}
+
 void AreaStack::componentBeingDeleted(juce::Component& component)
 {
+    if (native && component.isShowing())
+        repaintBelow(component);
     order.erase(std::remove(order.begin(), order.end(), &component), order.end());
     wanted.erase(&component);
 }

@@ -1034,14 +1034,14 @@ void ChannelRack::mouseDown(const juce::MouseEvent& e)
     // moving the rack up it no longer lies in the title bar (dragging up used to get stuck).
     movingRack = e.y < headerHeight;
     if (movingRack)
-        dragger.startDraggingComponent(this, e);
+        dragger.start(*this);
 }
 
-void ChannelRack::mouseDrag(const juce::MouseEvent& e)
+void ChannelRack::mouseDrag(const juce::MouseEvent&)
 {
     if (movingRack)
     {
-        dragger.dragComponent(this, e, nullptr);
+        dragger.drag(*this);
         keepTitleBarReachable(*this, movableArea);
     }
 }

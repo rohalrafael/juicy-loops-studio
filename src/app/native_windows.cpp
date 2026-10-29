@@ -3,7 +3,6 @@
 #if defined(__linux__) || defined(__FreeBSD__)
 #include <X11/Xlib.h>
 
-#include <cstdint>
 #include <memory>
 #endif
 
@@ -54,6 +53,18 @@ void restackNativeWindows([[maybe_unused]] const std::vector<void*>& frontToBack
         if (handle != nullptr)
             windows.push_back(toWindow(handle));
     XRestackWindows(display(), windows.data(), static_cast<int>(windows.size()));
+    XFlush(display());
+#endif
+}
+
+void setNativeWindowBackground([[maybe_unused]] void* nativeWindow,
+                               [[maybe_unused]] std::uint32_t rgb)
+{
+#if defined(__linux__) || defined(__FreeBSD__)
+    if (display() == nullptr || nativeWindow == nullptr)
+        return;
+    // Opaque alpha in the top byte, for windows with an ARGB visual.
+    XSetWindowBackground(display(), toWindow(nativeWindow), 0xff000000u | rgb);
     XFlush(display());
 #endif
 }

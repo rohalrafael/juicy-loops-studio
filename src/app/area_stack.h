@@ -54,6 +54,9 @@ class AreaStack final : private juce::ComponentListener
     // Whether `component` is one of the areas or inside one (native areas aren't the host's
     // children, so the host's isParentOf() doesn't see them).
     bool holds(const juce::Component* component) const;
+    // The colour the host's window shows where an area was just hidden or moved away, until the
+    // host repaints there (a moment later): the seams' colour, so nothing stale shows.
+    void setBackground(juce::Colour colour);
 
     // Attaches the areas to the host's window, again if it was recreated. Call often (a timer):
     // the window doesn't exist yet while the host is built.
@@ -61,7 +64,11 @@ class AreaStack final : private juce::ComponentListener
 
   private:
     void componentBroughtToFront(juce::Component& component) override;
+    void componentVisibilityChanged(juce::Component& component) override;
     void componentBeingDeleted(juce::Component& component) override;
+    // Repaints what `gone` covered (the areas below it and the host): on some desktops
+    // (GNOME's XWayland) what a closed window showed stayed there until the next repaint.
+    void repaintBelow(const juce::Component& gone);
     void attach(juce::Component& area);
     void restack();
 
@@ -71,6 +78,7 @@ class AreaStack final : private juce::ComponentListener
     std::vector<juce::Component*> order; // back to front
     std::map<juce::Component*, juce::Rectangle<int>> wanted; // host-space bounds
     bool raising = false;
+    juce::Colour background{juce::Colours::black}; // see setBackground()
 };
 
 } // namespace jls::app

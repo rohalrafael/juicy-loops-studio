@@ -517,7 +517,9 @@ not). Older entries describe the project as it was then; later entries may super
   top-level windows (the window manager would stack them, and they'd leave the main window).
   Costs: child windows can't be semi-transparent (no Rack shadow, opaque panel corners), and
   JUCE's cross-window drag lookup and the shortcut safety net needed adjusting (architecture,
-  *UI*). Windows and macOS keep the old behaviour until someone restacks there;
+  *UI*; first tests on GNOME found flashes, stale pixels and a drag that jumped by the main
+  window's offset, now handled). Windows and macOS keep the old behaviour until someone
+  restacks there;
   `JLS_NO_NATIVE_AREAS=1` turns it off on Linux, as a fallback.
 
 - 2026-10-29: **Plugin panels in the Ctrl+Tab order** (maintainer's request). Each open plugin

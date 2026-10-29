@@ -7,6 +7,7 @@
 #include "ui/plugin_menu.h"
 
 #include "ui/controls.h"
+#include "ui/floating_panel.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -95,10 +96,15 @@ class EffectPanel final : public juce::Component
   public:
     explicit EffectPanel(model::Document& document);
 
-    void show(model::EffectId id);
+    // Builds and sizes the panel for `id` without showing it, so it can be placed first: a native
+    // window shown before it's placed appears for a moment where it was.
+    void load(model::EffectId id);
+    void show(model::EffectId id); // load() and show it in front
     // Re-reads the document; hides itself if its effect was removed.
     void refresh();
     model::EffectId effect() const { return effectId; }
+    // Where it may be dragged (the area below the transport bar); its title bar stays inside.
+    void setMovableArea(juce::Rectangle<int> area);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -117,8 +123,8 @@ class EffectPanel final : public juce::Component
     LedToggle enabled;                                      // lit while the effect isn't bypassed
     std::vector<std::unique_ptr<juce::Component>> controls; // Slider or ComboBox per param
     std::vector<std::unique_ptr<juce::Label>> labels;
-    juce::ComponentDragger dragger;
-    juce::ComponentBoundsConstrainer dragBounds;
+    PanelDragger dragger;
+    juce::Rectangle<int> movableArea;
     bool movingPanel = false; // the current press started on the title bar
     int gesture = 0;
 };

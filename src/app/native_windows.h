@@ -6,6 +6,7 @@
 // manager to activate top-level ones). Kept apart so Xlib's macros stay out of other files.
 // Elsewhere these do nothing.
 
+#include <cstdint>
 #include <vector>
 
 namespace jls::app
@@ -17,5 +18,9 @@ void focusNativeWindow(void* nativeWindow);
 
 // Stacks sibling child windows in this order, the first on top (see AreaStack).
 void restackNativeWindows(const std::vector<void*>& frontToBack);
+
+// The colour (0xRRGGBB) the X server fills a window with where it's exposed, before the app
+// repaints there: where a child window was just hidden or moved away.
+void setNativeWindowBackground(void* nativeWindow, std::uint32_t rgb);
 
 } // namespace jls::app

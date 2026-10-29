@@ -620,7 +620,7 @@ void EffectPanel::resized()
 {
     HeaderLayout header(getLocalBounds().removeFromTop(panelHeaderHeight));
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
-    enabled.setBounds(header.fromRight(enabled.preferredWidth(metrics::controlHeight)));
+    enabled.setBounds(header.fromRight(metrics::controlHeight));
 
     const int columns = std::max(1, std::min(static_cast<int>(controls.size()), 5));
     for (std::size_t i = 0; i < controls.size(); ++i)

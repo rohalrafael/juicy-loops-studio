@@ -114,7 +114,7 @@ class EffectPanel final : public juce::Component
     std::string builtFor; // effect type the controls were built for
     juce::String heading;
     IconButton closeButton{Icon::close};
-    IconButton enabled{Icon::none, "On"};                   // lit while the effect isn't bypassed
+    LedToggle enabled;                                      // lit while the effect isn't bypassed
     std::vector<std::unique_ptr<juce::Component>> controls; // Slider or ComboBox per param
     std::vector<std::unique_ptr<juce::Label>> labels;
     juce::ComponentDragger dragger;

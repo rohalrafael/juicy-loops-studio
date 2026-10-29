@@ -305,7 +305,7 @@ The right-hand column has cutting and the envelope:
 
 | Setting | Does |
 |---|---|
-| Cut itself | A new note stops the channel's note that's still ringing (short fade, no click) |
+| Cut itself | A new note stops the channel's note that's still ringing (short fade, no click). Like the envelope's switch, it's a light: lit = on, click to switch |
 | Cut group / Cut by | Notes on a channel stop every channel whose *Cut by* is its *Cut group*. Closed and open hi-hat: give both the same number in both, and each stops the other |
 | Volume envelope | On: shapes the volume with Delay, Attack, Hold, Decay, Sustain and Release, and note length matters (the release starts where the note ends; a held key on the typing keyboard or MIDI holds it). Off: the sample plays to its end, as before. Knobs: drag up / down, double-click resets |
 
@@ -356,7 +356,8 @@ their end, like FL's default sampler.
   pan, **M**ute and **S**olo. Click a strip to select it.
 - **Effect slots** (right side, for the selected track):
   - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb, Compressor or Soft Clipper.
-  - Click an effect to open its controls; click its light to bypass it.
+  - Click an effect to open its controls; click its light to bypass it (the effect's panel has
+    the same light, left of its close button).
   - Right-click for edit, bypass, move up/down and remove.
 - **Plugins (VST3 / LV2):** first scan for them in **Options › Plugins…**. Then
   **+ Add effect › Plugins** lists them. Clicking a plugin's slot opens its editor (a panel in the main window). Its

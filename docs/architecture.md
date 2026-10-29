@@ -434,6 +434,8 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
   `textSmall` (12), `textBody` (13), `textLarge` (14), `textHeading` (16)
 - `drawIcon()`: vector icons (add, close, play, loop, metronome...), no image files
 - `IconButton`: icon, icon + label or label; toggles show the active colours
+- `LedToggle` / `paintLed()`: on/off switches drawn as a round light, the same as a channel's
+  mute light (lit in the theme's `led` colour)
 - `WindowButton`: the transport bar's window buttons, an `IconButton` with an LED showing the
   window's place in the Ctrl+Tab order (`MainComponent::tabSteps`, refreshed on focus changes and
   by the 30 Hz timer, since windows are shown and hidden from many places)

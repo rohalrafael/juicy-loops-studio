@@ -64,7 +64,6 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
         c->setMouseClickGrabsKeyboardFocus(false);
     }
     // Right column: cutting and the envelope.
-    cutItself.setClickingTogglesState(true);
     cutItself.setTooltip("A new note stops this channel's note that's still sounding");
     cutItself.onClick = [this]
     {
@@ -91,7 +90,6 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
         const int group = cutByBox.getSelectedId() - 1;
         edit([group](model::SamplerSettings& s) { s.cutBy = std::max(0, group); });
     };
-    envelopeOn.setClickingTogglesState(true);
     envelopeOn.setTooltip("Shape the volume with the envelope. Off: the sample plays to its end; "
                           "on: it releases where the note ends");
     envelopeOn.onClick = [this]
@@ -114,12 +112,11 @@ SamplerPanel::SamplerPanel(model::Document& document, model::ChannelId channel)
     for (auto* c : std::initializer_list<juce::Component*>{&cutItself, &envelopeOn})
         c->setMouseClickGrabsKeyboardFocus(false);
     second.addSection("Cut");
-    second.addRow("Cut itself", {{&cutItself, cutItself.preferredWidth(metrics::controlHeight)}});
+    second.addRow("Cut itself", {{&cutItself, metrics::controlHeight}});
     second.addRow("Cut group", {{&cutGroupBox, metrics::comboWidth}});
     second.addRow("Cut by", {{&cutByBox, metrics::comboWidth}});
     second.addSection("Envelope");
-    second.addRow("Volume envelope",
-                  {{&envelopeOn, envelopeOn.preferredWidth(metrics::controlHeight) + 8}});
+    second.addRow("Volume envelope", {{&envelopeOn, metrics::controlHeight}});
     second.addComponent(envelope, EnvelopeEditor::preferredHeight);
     addAndMakeVisible(second);
 

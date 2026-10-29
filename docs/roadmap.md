@@ -19,8 +19,6 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
-- LED toggles instead of "On" text buttons (2026-10-29): the Sampler's Cut itself and Volume
-  envelope, the effect panel's bypass. Same LED as the step keys and window buttons.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

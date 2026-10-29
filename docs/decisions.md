@@ -455,3 +455,9 @@ not). Older entries describe the project as it was then; later entries may super
   the root faintly tinted, line weights by bar / beat / step, all moved towards the theme's text
   colour so they work on any theme. Notes lit from above (`fillRaised`), duller and darker when
   soft, a dark label only from 34 px wide; the velocity lane with guides and the notes' colours.
+
+- 2026-10-29: **On/off switches are lights** (maintainer's pick: "the dot like in the Channel
+  Rack", over LED keys, LED + label, a sliding switch, a power symbol and a check box). The
+  Sampler's Cut itself and Volume envelope and the effect panel's bypass were buttons labelled
+  "On" whether on or off. They're now `LedToggle`s: the same round light as a channel's mute
+  light (`paintLed`, which the mute light uses too), lit in the theme's `led` colour when on.

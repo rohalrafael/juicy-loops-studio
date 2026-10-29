@@ -44,9 +44,9 @@ class SamplerPanel final : public FormPanel
     NumberField pitchBox{"st", 0, "+00"};
 
     FormPanel second; // the right-hand column
-    IconButton cutItself{Icon::none, "On"};
+    LedToggle cutItself;
     juce::ComboBox cutGroupBox, cutByBox;
-    IconButton envelopeOn{Icon::none, "On"};
+    LedToggle envelopeOn;
     EnvelopeEditor envelope;
     int gestureId = 0;
 };

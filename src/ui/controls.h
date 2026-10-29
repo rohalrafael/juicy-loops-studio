@@ -85,6 +85,19 @@ class IconButton : public juce::Button
     bool flat = false;
 };
 
+// The round light of the app's on/off switches (a channel's mute light, LedToggle): the theme's
+// led colour when on, ledOff when off, centred in `area`. `hovered` brightens its rim.
+void paintLed(juce::Graphics& g, juce::Rectangle<float> area, bool on, bool hovered = false);
+
+// An on/off switch drawn as a round light, like a channel's mute light: lit while on; a click
+// toggles it. Used instead of buttons labelled "On" (the Sampler, the effect panel's bypass).
+class LedToggle final : public juce::Button
+{
+  public:
+    LedToggle();
+    void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
+};
+
 // A transport-bar button that shows a window (Playlist, Channel rack...). An LED on it shows the
 // window's place in the Ctrl+Tab order: brightest (with a glow) for the focused window, dimmer
 // for each step further along the order, dark while the window is hidden, whose label is dimmed

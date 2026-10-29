@@ -49,12 +49,7 @@ void LedButton::setOn(bool shouldBeOn)
 
 void LedButton::paint(juce::Graphics& g)
 {
-    const auto& t = currentTheme();
-    const auto led = getLocalBounds().toFloat().withSizeKeepingCentre(9.0f, 9.0f);
-    g.setColour(colour(on ? t.colours.led : t.colours.ledOff));
-    g.fillEllipse(led);
-    g.setColour(colour(t.colours.outline));
-    g.drawEllipse(led, 1.0f);
+    paintLed(g, getLocalBounds().toFloat(), on);
 }
 
 void LedButton::mouseDown(const juce::MouseEvent& e)

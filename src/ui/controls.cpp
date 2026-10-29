@@ -280,6 +280,29 @@ int IconButton::preferredWidth(int height) const
     return width;
 }
 
+// ---------------------------------------------------------------------------------------- LED
+
+void paintLed(juce::Graphics& g, juce::Rectangle<float> area, bool on, bool hovered)
+{
+    const auto& c = currentTheme().colours;
+    constexpr float size = 9.0f;
+    const auto led = area.withSizeKeepingCentre(size, size);
+    g.setColour(colour(on ? c.led : c.ledOff));
+    g.fillEllipse(led);
+    g.setColour(hovered ? colour(c.textDim) : colour(c.outline));
+    g.drawEllipse(led, 1.0f);
+}
+
+LedToggle::LedToggle() : juce::Button({})
+{
+    setClickingTogglesState(true);
+}
+
+void LedToggle::paintButton(juce::Graphics& g, bool highlighted, bool)
+{
+    paintLed(g, getLocalBounds().toFloat(), getToggleState(), highlighted);
+}
+
 // ------------------------------------------------------------------------------- WindowButton
 
 namespace

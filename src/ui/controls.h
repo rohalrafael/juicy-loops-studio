@@ -39,8 +39,8 @@ enum class Icon
 // Draws `icon` centred in `area`, scaled to fit, stroked (or filled) in `colour`.
 void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::Colour colour);
 
-// Label font for a control of the given height (Medium weight): 13 px in panels, 14 px in the
-// transport bar.
+// Label font for a control of the given height (Medium weight): textBody in panels, textLarge in
+// the transport bar.
 juce::FontOptions controlFont(int controlHeight);
 // Font for numbers in displays (tempo, clock): the bundled IBM Plex Mono, whose digits all
 // have the same width so values don't jitter while they change.

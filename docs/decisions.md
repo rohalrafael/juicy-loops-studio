@@ -426,3 +426,6 @@ not). Older entries describe the project as it was then; later entries may super
   the 2026-10-18 attempt with the old one. Control sizes are unchanged. IBM Plex Sans is gone;
   IBM Plex Mono stays for numbers. Inter is OFL, bundled as static instances cut at the small
   optical size (opsz 14).
+  Then a **type scale**: the 49 literal sizes (ten different ones, some half a pixel apart) became
+  five named sizes in `ui::metrics`, so a change like this is one line next time. Half-pixel
+  strays snapped to their neighbours (picker and form rows 13.5 -> 14 px, the rest unseen).

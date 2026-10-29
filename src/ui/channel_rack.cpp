@@ -74,7 +74,7 @@ void InsertBox::paint(juce::Graphics& g)
     g.setColour(colour(t.colours.display));
     g.fillRoundedRectangle(r, metrics::cornerRadius);
     g.setColour(colour(value == 0 ? t.colours.displayDim : t.colours.displayText));
-    g.setFont(juce::FontOptions(12.0f));
+    g.setFont(juce::FontOptions(metrics::textSmall));
     g.drawText(value == 0 ? juce::String("--") : juce::String(value), r,
                juce::Justification::centred);
 }

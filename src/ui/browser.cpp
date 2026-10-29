@@ -71,7 +71,7 @@ class BrowserPanel::Item final : public juce::TreeViewItem
         }
         const bool folder = file.isDirectory();
         g.setColour(colour(folder ? t.colours.text : t.colours.textDim));
-        g.setFont(root ? semiboldFont(14.0f) : juce::FontOptions(14.0f));
+        g.setFont(root ? semiboldFont(metrics::textLarge) : juce::FontOptions(metrics::textLarge));
         g.drawText(file.getFileName(), 4, 0, width - 6, height, juce::Justification::centredLeft,
                    true);
     }
@@ -149,7 +149,7 @@ class BrowserPanel::Waveform final : public juce::Component, public juce::Settab
         if (peaks.empty())
         {
             g.setColour(colour(t.colours.textDim));
-            g.setFont(juce::FontOptions(13.0f));
+            g.setFont(juce::FontOptions(metrics::textBody));
             g.drawText("Click a sample to hear it", area, juce::Justification::centred);
             return;
         }
@@ -228,7 +228,7 @@ BrowserPanel::BrowserPanel(engine::PreviewPlayer& p, juce::PropertiesFile& s)
 
     playButton.setTooltip("Play / pause the whole sample");
     playButton.onClick = [this] { playPause(); };
-    nameLabel.setFont(juce::FontOptions(13.0f));
+    nameLabel.setFont(juce::FontOptions(metrics::textBody));
     nameLabel.setMinimumHorizontalScale(0.7f);
     addAndMakeVisible(nameLabel);
     startTimerHz(30);
@@ -453,7 +453,7 @@ void BrowserPanel::paint(juce::Graphics& g)
     if (folders.isEmpty())
     {
         g.setColour(colour(t.colours.textDim));
-        g.setFont(juce::FontOptions(13.0f));
+        g.setFont(juce::FontOptions(metrics::textBody));
         g.drawFittedText("Add a folder with + to browse its samples.", tree.getBounds().reduced(12),
                          juce::Justification::centredTop, 3);
     }

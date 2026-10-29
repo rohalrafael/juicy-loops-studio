@@ -41,6 +41,15 @@ inline constexpr int controlPadding = 10; // inside buttons; panel headers' left
 inline constexpr int comboWidth = 76;
 inline constexpr int narrowComboWidth = 52;
 
+// Text sizes: the type scale. Every piece of UI text uses one of these (in Inter), so text stays
+// consistent and a size change is made here. Numbers in displays use IBM Plex Mono, sized by
+// their box (displayFont).
+inline constexpr float textTiny = 11.0f;    // units, track numbers, piano key labels
+inline constexpr float textSmall = 12.0f;   // secondary text: clip labels, strip names, headings
+inline constexpr float textBody = 13.0f;    // panel controls, menus, tooltips, dialog text
+inline constexpr float textLarge = 14.0f;   // panel titles, the transport bar, list rows
+inline constexpr float textHeading = 16.0f; // dialog titles
+
 // Shapes: small, sharp radii, the same in every theme. Docked panels are square.
 inline constexpr float cornerRadius = 3.0f; // buttons and small controls
 inline constexpr float windowRadius = 4.0f; // floating panels (Channel Rack, Sampler, plugins)

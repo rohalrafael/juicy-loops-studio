@@ -430,7 +430,8 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
 
 **Controls.** `ui/controls` holds the shared pieces, so every panel lines up:
 - sizes in `ui::metrics`: panel headers 36 px with 26 px controls, the transport bar's 32 px
-  controls, 14 px icons, a 6 px gap
+  controls, 14 px icons, a 6 px gap, and the type scale every text uses: `textTiny` (11 px),
+  `textSmall` (12), `textBody` (13), `textLarge` (14), `textHeading` (16)
 - `drawIcon()`: vector icons (add, close, play, loop, metronome...), no image files
 - `IconButton`: icon, icon + label or label; toggles show the active colours
 - `joinSegments()`: buttons drawn as one segmented control (PAT | SONG, 16 | 32 | 64)

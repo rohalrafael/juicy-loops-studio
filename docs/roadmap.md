@@ -24,20 +24,20 @@ starting one.
   current pattern, and paste them into the selected channel, also in another pattern, as in FL.
   The commands exist already; today they only act on the Playlist or Piano Roll
   (`MainComponent::editInMainView`); Delete already has a Channel Rack case. The notes clipboard
-  is `model/clipboard`. To decide when building it: whether pasting replaces the channel's steps
-  (FL) or adds to them.
+  is `model/clipboard`. Decided: pasting replaces the target channel's steps in that pattern, as
+  in FL (undoable).
 
 - A click in empty space deselects and adds a note (2026-10-29, maintainer's request): with notes
   selected in the Piano Roll, a left-click elsewhere should both clear the selection and place a
   note, instead of only deselecting. This reverses the 2026-10-17 choice ("a click outside a
-  selection only deselects, as in FL"; user guide, *Piano Roll*). To check when building it:
-  whether the Playlist, which behaves the same way with clips, should follow.
+  selection only deselects, as in FL"; user guide, *Piano Roll*). Decided: the Playlist follows
+  (a click in empty space deselects and places a clip).
 
 - No note preview while playing (2026-10-29, maintainer's request): in the Piano Roll, clicking,
   adding or dragging notes plays them (`PianoRollView::audition`). While the pattern or song is
   playing that should stay silent; while stopped or paused it stays as it is. A preview still
-  sounding when playback starts stops at once. To check when building it: whether clicking the
-  Piano Roll's keyboard keys follows the same rule.
+  sounding when playback starts stops at once. Decided: clicking the Piano Roll's keyboard keys
+  still sounds while playing (a deliberate "let me hear this note").
 
 - Plugin windows can go to the background (2026-10-29, maintainer's request): today a plugin's
   panel always stays in front of the Playlist, Channel Rack and the rest, because on Linux the
@@ -53,8 +53,8 @@ starting one.
   until the main window is clicked. Shortcuts are forwarded from other windows
   (`MainComponent::forwardShortcuts`), but notes are played in `MainComponent::keyStateChanged`,
   which only sees keys while the main window has them. FL has the same problem at times and a
-  button to give the keyboard back; options: such a button in plugin panels' title bars, and/or
-  handing the keyboard back automatically when the mouse leaves the plugin.
+  button to give the keyboard back. Decided: both, the keyboard returns automatically when the
+  mouse leaves the plugin's window, and plugin panels' title bars get a button for it.
 
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run

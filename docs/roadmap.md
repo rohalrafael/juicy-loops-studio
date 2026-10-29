@@ -22,10 +22,9 @@ starting one.
 - Window buttons in the transport bar (2026-10-29, maintainer's request): buttons that show the
   Channel Rack, Playlist, Browser and Piano Roll, left of the oscilloscope, so they're one click
   away instead of only in the View menu. They run the existing commands (F6, F5, Alt+F8, F7; the
-  tooltips show the keys) and show which windows are open. Open question: a Mixer (F9) button
-  too, as in FL.
-- A visual cue for the Ctrl+Tab focus order (2026-10-29): options being drawn up for the
-  maintainer to choose from.
+  tooltips show the keys) and show which windows are open. The buttons also show the Ctrl+Tab
+  focus order (e.g. colour fading along the order); the maintainer is choosing the cue from
+  mockups. Open question: a Mixer (F9) button too, as in FL.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

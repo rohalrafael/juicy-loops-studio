@@ -74,21 +74,41 @@ juce::DocumentWindow* TitleBar::window() const
     return findParentComponentOfClass<juce::DocumentWindow>();
 }
 
+bool TitleBar::maximised() const
+{
+    if (isMaximised)
+        return isMaximised();
+    const auto* w = window();
+    return w != nullptr && w->isFullScreen();
+}
+
 void TitleBar::toggleMaximised()
 {
-    // JUCE's "full screen" for a window is maximized: the screen's usable area (a real
-    // maximize on Windows).
-    if (auto* w = window())
-        w->setFullScreen(!w->isFullScreen());
+    const bool wanted = !maximised();
+    if (setMaximised)
+        setMaximised(wanted);
+    else if (auto* w = window())
+        // JUCE's "full screen" for a window is maximized: the screen's usable area (a real
+        // maximize on Windows).
+        w->setFullScreen(wanted);
     updateMaximiseIcon();
+    startTimer(250);
 }
 
 void TitleBar::updateMaximiseIcon()
 {
-    const auto* w = window();
-    const bool maximised = w != nullptr && w->isFullScreen();
-    maximise.setIcon(maximised ? Icon::windowRestore : Icon::windowMaximize);
-    maximise.setTooltip(maximised ? "Restore" : "Maximize");
+    const bool isMax = maximised();
+    maximise.setIcon(isMax ? Icon::windowRestore : Icon::windowMaximize);
+    maximise.setTooltip(isMax ? "Restore" : "Maximize");
+}
+
+void TitleBar::timerCallback()
+{
+    stopTimer();
+    if (isMaximised && resyncWindow)
+        if (const auto* w = window(); w != nullptr && w->isFullScreen() != isMaximised())
+            resyncWindow();
+    updateMaximiseIcon();
 }
 
 void TitleBar::paint(juce::Graphics& g)
@@ -131,17 +151,18 @@ void TitleBar::resized()
     }
     menuBar.setBounds(area.removeFromLeft(width).reduced(0, 3));
     updateMaximiseIcon();
+    startTimer(250);
 }
 
 void TitleBar::mouseDown(const juce::MouseEvent& e)
 {
-    if (auto* w = window(); w != nullptr && !w->isFullScreen())
+    if (auto* w = window(); w != nullptr && !maximised())
         dragger.startDraggingComponent(w, e.getEventRelativeTo(w));
 }
 
 void TitleBar::mouseDrag(const juce::MouseEvent& e)
 {
-    if (auto* w = window(); w != nullptr && !w->isFullScreen())
+    if (auto* w = window(); w != nullptr && !maximised())
         dragger.dragComponent(w, e.getEventRelativeTo(w), nullptr);
 }
 

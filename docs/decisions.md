@@ -529,3 +529,15 @@ not). Older entries describe the project as it was then; later entries may super
   plugin still takes a click into it. Opening a plugin, or bringing it up from its channel's
   name, focuses it. Separate plugin windows aren't stops (the window manager owns their focus),
   and the window buttons' LEDs still cover only the five main windows.
+
+- 2026-10-29: **Maximize asks the window manager (Linux)** (maintainer's report: a maximized
+  window couldn't be restored). Our title bar used JUCE's full screen, which without the
+  system's title bar only resizes the window; JUCE then reads the window manager's state back,
+  finds the window not maximized and forgets. A window GNOME maximized (Super+Up) couldn't be
+  restored either, since a resize doesn't un-maximize it. Now the title bar asks the window
+  manager (`_NET_WM_STATE`, `app/native_windows`) and reads its state, as the system's title bar
+  would; without such a window manager the app fills the screen's work area itself and
+  remembers where the window was. Windows keeps JUCE's (real) maximize. JUCE also reads the
+  maximized state at each resize, which GNOME updates just after: JUCE lagged a step (a resize
+  border while maximized, none after restoring), so the title bar has JUCE read it again a
+  moment later when the two disagree (`refreshNativeWindowState`).

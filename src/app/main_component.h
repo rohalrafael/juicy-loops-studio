@@ -210,6 +210,9 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::BrowserPanel browser;    // docked at the left or right (Alt+F8)
     Area focusArea = Area::mainView;
     juce::Component* focusPlugin = nullptr; // the focused plugin panel, with Area::plugin
+    // The mouse press during which something chose the focus: a click whose own action did (the
+    // Channel Rack's note preview opens the Piano Roll) keeps it (see mouseDown).
+    juce::Time focusChosenDuringPress;
     // "Last used first" focus order: most recent first; while cycling (modifier held), the order
     // is frozen and `cycleStep` says how far back we are.
     std::vector<FocusStop> recentAreas{
@@ -245,6 +248,8 @@ class MainComponent final : public juce::AudioAppComponent,
     app::AreaStack areas{*this};
     // Menus, window name and window buttons (not on macOS: native title bar and menu bar).
     std::unique_ptr<ui::TitleBar> titleBar;
+    // Where the window was before the title bar maximized it, without a window manager to ask.
+    std::optional<juce::Rectangle<int>> boundsBeforeMaximise;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

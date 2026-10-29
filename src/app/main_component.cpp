@@ -203,6 +203,50 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 #else
     titleBar = std::make_unique<ui::TitleBar>(*this);
     addAndMakeVisible(*titleBar);
+#if JUCE_LINUX || JUCE_BSD
+    // Maximized by the window manager, as with the system's title bar (app/native_windows).
+    if (app::canMaximiseNativeWindows())
+    {
+        titleBar->isMaximised = [this]
+        {
+            return getPeer() != nullptr &&
+                   app::isNativeWindowMaximised(getPeer()->getNativeHandle());
+        };
+        titleBar->setMaximised = [this](bool maximise)
+        {
+            if (auto* peer = getPeer())
+                app::setNativeWindowMaximised(peer->getNativeHandle(), maximise);
+        };
+        titleBar->resyncWindow = [this]
+        {
+            if (auto* peer = getPeer())
+                app::refreshNativeWindowState(peer->getNativeHandle());
+        };
+    }
+    else
+    {
+        // No window manager to ask: fill the screen's work area, and remember where it was
+        // (JUCE's own full screen forgets it's maximized when nothing marks the window so).
+        titleBar->isMaximised = [this] { return boundsBeforeMaximise.has_value(); };
+        titleBar->setMaximised = [this](bool maximise)
+        {
+            auto* window = getTopLevelComponent();
+            if (maximise && !boundsBeforeMaximise)
+            {
+                boundsBeforeMaximise = window->getBounds();
+                if (const auto* screen =
+                        juce::Desktop::getInstance().getDisplays().getDisplayForRect(
+                            window->getScreenBounds()))
+                    window->setBounds(screen->userBounds.getSmallestIntegerContainer());
+            }
+            else if (!maximise && boundsBeforeMaximise)
+            {
+                window->setBounds(*boundsBeforeMaximise);
+                boundsBeforeMaximise.reset();
+            }
+        };
+    }
+#endif
 #endif
 
     // Shortcuts: defaults from app/commands, then the user's changes on top.
@@ -674,6 +718,7 @@ std::vector<MainComponent::FocusStop> MainComponent::tabOrder()
 
 void MainComponent::setFocusStop(FocusStop stop)
 {
+    focusChosenDuringPress = juce::Desktop::getInstance().getMainMouseSource().getLastMouseDownTime();
     // A deliberate choice (click, focus command): it becomes the most recent stop.
     cycleStep = 0;
     std::erase(recentAreas, stop);
@@ -1307,9 +1352,12 @@ void MainComponent::mouseDown(const juce::MouseEvent& e)
         {Area::browser}, {Area::channelRack}, {Area::mixer}, {Area::mainView}};
     for (auto* panel : pluginPanels())
         stops.insert(stops.begin(), {Area::plugin, panel});
+    // We hear a press after the component it went to: if that already chose the focus (e.g. the
+    // Channel Rack's note preview opened the Piano Roll), the click doesn't take it back.
+    const bool chosenByClick = focusChosenDuringPress == e.mouseDownTime;
     for (const auto& stop : stops)
         if (auto* c = stopComponent(stop);
-            c != nullptr && c->isVisible() &&
+            !chosenByClick && c != nullptr && c->isVisible() &&
             (c == e.eventComponent || c->isParentOf(e.eventComponent)))
         {
             setFocusStop(stop);

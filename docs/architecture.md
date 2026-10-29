@@ -370,7 +370,9 @@ which gives:
   panel) says where the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on
   the window. Ctrl+Tab walks `FocusStop`s: an area, or one open plugin panel (`focusPlugin`;
   `tabOrder()` lists the stops showing; separate plugin windows aren't stops). A click in an
-  area or on a plugin panel focuses it (`mouseDown`), as does bringing a plugin up
+  area or on a plugin panel focuses it (`mouseDown`; not when the click's own action already
+  chose the focus, like the rack's note preview opening the Piano Roll), as does bringing a
+  plugin up
   (`bringPluginToFront`); Ctrl+Tab cycles (`cycleFocus`); each panel draws its own focus line
   from its "focused" property (`updateFocusFrames`), and `navigate()` dispatches (a plugin
   takes none). With Settings › Ctrl+Tab order = "Last used first", `recentAreas` keeps the
@@ -405,7 +407,9 @@ which gives:
   the keyboard; `MainComponent::returnKeyboard` takes it back when the mouse leaves the plugin
   panels (the timer) or from the panel's keyboard button. JUCE won't move the X input focus while
   it's inside our window (a plugin's child window counts), so `app/native_windows` sets it with
-  Xlib (the app links libX11 for this).
+  Xlib (the app links libX11 for this). The same file maximizes and restores the main window
+  through the window manager for our title bar (`ui::TitleBar::setMaximised`), since JUCE's full
+  screen only resizes a window without the system's title bar.
 - **Areas as native windows (Linux).** JUCE can't draw over a plugin's native window, so on
   Linux every area that can overlap a plugin panel (Browser, Playlist, Piano Roll, Mixer,
   Channel Rack, effect panel, Sampler and the plugin panels themselves) is a native child window

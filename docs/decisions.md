@@ -429,3 +429,11 @@ not). Older entries describe the project as it was then; later entries may super
   Then a **type scale**: the 49 literal sizes (ten different ones, some half a pixel apart) became
   five named sizes in `ui::metrics`, so a change like this is one line next time. Half-pixel
   strays snapped to their neighbours (picker and form rows 13.5 -> 14 px, the rest unseen).
+
+- 2026-10-29: **Clicking a looped step is a setting** (maintainer's request): Options › Settings ›
+  Clicking a looped step, stored as `loopedStepClick`. *Discards the loop (FL)*, the default:
+  only the clicked channel's repeats go, its loop grows to include the new step, the bars in
+  between are empty, other channels keep repeating; right-click and erase-drags leave greyed
+  steps alone (with Loop on, dropping copies without adding a note would only bring them back).
+  *Copies the loop in*: the 2026-10-18 behaviour, unchanged. The setting is an app preference,
+  not project data, like the other Settings.

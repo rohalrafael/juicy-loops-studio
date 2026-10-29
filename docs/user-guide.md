@@ -204,10 +204,14 @@ longer than 2 minutes are cut at 2 minutes (for now).
 **Pattern length and looping.** 16 | 32 | 64 and the handle only set how many steps you see.
 The pattern *plays* as far as its notes go, rounded up to whole bars: with notes only in the
 first 16 steps it plays 16 steps and starts over, even when 32 are shown. Steps past that are
-greyed and show what will be heard there (the repeat). Clicking a greyed step makes that bar
-real: the repeat is copied in first, so nothing else you hear changes, and the pattern now plays
-up to there. Left-click keeps or adds a note on that step; right-click (or right-drag) removes
-looped notes, and leaves empty greyed steps alone. With **Loop** on (the default), a channel whose notes are shorter than the pattern
+greyed and show what will be heard there (the repeat). What clicking a greyed step does is set in
+**Options › Settings › Clicking a looped step**:
+- **Discards the loop (FL)**, the default: the step you click becomes a real note and the pattern
+  now plays up to there. That channel's repeats are dropped (its other new steps are empty);
+  other channels keep repeating. Right-click leaves greyed steps alone.
+- **Copies the loop in**: the repeat is copied in first, so nothing else you hear changes, then
+  left-click keeps or adds a note on that step; right-click (or right-drag) removes looped notes,
+  and leaves empty greyed steps alone. With **Loop** on (the default), a channel whose notes are shorter than the pattern
 repeats them: its notes are rounded up to 1, 2, 4, 8... bars, and that block plays again and
 again. Example: a 4-bar bass line with a 1-bar drum beat gives 4 bars of drums. Those repeats
 are greyed too. Because the loop length comes from the notes, a looping channel can't end with
@@ -362,6 +366,7 @@ their end, like FL's default sampler.
 | Click preview length | How much of a sample a click in the Browser plays (5 s by default) |
 | Ctrl+Tab order | Fixed, or Last used first (like Alt+Tab) |
 | Plugin windows | Inside the app (panels, the default) or separate windows |
+| Clicking a looped step | Discards the loop (as in FL, the default) or copies the loop in first (see *Channel Rack*) |
 | Interface size | Scales the whole interface, text included: 100, 110, 125 or 150 % |
 
 Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio

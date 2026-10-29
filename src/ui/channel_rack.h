@@ -118,6 +118,9 @@ class StepGrid final : public juce::Component
     // (step, on, gestureId): one gesture per mouse press so a drag undoes as one step.
     std::function<void(int, bool, int)> onStepPainted;
     std::function<int()> newGestureId;
+    // Whether clicking a greyed (looped) step copies the loop in first (Settings); if not, as in
+    // FL, right-click and erasing leave greyed steps alone.
+    std::function<bool()> copiesLoop;
 
     // Width of `numSteps` step keys with their gaps. Steps are always full size: a long pattern
     // makes the rack wider, past the window's edge if need be (drag it to see the rest).
@@ -227,6 +230,10 @@ class ChannelRack final : public juce::Component,
     std::function<void(model::ChannelId, bool toggle)> onShowInstrument;
     // Set by the owner: show a sample channel's Sampler window (`toggle` as above).
     std::function<void(model::ChannelId, bool toggle)> onShowSampler;
+    // Set by the owner (Settings > Clicking a looped step): true copies a channel's loop in before
+    // a click on a greyed step, so nothing else changes; false (unset, as in FL) discards it.
+    std::function<bool()> loopedClickCopies;
+    bool copiesLoopOnClick() const { return loopedClickCopies && loopedClickCopies(); }
 
     // Where the rack may be dragged (the owner's area below the transport bar). The title bar
     // always stays inside it, so the rack can't end up where it can't be grabbed again.

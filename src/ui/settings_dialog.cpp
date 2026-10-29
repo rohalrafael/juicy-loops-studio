@@ -37,6 +37,11 @@ bool pluginsInsideApp(juce::PropertiesFile& file)
     return file.getValue(pluginWindowsKey, "inside") != "separate";
 }
 
+bool loopedStepClickCopies(juce::PropertiesFile& file)
+{
+    return file.getValue(loopedStepClickKey, "discard") == "copy";
+}
+
 double uiScale(juce::PropertiesFile& file)
 {
     return std::clamp(file.getDoubleValue(uiScaleKey, 1.0), 0.75, 2.0);
@@ -104,6 +109,15 @@ class SettingsPanel final : public FormPanel
                           pluginWindows.getSelectedItemIndex() == 0 ? "inside" : "separate");
         };
 
+        loopedStepClick.addItemList({"Discards the loop (FL)", "Copies the loop in"}, 1);
+        loopedStepClick.setSelectedItemIndex(settings::loopedStepClickCopies(file) ? 1 : 0,
+                                             juce::dontSendNotification);
+        loopedStepClick.onChange = [this]
+        {
+            file.setValue(settings::loopedStepClickKey,
+                          loopedStepClick.getSelectedItemIndex() == 0 ? "discard" : "copy");
+        };
+
         const int field = tempoStep.preferredWidth(metrics::controlHeight);
         addSection("Tempo");
         addRow("Tempo step", {{&tempoStep, field}});
@@ -113,6 +127,13 @@ class SettingsPanel final : public FormPanel
         addSection("Browser");
         addRow("Click preview length", {{&previewLength, field}});
         addNote("Clicking a sample plays this much of it; Shift+click plays it all.");
+        addSection("Channel Rack");
+        addRow("Clicking a looped step", {{&loopedStepClick, 160}});
+        addNote(
+            "Greyed steps repeat a channel's shorter loop. Discards: the step you click becomes "
+            "a real note and that channel's repeats are dropped (right-click leaves them "
+            "alone). Copies: the repeats are copied in first, so nothing else you hear "
+            "changes.");
         addSection("Focus");
         addRow("Ctrl+Tab order", {{&focusOrder, 160}});
         addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
@@ -145,6 +166,7 @@ class SettingsPanel final : public FormPanel
     juce::ComboBox focusOrder;
     juce::ComboBox pluginWindows;
     juce::ComboBox interfaceSize;
+    juce::ComboBox loopedStepClick;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

@@ -134,6 +134,8 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         setFocusArea(Area::channelRack);
         menuItemsChanged();
     };
+    channelRack.loopedClickCopies = [this]
+    { return ui::settings::loopedStepClickCopies(themes.settingsFile()); };
     channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)
     { showSampler(id, toggle); };
     stretchCache.onReady = [this] { publishState(); };

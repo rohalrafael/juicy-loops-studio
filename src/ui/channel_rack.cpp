@@ -332,8 +332,9 @@ void StepGrid::mouseDown(const juce::MouseEvent& e)
     if (steps.empty())
         return;
     const int step = stepAt(e.x);
-    // A greyed (looped) step isn't toggled: left-click keeps or adds a note there, right-click
-    // removes it. Either way the loop becomes real first (see paintStep and ChannelRow).
+    // A greyed (looped) step isn't toggled: left-click keeps or adds a note there. Right-click
+    // removes it when the loop is copied in first (Settings), and leaves it alone otherwise (see
+    // paintStep and ChannelRow).
     paintValue =
         !e.mods.isPopupMenu() && (isRepeat(step) || !steps[static_cast<std::size_t>(step)]);
     gestureId = newGestureId ? newGestureId() : 0;
@@ -363,8 +364,11 @@ void StepGrid::paintStep(int step)
     if (step == lastPainted || step < 0)
         return;
     lastPainted = step;
-    // A left-click on a repeat is reported even when it's already on, so the loop becomes real
-    // with the note kept. Erasing only touches repeats that have a note: empty ones stay looped.
+    // A left-click on a repeat is reported even when it's already on, so the note becomes real.
+    // Erasing only touches repeats that have a note (empty ones stay looped), and only when the
+    // loop is copied in first: as in FL, erasing otherwise leaves the loop alone.
+    if (isRepeat(step) && !paintValue && !(copiesLoop && copiesLoop()))
+        return;
     const bool on = steps[static_cast<std::size_t>(step)];
     if ((on != paintValue || (isRepeat(step) && paintValue)) && onStepPainted)
         onStepPainted(step, paintValue, gestureId);
@@ -459,18 +463,21 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
     steps.onOpenNotes = [this] { rack.openPianoRoll(id); };
 
     steps.newGestureId = [this] { return rack.document().newGestureId(); };
+    steps.copiesLoop = [this] { return rack.copiesLoopOnClick(); };
     steps.onStepPainted = [this](int step, bool on, int gesture)
     {
         rack.edit(
-            [this, step, on](model::Project& p)
+            [this, step, on, copyLoop = rack.copiesLoopOnClick()](model::Project& p)
             {
                 auto& pattern = p.current();
                 // A greyed step repeats something: the channel's own loop, or the whole
-                // pattern (the steps past where it ends). Make the repeats up to there real
-                // first (doubling as needed), so clicking doesn't change what else plays.
+                // pattern (the steps past where it ends). When the loop is copied in, the
+                // repeats up to there become real first (doubling as needed), so clicking
+                // doesn't change what else plays. Otherwise (as in FL) only the clicked step
+                // is set: the channel's loop grows to include it and its other repeats go.
                 const int loopLength = p.loopLengthInSteps(pattern, id);
                 const int repeat = loopLength > 0 ? loopLength : p.lengthInSteps(pattern);
-                if (step >= repeat)
+                if (copyLoop && step >= repeat)
                 {
                     int target = repeat;
                     while (target <= step)

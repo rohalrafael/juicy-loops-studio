@@ -26,12 +26,17 @@ double uiScale(juce::PropertiesFile& file);
 void applyUiScale(juce::PropertiesFile& file);
 // Plugin editors: "inside" (panels in the main window, the default) or "separate" (windows).
 inline constexpr const char* pluginWindowsKey = "pluginWindows";
+// Clicking a greyed (looped) step in the Channel Rack: "discard" (as in FL, the default: the new
+// step is real, that channel's repeats are dropped) or "copy" (the repeats are copied in first,
+// so nothing else changes).
+inline constexpr const char* loopedStepClickKey = "loopedStepClick";
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
 double previewSeconds(juce::PropertiesFile& file);
 bool focusOrderRecent(juce::PropertiesFile& file);
 bool pluginsInsideApp(juce::PropertiesFile& file);
+bool loopedStepClickCopies(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

@@ -59,22 +59,6 @@ constexpr std::array colourFields{
     ColourField{"clipText", &Colours::clipText},
 };
 
-struct ShapeField
-{
-    const char* key;
-    float Shape::* member;
-    float min;
-    float max;
-};
-
-constexpr std::array shapeFields{
-    ShapeField{"cornerRadius", &Shape::cornerRadius, 0.0f, 24.0f},
-    ShapeField{"windowRadius", &Shape::windowRadius, 0.0f, 32.0f},
-    ShapeField{"stepRadius", &Shape::stepRadius, 0.0f, 12.0f},
-    ShapeField{"borderWidth", &Shape::borderWidth, 0.0f, 4.0f},
-    ShapeField{"stepOutline", &Shape::stepOutline, 0.0f, 4.0f},
-};
-
 class Reader
 {
   public:
@@ -98,25 +82,6 @@ class Reader
             warn(path + key + ": \"" + it->get<std::string>() + "\" is not a colour");
     }
 
-    void number(const ordered_json& obj, const std::string& path, const ShapeField& field,
-                Shape& shape)
-    {
-        const auto it = obj.find(field.key);
-        if (it == obj.end())
-            return;
-        if (!it->is_number())
-        {
-            warn(path + field.key + ": expected a number");
-            return;
-        }
-        const auto value = it->get<double>();
-        const auto clamped = std::clamp(static_cast<float>(value), field.min, field.max);
-        if (static_cast<double>(clamped) != value)
-            warn(path + field.key + ": " + std::to_string(value) + " is out of range, using " +
-                 std::to_string(clamped));
-        shape.*field.member = clamped;
-    }
-
     void text(const ordered_json& obj, const char* key, std::string& out)
     {
         const auto it = obj.find(key);
@@ -126,22 +91,6 @@ class Reader
             out = it->get<std::string>();
         else
             warn(std::string(key) + ": expected text");
-    }
-
-    void optionalColour(const ordered_json& obj, const std::string& path, const char* key,
-                        std::optional<Argb>& out)
-    {
-        const auto it = obj.find(key);
-        if (it == obj.end())
-            return;
-        if (it->is_null() || (it->is_boolean() && !it->get<bool>()))
-            out.reset();
-        else if (!it->is_string())
-            warn(path + key + ": expected a colour or false");
-        else if (const auto c = parseColour(it->get<std::string>()))
-            out = *c;
-        else
-            warn(path + key + ": \"" + it->get<std::string>() + "\" is not a colour");
     }
 
     void unknownKeys(const ordered_json& obj, const std::string& path,
@@ -221,7 +170,6 @@ ParseResult parseTheme(std::string_view json, const Theme& fallback)
     theme.description.clear();
     read.text(root, "author", theme.author);
     read.text(root, "description", theme.description);
-    read.text(root, "font", theme.font);
 
     if (const auto v = root.find("formatVersion"); v != root.end())
     {
@@ -267,42 +215,10 @@ ParseResult parseTheme(std::string_view json, const Theme& fallback)
         }
     }
 
-    if (const auto s = root.find("shape"); s != root.end())
-    {
-        if (!s->is_object())
-            read.warn("shape: expected an object");
-        else
-        {
-            for (const auto& field : shapeFields)
-                read.number(*s, "shape.", field, theme.shape);
-            read.unknownKeys(
-                *s, "shape.",
-                {"cornerRadius", "windowRadius", "stepRadius", "borderWidth", "stepOutline"});
-        }
-    }
-
-    if (const auto e = root.find("effects"); e != root.end())
-    {
-        if (!e->is_object())
-            read.warn("effects: expected an object");
-        else
-        {
-            read.optionalColour(*e, "effects.", "stepGlow", theme.effects.stepGlow);
-            read.optionalColour(*e, "effects.", "ledGlow", theme.effects.ledGlow);
-            if (const auto h = e->find("hardShadow"); h != e->end())
-            {
-                if (h->is_boolean())
-                    theme.effects.hardShadow = h->get<bool>();
-                else
-                    read.warn("effects.hardShadow: expected true or false");
-            }
-            read.unknownKeys(*e, "effects.", {"stepGlow", "ledGlow", "hardShadow"});
-        }
-    }
-
+    // "font", "shape" and "effects" are version 1 settings: themes no longer change them.
     read.unknownKeys(
         root, "",
-        {"name", "author", "description", "formatVersion", "font", "colours", "shape", "effects"});
+        {"name", "author", "description", "formatVersion", "colours", "font", "shape", "effects"});
 
     result.theme = std::move(theme);
     return result;
@@ -319,25 +235,12 @@ std::string serializeTheme(const Theme& theme)
                                   formatColour(theme.colours.stepOffB)};
     }
 
-    ordered_json shape = ordered_json::object();
-    for (const auto& field : shapeFields)
-        shape[field.key] = theme.shape.*field.member;
-
-    auto optionalColour = [](const std::optional<Argb>& c)
-    { return c ? ordered_json(formatColour(*c)) : ordered_json(false); };
-
     ordered_json root = {
         {"name", theme.name},
         {"author", theme.author},
         {"description", theme.description},
         {"formatVersion", Theme::currentFormatVersion},
-        {"font", theme.font},
         {"colours", colours},
-        {"shape", shape},
-        {"effects",
-         {{"stepGlow", optionalColour(theme.effects.stepGlow)},
-          {"ledGlow", optionalColour(theme.effects.ledGlow)},
-          {"hardShadow", theme.effects.hardShadow}}},
     };
     return root.dump(2) + "\n";
 }

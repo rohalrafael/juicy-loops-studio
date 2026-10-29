@@ -36,15 +36,6 @@ juce_add_binary_data(JlsFonts SOURCES
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans-Medium.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans-SemiBold.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/bricolagegrotesque/BricolageGrotesque.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/bricolagegrotesque/BricolageGrotesque-Medium.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/bricolagegrotesque/BricolageGrotesque-SemiBold.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/sora/Sora.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/sora/Sora-Medium.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/sora/Sora-SemiBold.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit-Medium.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/outfit/Outfit-SemiBold.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexmono/IBMPlexMono-Medium.ttf)
 
 target_compile_definitions(JuicyLoopsStudio PRIVATE

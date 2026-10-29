@@ -121,10 +121,14 @@ class HeaderLayout
     int height;
 };
 
-// Docked panels are cards: rounded corners (masked in the window background) and a thin border,
-// in the accent colour while the panel has the keyboard focus (its "focused" property, set by
-// MainComponent). Call from the panel's paintOverChildren() so it's drawn over its children.
+// Docked panels' frame: square, a thin border, and a line in the accent colour along the top
+// while the panel has the keyboard focus (its "focused" property, set by MainComponent). Call
+// from the panel's paintOverChildren() so it's drawn over its children.
 void paintCardFrame(juce::Graphics& g, juce::Component& panel);
+
+// Fills `shape` with `fill` as a raised surface, lit from above: lighter at the top, a highlight
+// along the top edge. Buttons, steps, knobs and fader caps use it.
+void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill);
 
 // A recessed box for numbers (the tempo and the clock).
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area);

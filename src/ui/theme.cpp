@@ -48,7 +48,13 @@ juce::Typeface::Ptr LookAndFeel::getTypefaceForFont(const juce::Font& font)
     return juce::LookAndFeel_V4::getTypefaceForFont(font);
 }
 
-void LookAndFeel::applyTheme(const theme::Theme& t, const FontFamily* bundledFont)
+void LookAndFeel::setFont(const FontFamily& font)
+{
+    family = font;
+    setDefaultSansSerifTypeface(font.regular);
+}
+
+void LookAndFeel::applyTheme(const theme::Theme& t)
 {
     const auto& c = t.colours;
     setColour(juce::ResizableWindow::backgroundColourId, colour(c.background));
@@ -107,25 +113,12 @@ void LookAndFeel::applyTheme(const theme::Theme& t, const FontFamily* bundledFon
     getCurrentColourScheme().setUIColour(ColourScheme::highlightedText, colour(c.activeText));
     getCurrentColourScheme().setUIColour(ColourScheme::highlightedFill, colour(c.activeBackground));
     getCurrentColourScheme().setUIColour(ColourScheme::menuText, colour(c.text));
-
-    family = bundledFont != nullptr ? *bundledFont : FontFamily{};
-    if (bundledFont != nullptr)
-    {
-        setDefaultSansSerifTypeface(bundledFont->regular);
-    }
-    else
-    {
-        // Not bundled: ask the system for a font with that name (falls back if missing).
-        setDefaultSansSerifTypeface(nullptr);
-        setDefaultSansSerifTypefaceName(juce::String::fromUTF8(t.font.c_str()));
-    }
 }
 
 void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
                                        const juce::Colour& background, bool highlighted, bool down)
 {
-    const auto& shape = currentTheme().shape;
-    auto bounds = button.getLocalBounds().toFloat().reduced(shape.borderWidth / 2.0f);
+    auto bounds = button.getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f);
 
     auto fill = background;
     if (down)
@@ -138,17 +131,14 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
     const bool left = button.isConnectedOnLeft();
     const bool right = button.isConnectedOnRight();
     if (left)
-        bounds.setLeft(bounds.getX() - shape.borderWidth / 2.0f);
+        bounds.setLeft(bounds.getX() - metrics::borderWidth / 2.0f);
     juce::Path box;
     box.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
-                            shape.cornerRadius, shape.cornerRadius, !left, !right, !left, !right);
-    g.setColour(fill);
-    g.fillPath(box);
-    if (shape.borderWidth > 0.0f)
-    {
-        g.setColour(colour(currentTheme().colours.outline));
-        g.strokePath(box, juce::PathStrokeType(shape.borderWidth));
-    }
+                            metrics::cornerRadius, metrics::cornerRadius, !left, !right, !left,
+                            !right);
+    fillRaised(g, box, fill);
+    g.setColour(colour(currentTheme().colours.outline));
+    g.strokePath(box, juce::PathStrokeType(metrics::borderWidth));
 }
 
 juce::Font LookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight)
@@ -162,17 +152,14 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool, i
     const auto& t = currentTheme();
     const auto bounds =
         juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
-            .reduced(t.shape.borderWidth / 2.0f);
+            .reduced(metrics::borderWidth / 2.0f);
     auto fill = colour(t.colours.panelRaised);
     if (box.isMouseOver(true) && box.isEnabled())
         fill = fill.contrasting(0.07f);
     g.setColour(fill);
-    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
-    if (t.shape.borderWidth > 0.0f)
-    {
-        g.setColour(colour(t.colours.outline));
-        g.drawRoundedRectangle(bounds, t.shape.cornerRadius, t.shape.borderWidth);
-    }
+    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
+    g.setColour(colour(t.colours.outline));
+    g.drawRoundedRectangle(bounds, metrics::cornerRadius, metrics::borderWidth);
     const float icon = static_cast<float>(metrics::iconSize);
     const auto chevron =
         juce::Rectangle<float>(static_cast<float>(width) - icon - 6.0f,
@@ -241,9 +228,9 @@ void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int heigh
         return;
     }
     g.setColour(colour(c.panelRaised).contrasting(button.isOver() ? 0.07f : 0.0f));
-    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
     g.setColour(colour(c.outline));
-    g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
+    g.drawRoundedRectangle(bounds, metrics::cornerRadius, 1.0f);
     g.setColour(colour(c.text));
     g.setFont(mediumFont(11.5f));
     g.drawFittedText(keyDescription, bounds.toNearestInt().reduced(4, 0),
@@ -294,7 +281,7 @@ void LookAndFeel::drawTickBox(juce::Graphics& g, juce::Component&, float x, floa
     const auto& c = t.colours;
     const float size = std::min({w, h, 16.0f});
     const auto box = juce::Rectangle<float>(x, y, w, h).withSizeKeepingCentre(size, size);
-    const float radius = std::min(4.0f, t.shape.cornerRadius);
+    const float radius = metrics::cornerRadius;
     g.setColour(colour(ticked ? c.accent : c.panelRaised)
                     .withMultipliedAlpha(isEnabled ? 1.0f : 0.5f)
                     .brighter(isMouseOverButton ? 0.1f : 0.0f));
@@ -352,7 +339,7 @@ void LookAndFeel::drawMenuBarItem(juce::Graphics& g, int width, int height, int,
         g.fillRoundedRectangle(
             juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
                 .reduced(1.0f, 0.0f),
-            t.shape.cornerRadius);
+            metrics::cornerRadius);
     }
     g.setColour(colour(isMenuOpen ? t.colours.activeText : t.colours.text));
     g.setFont(getMenuBarFont(bar, 0, itemText));
@@ -440,9 +427,9 @@ void LookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text, int w
         juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
             .reduced(0.5f);
     g.setColour(colour(t.colours.panelRaised));
-    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
     g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(bounds, t.shape.cornerRadius, 1.0f);
+    g.drawRoundedRectangle(bounds, metrics::cornerRadius, 1.0f);
     g.setColour(colour(t.colours.text));
     g.setFont(juce::FontOptions(12.0f));
     g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4),
@@ -474,54 +461,85 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     const auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
     const float radius = std::min(bounds.getWidth(), bounds.getHeight()) / 2.0f;
     const auto centre = bounds.getCentre();
-    const float lineWidth = std::max(2.0f, radius * 0.22f);
-    const float arcRadius = radius - lineWidth / 2.0f;
-    const juce::PathStrokeType stroke(lineWidth, juce::PathStrokeType::curved,
-                                      juce::PathStrokeType::rounded);
-
+    // A knob body inside a thin value ring, with a pointer from the edge of the body.
+    const float ring = std::max(1.5f, radius * 0.14f);
+    const float arcR = radius - ring / 2.0f;
+    const juce::PathStrokeType thin(ring, juce::PathStrokeType::curved, juce::PathStrokeType::butt);
     juce::Path track;
-    track.addCentredArc(centre.x, centre.y, arcRadius, arcRadius, 0.0f, startAngle, endAngle, true);
+    track.addCentredArc(centre.x, centre.y, arcR, arcR, 0.0f, startAngle, endAngle, true);
     g.setColour(colour(c.display));
-    g.strokePath(track, stroke);
+    g.strokePath(track, thin);
 
     // Bipolar knobs (pan) fill from the centre, others from the start.
     const bool bipolar = slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0;
-    const float fromAngle = bipolar ? (startAngle + endAngle) / 2.0f : startAngle;
-    const float toAngle = startAngle + position * (endAngle - startAngle);
-
+    const float from = bipolar ? (startAngle + endAngle) / 2.0f : startAngle;
+    const float to = startAngle + position * (endAngle - startAngle);
     juce::Path value;
-    value.addCentredArc(centre.x, centre.y, arcRadius, arcRadius, 0.0f, fromAngle, toAngle, true);
+    value.addCentredArc(centre.x, centre.y, arcR, arcR, 0.0f, from, to, true);
     g.setColour(slider.isEnabled() ? colour(c.accent) : colour(c.textDim));
-    g.strokePath(value, stroke);
+    g.strokePath(value, thin);
 
-    const juce::Point<float> tip(centre.x + arcRadius * 0.6f * std::sin(toAngle),
-                                 centre.y - arcRadius * 0.6f * std::cos(toAngle));
+    const float bodyR = radius - ring - 1.5f;
+    juce::Path body;
+    body.addEllipse(centre.x - bodyR, centre.y - bodyR, 2.0f * bodyR, 2.0f * bodyR);
+    fillRaised(g, body, colour(c.panelRaised).brighter(0.15f));
+    g.setColour(colour(c.outline));
+    g.strokePath(body, juce::PathStrokeType(1.0f));
+    const juce::Point<float> dir(std::sin(to), -std::cos(to));
     g.setColour(colour(c.text));
-    g.drawLine({centre, tip}, lineWidth * 0.7f);
+    g.drawLine({centre + dir * (bodyR * 0.25f), centre + dir * (bodyR * 0.9f)}, 1.5f);
+}
+
+void LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
+                                   float sliderPos, float minSliderPos, float maxSliderPos,
+                                   juce::Slider::SliderStyle style, juce::Slider& slider)
+{
+    if (style != juce::Slider::LinearVertical)
+    {
+        LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos, minSliderPos,
+                                         maxSliderPos, style, slider);
+        return;
+    }
+    const auto& c = currentTheme().colours;
+    const auto area = juce::Rectangle<int>(x, y, width, height).toFloat();
+    const float cx = area.getCentreX();
+
+    // The groove, with scale ticks either side.
+    const auto groove = juce::Rectangle<float>(cx - 2.0f, area.getY(), 4.0f, area.getHeight());
+    g.setColour(colour(c.display));
+    g.fillRoundedRectangle(groove, 2.0f);
+    g.setColour(colour(c.textDim).withAlpha(0.35f));
+    for (int i = 0; i <= 10; ++i)
+    {
+        const float ty = area.getY() + area.getHeight() * static_cast<float>(i) / 10.0f;
+        g.fillRect(cx - 9.0f, ty, 4.0f, 1.0f);
+        g.fillRect(cx + 5.0f, ty, 4.0f, 1.0f);
+    }
+
+    // The cap: a ridged rectangle with a line across its middle, like a console fader.
+    const float capW = std::min(22.0f, area.getWidth() - 2.0f);
+    const auto cap = juce::Rectangle<float>(cx - capW / 2.0f, sliderPos - 9.0f, capW, 18.0f);
+    juce::Path capShape;
+    capShape.addRoundedRectangle(cap, 2.0f);
+    fillRaised(g, capShape, colour(c.panelRaised).brighter(0.3f));
+    g.setColour(colour(c.outline));
+    g.strokePath(capShape, juce::PathStrokeType(1.0f));
+    g.setColour(colour(c.text));
+    g.fillRect(cap.getX() + 3.0f, sliderPos - 0.5f, cap.getWidth() - 6.0f, 1.5f);
 }
 
 // ------------------------------------------------------------------------------- ThemeManager
 
 ThemeManager::ThemeManager() : active(theme::defaultTheme())
 {
-    // Each family in the weights the UI uses. The Medium and SemiBold files are cut from the
-    // variable fonts and keep the family's name, so they're filed by family here, not by name.
+    // The UI's font in the weights it uses. The Medium and SemiBold files are cut from the
+    // variable font and keep the family's name.
     const auto load = [](const char* data, int size)
     { return juce::Typeface::createSystemTypefaceFor(data, static_cast<size_t>(size)); };
-    const auto add = [this](const char* name, juce::Typeface::Ptr regular,
-                            juce::Typeface::Ptr medium, juce::Typeface::Ptr semibold)
-    { fonts[juce::String(name).toLowerCase()] = {regular, medium, semibold}; };
     using namespace BinaryData;
-    add("IBM Plex Sans", load(IBMPlexSans_ttf, IBMPlexSans_ttfSize),
-        load(IBMPlexSansMedium_ttf, IBMPlexSansMedium_ttfSize),
-        load(IBMPlexSansSemiBold_ttf, IBMPlexSansSemiBold_ttfSize));
-    add("Bricolage Grotesque", load(BricolageGrotesque_ttf, BricolageGrotesque_ttfSize),
-        load(BricolageGrotesqueMedium_ttf, BricolageGrotesqueMedium_ttfSize),
-        load(BricolageGrotesqueSemiBold_ttf, BricolageGrotesqueSemiBold_ttfSize));
-    add("Sora", load(Sora_ttf, Sora_ttfSize), load(SoraMedium_ttf, SoraMedium_ttfSize),
-        load(SoraSemiBold_ttf, SoraSemiBold_ttfSize));
-    add("Outfit", load(Outfit_ttf, Outfit_ttfSize), load(OutfitMedium_ttf, OutfitMedium_ttfSize),
-        load(OutfitSemiBold_ttf, OutfitSemiBold_ttfSize));
+    laf.setFont({load(IBMPlexSans_ttf, IBMPlexSans_ttfSize),
+                 load(IBMPlexSansMedium_ttf, IBMPlexSansMedium_ttfSize),
+                 load(IBMPlexSansSemiBold_ttf, IBMPlexSansSemiBold_ttfSize)});
 
     juce::PropertiesFile::Options options;
     options.applicationName = "JuicyLoopsStudio";
@@ -542,7 +560,8 @@ ThemeManager::ThemeManager() : active(theme::defaultTheme())
 
     activeTheme = &active;
     rescan();
-    select(settings->getValue(themeSettingKey, "juicy").toStdString());
+    // A theme that's gone (e.g. the old built-ins Juicy or Citrus) falls back to the default.
+    select(settings->getValue(themeSettingKey, theme::defaultTheme().id.c_str()).toStdString());
 }
 
 ThemeManager::~ThemeManager()
@@ -589,15 +608,9 @@ void ThemeManager::select(const std::string& id)
     apply();
 }
 
-const FontFamily* ThemeManager::bundledFont(const std::string& family) const
-{
-    const auto it = fonts.find(juce::String::fromUTF8(family.c_str()).toLowerCase());
-    return it != fonts.end() && it->second.regular != nullptr ? &it->second : nullptr;
-}
-
 void ThemeManager::apply()
 {
-    laf.applyTheme(active, bundledFont(active.font));
+    laf.applyTheme(active);
 
     // Repaint everything that's on screen with the new look.
     auto& desktop = juce::Desktop::getInstance();

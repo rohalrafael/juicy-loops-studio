@@ -369,7 +369,7 @@ which gives:
 - **Focus areas:** `MainComponent::Area` (Browser, Channel Rack, main view, Mixer) says where
   the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on the window. A click
   in an area focuses it (`mouseDown`), Ctrl+Tab cycles (`cycleFocus`), `paintOverChildren`
-  outlines the focused one, and `navigate()` dispatches. With Settings › Ctrl+Tab order = "Last
+  marks the focused one (an accent line along its top), and `navigate()` dispatches. With Settings › Ctrl+Tab order = "Last
   used first", `recentAreas` keeps the areas most-recent-first; while the modifier is held the
   order is frozen and `cycleStep` walks it, and `modifierKeysChanged` commits on release.
   `raiseFocusedArea()` also sets the floating Channel Rack's stacking: in front while it has the
@@ -414,16 +414,19 @@ through `Document::apply()` / `setViewState()`.
 shortcuts*), and most widgets don't take focus. Focus is steered back after menus (`menuBarActivated`), on clicks (a mouse
 listener on all children) and by a timer while the window is active.
 
-**Theming.** Colours, radii, border widths, glow and fonts all come from the active theme
-(`ui::currentTheme()`). Components read them in `paint()`, so switching themes repaints live.
-`ThemeManager`:
+**Theming.** A theme is colours only (`ui::currentTheme().colours`). Components read them in
+`paint()`, so switching themes repaints live. Everything else about the look is fixed, the same
+in every theme: sizes and corner radii (`ui::metrics`) and the font (IBM Plex Sans, IBM Plex
+Mono for numbers). `ThemeManager`:
 - builds the `LookAndFeel` from the active theme
-- loads the bundled fonts
-- remembers the choice in the settings file
+- loads the bundled font once (`LookAndFeel::setFont`)
+- remembers the choice in the settings file (a theme that no longer exists falls back to
+  Blackberry, the default)
 - manages user theme files
 
-Only layout sizes are fixed (`ui::metrics`). The theme file format is in
-[themes.md](themes.md).
+The look is a console's: docked panels edge to edge with 2 px seams, surfaces lit from above
+(`fillRaised()`: a gradient and a highlight along the top edge), recessed displays, console
+faders and knobs, step keys with an LED. The theme file format is in [themes.md](themes.md).
 
 **Controls.** `ui/controls` holds the shared pieces, so every panel lines up:
 - sizes in `ui::metrics`: panel headers 36 px with 26 px controls, the transport bar's 32 px
@@ -435,11 +438,12 @@ Only layout sizes are fixed (`ui::metrics`). The theme file format is in
   from the right)
 - `paintDisplayBox()` and `NumberField`: recessed number boxes (tempo, settings, the Sampler),
   with the bundled IBM Plex Mono so digits keep their width
-- `paintCardFrame()`: docked panels are cards (rounded, bordered; accent border while focused,
-  from the "focused" property MainComponent sets)
+- `paintCardFrame()`: docked panels' frame (square, a thin border; an accent line along the top
+  while focused, from the "focused" property MainComponent sets)
+- `fillRaised()`: a raised surface lit from above, for buttons, step keys, knobs and fader caps
 - `FormPanel`: dialogs and the Sampler window as sections of label + control rows and notes
 - fonts: `mediumFont()` / `semiboldFont()` ask for a weight by style name; `ThemeManager` loads
-  each bundled family in Regular, Medium and SemiBold
+  IBM Plex Sans in Regular, Medium and SemiBold
 The `LookAndFeel` draws the rest to match: drop-downs, segment edges, scrollbars, tooltips and
 tree arrows. Mockups of the layout are on the design canvas (option A, "Compact").
 

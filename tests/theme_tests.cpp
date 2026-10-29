@@ -42,29 +42,22 @@ TEST_CASE("Colours format back to text")
         CHECK(formatColour(*parseColour(text)) == text);
 }
 
-TEST_CASE("The five built-in themes load, Juicy first and default")
+TEST_CASE("The built-in themes load, Blackberry first and default")
 {
     const auto& themes = builtInThemes();
-    REQUIRE(themes.size() == 5);
-    CHECK(themes[0].id == "juicy");
-    CHECK(themes[1].id == "citrus");
-    CHECK(themes[2].id == "watermelon");
-    CHECK(themes[3].id == "blueberry");
-    CHECK(themes[4].id == "blackberry");
-    CHECK(defaultTheme().id == "juicy");
-
-    CHECK(themes[1].font == "Bricolage Grotesque");
-    CHECK(themes[1].effects.hardShadow);
-    CHECK(themes[2].effects.stepGlow == 0xccff3d6eu);
-    CHECK(themes[3].shape.windowRadius == 20.0f);
+    REQUIRE(themes.size() == 2);
+    CHECK(themes[0].id == "blackberry");
+    CHECK(themes[1].id == "graphite");
+    CHECK(defaultTheme().id == "blackberry");
+    CHECK(themes[1].colours.accent == 0xff5aa9ffu);
 }
 
-TEST_CASE("The Juicy theme file matches the built-in defaults")
+TEST_CASE("The Blackberry theme file matches the built-in defaults")
 {
-    // Theme's member defaults are the fallback for every file, so they must equal Juicy.
+    // Theme's member defaults are the fallback for every file, so they must equal Blackberry.
     Theme defaults;
-    defaults.id = "juicy";
-    defaults.description = "Plum, blood orange and lime";
+    defaults.id = "blackberry";
+    defaults.description = "Near-black with lavender, mint and pink";
     CHECK(defaultTheme() == defaults);
 }
 
@@ -76,7 +69,6 @@ TEST_CASE("A minimal theme only needs a name; the rest falls back")
     CHECK(r.theme->name == "Tiny");
     CHECK(r.theme->colours.accent == 0xff5ee0d0u);
     CHECK(r.theme->colours.background == defaultTheme().colours.background);
-    CHECK(r.theme->font == defaultTheme().font);
     CHECK(r.theme->author.empty());
 }
 
@@ -93,8 +85,6 @@ TEST_CASE("Bad values are skipped with a warning, not fatal")
     const auto r = parseTheme(R"({
         "name": "Messy",
         "colours": { "accent": "orange", "text": 42, "stepOff": ["#111111"], "sparkle": "#ffffff" },
-        "shape": { "cornerRadius": 100, "stepRadius": "big" },
-        "effects": { "stepGlow": "#nothex", "hardShadow": "yes" },
         "extra": true
     })");
     REQUIRE(r.theme);
@@ -104,19 +94,11 @@ TEST_CASE("Bad values are skipped with a warning, not fatal")
     CHECK(t.colours.accent == d.colours.accent);
     CHECK(t.colours.text == d.colours.text);
     CHECK(t.colours.stepOffA == d.colours.stepOffA);
-    CHECK(t.shape.cornerRadius == 24.0f); // clamped to max
-    CHECK(t.shape.stepRadius == d.shape.stepRadius);
-    CHECK_FALSE(t.effects.stepGlow);
-    CHECK_FALSE(t.effects.hardShadow);
 
     CHECK(hasWarningContaining(r, "colours.accent"));
     CHECK(hasWarningContaining(r, "colours.text"));
     CHECK(hasWarningContaining(r, "colours.stepOff"));
     CHECK(hasWarningContaining(r, "colours.sparkle"));
-    CHECK(hasWarningContaining(r, "shape.cornerRadius"));
-    CHECK(hasWarningContaining(r, "shape.stepRadius"));
-    CHECK(hasWarningContaining(r, "effects.stepGlow"));
-    CHECK(hasWarningContaining(r, "effects.hardShadow"));
     CHECK(hasWarningContaining(r, "extra"));
 }
 
@@ -128,14 +110,28 @@ TEST_CASE("Themes from a newer version still load, with a warning")
     CHECK(r.theme->formatVersion == Theme::currentFormatVersion);
 }
 
-TEST_CASE("Glow can be switched off with false or null")
+TEST_CASE("Version 1 themes load their colours; font, shapes and effects are skipped quietly")
 {
-    Theme glowing = defaultTheme();
-    glowing.effects.stepGlow = 0xffff0000u;
-    CHECK_FALSE(parseTheme(R"({ "name": "a", "effects": { "stepGlow": false } })", glowing)
-                    .theme->effects.stepGlow);
-    CHECK_FALSE(parseTheme(R"({ "name": "a", "effects": { "stepGlow": null } })", glowing)
-                    .theme->effects.stepGlow);
+    // Themes used to set a font, corner radii and glows; now they only set colours.
+    const auto r = parseTheme(R"({
+        "name": "Old", "formatVersion": 1, "font": "Sora",
+        "colours": { "accent": "#ff7a45" },
+        "shape": { "cornerRadius": 6, "windowRadius": 8 },
+        "effects": { "stepGlow": "#ff000080", "hardShadow": true }
+    })");
+    REQUIRE(r.theme);
+    CHECK(r.warnings.empty());
+    CHECK(r.theme->colours.accent == 0xffff7a45u);
+    CHECK(r.theme->formatVersion == Theme::currentFormatVersion);
+}
+
+TEST_CASE("Exported themes contain only colours")
+{
+    const auto text = serializeTheme(defaultTheme());
+    CHECK(text.find("\"colours\"") != std::string::npos);
+    CHECK(text.find("\"formatVersion\": 2") != std::string::npos);
+    for (const char* gone : {"\"font\"", "\"shape\"", "\"effects\""})
+        CHECK(text.find(gone) == std::string::npos);
 }
 
 TEST_CASE("Exported themes read back identically")

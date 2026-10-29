@@ -232,18 +232,16 @@ void IconButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
     if (flat)
     {
         g.setColour(fill);
-        g.fillRoundedRectangle(bounds, std::min(4.0f, t.shape.cornerRadius));
+        g.fillRoundedRectangle(bounds, metrics::cornerRadius);
     }
     else
     {
-        const auto box = bounds.reduced(t.shape.borderWidth / 2.0f);
-        g.setColour(fill);
-        g.fillRoundedRectangle(box, t.shape.cornerRadius);
-        if (t.shape.borderWidth > 0.0f)
-        {
-            g.setColour(colour(c.outline));
-            g.drawRoundedRectangle(box, t.shape.cornerRadius, t.shape.borderWidth);
-        }
+        const auto box = bounds.reduced(metrics::borderWidth / 2.0f);
+        juce::Path shape;
+        shape.addRoundedRectangle(box, metrics::cornerRadius);
+        fillRaised(g, shape, fill);
+        g.setColour(colour(c.outline));
+        g.drawRoundedRectangle(box, metrics::cornerRadius, metrics::borderWidth);
     }
 
     auto ink = colour(on ? c.activeText : c.text);
@@ -334,7 +332,10 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
 {
     const auto& t = currentTheme();
     const auto area = header.toFloat();
-    g.setColour(colour(t.colours.header));
+    // A slight sheen, lit from above like the rest.
+    g.setGradientFill(
+        juce::ColourGradient::vertical(colour(t.colours.header).brighter(0.08f), area.getY(),
+                                       colour(t.colours.header).darker(0.1f), area.getBottom()));
     if (topRadius > 0.0f)
     {
         juce::Path top;
@@ -347,7 +348,7 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
         g.fillRect(area);
     }
     g.setColour(colour(t.colours.outline));
-    g.fillRect(area.withTop(area.getBottom() - std::max(1.0f, t.shape.borderWidth)));
+    g.fillRect(area.withTop(area.getBottom() - std::max(1.0f, metrics::borderWidth)));
 
     auto text = header.withTrimmedLeft(metrics::controlPadding);
     if (textRight >= 0)
@@ -404,31 +405,47 @@ void paintCardFrame(juce::Graphics& g, juce::Component& panel)
 {
     const auto& t = currentTheme();
     const auto bounds = panel.getLocalBounds().toFloat();
-    const float radius = t.shape.windowRadius;
-    juce::Path corners;
-    corners.addRectangle(bounds);
-    corners.addRoundedRectangle(bounds, radius);
-    corners.setUsingNonZeroWinding(false); // just the bits outside the rounded rectangle
-    g.setColour(colour(t.colours.background));
-    g.fillPath(corners);
+    // Square, edge to edge; focus is a line along the top instead of a frame.
+    g.setColour(colour(t.colours.outline));
+    g.drawRect(bounds, 1.0f);
+    if (panel.getProperties()["focused"])
+    {
+        g.setColour(colour(t.colours.accent));
+        g.fillRect(bounds.withHeight(2.0f));
+    }
+}
 
-    const bool focused = panel.getProperties()["focused"];
-    const float width = focused ? 1.5f : std::max(1.0f, t.shape.borderWidth);
-    g.setColour(focused ? colour(t.colours.accent).withAlpha(0.85f) : colour(t.colours.outline));
-    g.drawRoundedRectangle(bounds.reduced(width / 2.0f), radius, width);
+void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill)
+{
+    const auto b = shape.getBounds();
+    g.setGradientFill(juce::ColourGradient::vertical(fill.brighter(0.12f), b.getY(),
+                                                     fill.darker(0.22f), b.getBottom()));
+    g.fillPath(shape);
+    juce::Graphics::ScopedSaveState state(g);
+    g.reduceClipRegion(shape);
+    g.setColour(juce::Colours::white.withAlpha(0.09f));
+    g.fillRect(b.getX(), b.getY() + 1.0f, b.getWidth(), 1.0f);
 }
 
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
 {
     const auto& t = currentTheme();
-    const auto box = area.reduced(t.shape.borderWidth / 2.0f);
+    const auto box = area.reduced(metrics::borderWidth / 2.0f);
     g.setColour(colour(t.colours.display));
-    g.fillRoundedRectangle(box, t.shape.cornerRadius);
-    if (t.shape.borderWidth > 0.0f)
+    g.fillRoundedRectangle(box, metrics::cornerRadius);
     {
-        g.setColour(colour(t.colours.outline));
-        g.drawRoundedRectangle(box, t.shape.cornerRadius, t.shape.borderWidth);
+        // Recessed: a shadow falling in from the top edge.
+        juce::Path p;
+        p.addRoundedRectangle(box, metrics::cornerRadius);
+        juce::Graphics::ScopedSaveState state(g);
+        g.reduceClipRegion(p);
+        g.setGradientFill(
+            juce::ColourGradient::vertical(juce::Colours::black.withAlpha(0.55f), box.getY(),
+                                           juce::Colours::transparentBlack, box.getY() + 6.0f));
+        g.fillRect(box.withHeight(6.0f));
     }
+    g.setColour(colour(t.colours.outline));
+    g.drawRoundedRectangle(box, metrics::cornerRadius, metrics::borderWidth);
 }
 
 // -------------------------------------------------------------------------------- NumberField

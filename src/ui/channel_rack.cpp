@@ -20,7 +20,6 @@ void noFocus(juce::Component& c)
 }
 
 constexpr int padding = 8;
-constexpr int hardShadowOffset = 5; // themes with a hard shadow draw it in this margin
 constexpr int headerHeight = metrics::panelHeaderHeight; // title bar; drag it to move the rack
 constexpr int loopWidth = 20;   // a row's loop switch, between the name and the steps
 constexpr int handleWidth = 12; // the length handle after the last step column
@@ -28,14 +27,6 @@ constexpr int minStepWidth = 8; // steps shrink down to this to fit long pattern
 // Everything in a row except the steps.
 constexpr int rowFixedWidth = metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
                               metrics::insertWidth + 4 + metrics::nameWidth + loopWidth;
-
-// Soft glow around a shape, for themes that have one.
-void drawGlow(juce::Graphics& g, const juce::Path& shape, std::optional<theme::Argb> glow,
-              int radius)
-{
-    if (glow)
-        juce::DropShadow(colour(*glow), radius, {}).drawForPath(g, shape);
-}
 
 } // namespace
 
@@ -54,12 +45,6 @@ void LedButton::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     const auto led = getLocalBounds().toFloat().withSizeKeepingCentre(9.0f, 9.0f);
-    if (on)
-    {
-        juce::Path dot;
-        dot.addEllipse(led);
-        drawGlow(g, dot, t.effects.ledGlow, 6);
-    }
     g.setColour(colour(on ? t.colours.led : t.colours.ledOff));
     g.fillEllipse(led);
     g.setColour(colour(t.colours.outline));
@@ -88,7 +73,7 @@ void InsertBox::paint(juce::Graphics& g)
     const auto& t = currentTheme();
     const auto r = getLocalBounds().toFloat().reduced(1.0f, 5.0f);
     g.setColour(colour(t.colours.display));
-    g.fillRoundedRectangle(r, std::min(4.0f, t.shape.cornerRadius));
+    g.fillRoundedRectangle(r, metrics::cornerRadius);
     g.setColour(colour(value == 0 ? t.colours.displayDim : t.colours.displayText));
     g.setFont(juce::FontOptions(11.0f));
     g.drawText(value == 0 ? juce::String("--") : juce::String(value), r,
@@ -269,7 +254,7 @@ void StepGrid::setPlayingStep(int step)
 void StepGrid::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
-    const float radius = t.shape.stepRadius;
+    const float radius = metrics::stepRadius;
 
     if (melodic)
     {
@@ -323,24 +308,32 @@ void StepGrid::paint(juce::Graphics& g)
         const bool repeat = loopStart > 0 && s >= loopStart; // greyed loop repeat
         const auto r = juce::Rectangle<int>(stepX(s), 3, stepWidth, getHeight() - 6).toFloat();
 
-        if (on && !repeat)
-        {
-            juce::Path shape;
-            shape.addRoundedRectangle(r, radius);
-            drawGlow(g, shape, t.effects.stepGlow, 8);
-        }
+        // A drum machine's step key: the key stays grey (a little lighter while on) and a small
+        // LED on it lights up. Keys alternate A / B every beat; a greyed repeat is faded.
+        const float alpha = repeat ? (on ? 0.35f : 0.5f) : 1.0f;
+        const auto key = colour((s / 4) % 2 == 0 ? t.colours.stepOffA : t.colours.stepOffB)
+                             .withMultipliedAlpha(alpha);
+        juce::Path keyShape;
+        keyShape.addRoundedRectangle(r, radius);
+        fillRaised(g, keyShape, key.brighter(on ? 0.18f : 0.04f));
+        g.setColour(juce::Colours::black.withAlpha(0.6f * alpha));
+        g.strokePath(keyShape, juce::PathStrokeType(1.0f));
 
-        const auto offColour = (s / 4) % 2 == 0 ? t.colours.stepOffA : t.colours.stepOffB;
-        g.setColour(colour(on ? t.colours.stepOn : offColour)
-                        .withMultipliedAlpha(repeat ? (on ? 0.35f : 0.5f) : 1.0f));
-        g.fillRoundedRectangle(r, radius);
-
-        if (t.shape.stepOutline > 0.0f)
+        const float inset = std::min(4.0f, r.getWidth() * 0.2f); // narrow steps keep a LED
+        juce::Path led;
+        led.addRoundedRectangle(r.getX() + inset, r.getY() + 4.0f, r.getWidth() - 2.0f * inset,
+                                3.0f, 1.5f);
+        if (on)
         {
-            g.setColour(colour(t.colours.outline));
-            g.drawRoundedRectangle(r.reduced(t.shape.stepOutline / 2.0f), radius,
-                                   t.shape.stepOutline);
+            const auto lit = colour(t.colours.stepOn).withMultipliedAlpha(alpha);
+            juce::DropShadow(lit, 6, {}).drawForPath(g, led);
+            g.setColour(lit.brighter(0.3f));
         }
+        else
+        {
+            g.setColour(juce::Colours::black.withAlpha(0.45f * alpha));
+        }
+        g.fillPath(led);
 
         if (s == playingStep)
         {
@@ -582,7 +575,7 @@ void ChannelRow::paint(juce::Graphics& g)
     const auto& t = currentTheme();
     g.setColour(colour(t.colours.activeBackground).withAlpha(0.6f));
     g.fillRoundedRectangle(getLocalBounds().toFloat().expanded(2.0f, 1.0f).withTrimmedRight(2.0f),
-                           t.shape.cornerRadius);
+                           metrics::cornerRadius);
 }
 
 void ChannelRow::resized()
@@ -928,8 +921,8 @@ int ChannelRack::stepWidth() const
     const auto& project = doc.project();
     const int steps = project.gridLengthInSteps(project.current());
     const int parentWidth = getParentWidth() > 0 ? getParentWidth() : 1280;
-    const int room = parentWidth - std::max(12, getX()) - 12 - hardShadowOffset - padding * 2 -
-                     rowFixedWidth - handleWidth;
+    const int room =
+        parentWidth - std::max(12, getX()) - 12 - padding * 2 - rowFixedWidth - handleWidth;
     int width = metrics::stepWidth;
     while (width > minStepWidth && StepGrid::widthFor(steps, width) > room)
         --width;
@@ -938,7 +931,7 @@ int ChannelRack::stepWidth() const
 
 int ChannelRack::preferredWidth() const
 {
-    return hardShadowOffset + padding * 2 + rowFixedWidth + handleWidth +
+    return padding * 2 + rowFixedWidth + handleWidth +
            StepGrid::widthFor(doc.project().gridLengthInSteps(doc.project().current()),
                               stepWidth());
 }
@@ -946,25 +939,15 @@ int ChannelRack::preferredWidth() const
 int ChannelRack::preferredHeight() const
 {
     const int n = static_cast<int>(shownChannels().size());
-    return hardShadowOffset + headerHeight + padding * 2 +
-           n * (metrics::rowHeight + metrics::rowGap) + metrics::rowHeight;
+    return headerHeight + padding * 2 + n * (metrics::rowHeight + metrics::rowGap) +
+           metrics::rowHeight;
 }
 
 void ChannelRack::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
-    const float radius = t.shape.windowRadius;
+    const float radius = metrics::windowRadius;
     auto panel = getLocalBounds().toFloat();
-
-    if (t.effects.hardShadow)
-    {
-        // Solid offset shadow (Citrus): panel shifted up-left, shadow fills the gap.
-        g.setColour(colour(t.colours.shadow));
-        g.fillRoundedRectangle(
-            panel.withTrimmedLeft(hardShadowOffset).withTrimmedTop(hardShadowOffset), radius);
-        panel = panel.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
-    }
-
     g.setColour(colour(t.colours.panel));
     g.fillRoundedRectangle(panel, radius);
 
@@ -973,29 +956,21 @@ void ChannelRack::paint(juce::Graphics& g)
                      "Channel rack", juce::String::fromUTF8(doc.project().current().name.c_str()),
                      loopButton.getX() - metrics::controlGap, radius);
 
-    panel = getLocalBounds().toFloat();
-    if (t.effects.hardShadow)
-        panel = panel.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
-    if (t.shape.borderWidth > 0.0f)
-    {
-        g.setColour(colour(t.colours.outline));
-        g.drawRoundedRectangle(panel.reduced(t.shape.borderWidth / 2.0f), radius,
-                               t.shape.borderWidth);
-    }
+    g.setColour(colour(t.colours.outline));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f), radius,
+                           metrics::borderWidth);
 }
 
 void ChannelRack::paintOverChildren(juce::Graphics& g)
 {
-    // The focus outline (the "focused" property, set by MainComponent), drawn here rather than
-    // by the main window so floating panels above the rack cover it.
+    // Focus (the "focused" property, set by MainComponent): a line in the accent colour along the
+    // top, as on docked panels. Drawn here rather than by the main window so floating panels
+    // above the rack cover it.
     if (getProperties()["focused"])
     {
-        const auto& t = currentTheme();
-        auto frame = getLocalBounds().toFloat();
-        if (t.effects.hardShadow)
-            frame = frame.withTrimmedRight(hardShadowOffset).withTrimmedBottom(hardShadowOffset);
-        g.setColour(colour(t.colours.accent).withAlpha(0.85f));
-        g.drawRoundedRectangle(frame.reduced(0.75f), t.shape.windowRadius, 1.5f);
+        g.setColour(colour(currentTheme().colours.accent));
+        g.fillRect(
+            getLocalBounds().toFloat().reduced(metrics::windowRadius, 0.0f).withHeight(2.0f));
     }
     if (!dragging)
         return;
@@ -1009,7 +984,7 @@ void ChannelRack::paintOverChildren(juce::Graphics& g)
 void ChannelRack::resized()
 {
     auto bounds = getLocalBounds();
-    HeaderLayout header(bounds.removeFromTop(headerHeight).withTrimmedRight(hardShadowOffset));
+    HeaderLayout header(bounds.removeFromTop(headerHeight));
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
     // 16 | 32 | 64 as one segmented control: the segments touch.
     const int segment = buttonWidth("64", metrics::controlHeight);
@@ -1019,7 +994,6 @@ void ChannelRack::resized()
     loopButton.setBounds(header.fromRight(loopButton.preferredWidth(metrics::controlHeight)));
 
     auto area = bounds.reduced(padding);
-    area.removeFromRight(hardShadowOffset);
     const int rowsTop = area.getY();
     for (auto& row : rows)
     {

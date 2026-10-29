@@ -562,7 +562,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         const auto bounds = clipBounds(clip);
         if (!g.getClipBounds().toFloat().intersects(bounds))
             return;
-        const float radius = std::min(t.shape.cornerRadius, 6.0f);
+        const float radius = metrics::cornerRadius;
         g.setColour(audioClipColour(t));
         g.fillRoundedRectangle(bounds, radius);
         if (selected)
@@ -612,7 +612,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
     if (!g.getClipBounds().toFloat().intersects(bounds))
         return;
 
-    const float radius = std::min(t.shape.cornerRadius, 6.0f);
+    const float radius = metrics::cornerRadius;
     g.setColour(colour(t.colours.clip));
     g.fillRoundedRectangle(bounds, radius);
     if (selected)
@@ -662,13 +662,6 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         g.setColour(colour(t.colours.clipText).withAlpha(0.35f));
         for (int r = patternSteps; r < clip.lengthInSteps; r += patternSteps)
             g.fillRect(bounds.getX() + view.xForStep(r), body.getY(), 1.0f, body.getHeight());
-    }
-
-    if (t.shape.stepOutline > 0.0f || t.shape.borderWidth > 1.0f)
-    {
-        g.setColour(colour(t.colours.outline));
-        g.drawRoundedRectangle(bounds.reduced(t.shape.borderWidth / 2.0f), radius,
-                               t.shape.borderWidth);
     }
 }
 

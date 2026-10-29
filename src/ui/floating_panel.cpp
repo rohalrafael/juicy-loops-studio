@@ -111,7 +111,7 @@ void FloatingPanel::keepReachable()
 void FloatingPanel::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
-    const float radius = t.shape.windowRadius;
+    const float radius = metrics::windowRadius;
     g.setColour(colour(t.colours.panel));
     g.fillRoundedRectangle(getLocalBounds().toFloat(), radius);
     paintPanelHeader(g, getLocalBounds().removeFromTop(metrics::panelHeaderHeight), title, subtitle,
@@ -122,8 +122,8 @@ void FloatingPanel::paintOverChildren(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), t.shape.windowRadius,
-                           std::max(1.0f, t.shape.borderWidth));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), metrics::windowRadius,
+                           std::max(1.0f, metrics::borderWidth));
 }
 
 void FloatingPanel::resized()

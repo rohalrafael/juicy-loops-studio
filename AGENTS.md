@@ -56,9 +56,10 @@ folders (`jls::engine`, `jls::model`, ...).
    `src/app/commands` (stable id, name, category, default keys: FL's where FL has one), handled
    in `MainComponent::perform()`. Ids are saved in users' shortcut files: never renumber or
    reuse one. Controls that run a command show its current keys in their tooltip.
-5. **Themes, not hard-coded looks.** Colours, radii and fonts come from the active theme
-   (`ui::currentTheme()`), read in `paint()` since themes switch at runtime. New themeable
-   properties go into `theme::Theme`, its parse/serialize tables, every built-in theme and
+5. **Themes are colours; the look is fixed.** Colours come from the active theme
+   (`ui::currentTheme()`), read in `paint()` since themes switch at runtime. Shapes, sizes and
+   the font are the same for every theme: `ui::metrics` and IBM Plex Sans, never theme data. A
+   new colour goes into `theme::Colours`, its parse/serialize table, both built-in themes and
    `docs/themes.md`.
 6. **Tests are the gate.** Engine and model changes come with Catch2 tests; timing is tested to
    the sample. UI changes are checked visually on Xvfb (see `docs/development.md`); sound by

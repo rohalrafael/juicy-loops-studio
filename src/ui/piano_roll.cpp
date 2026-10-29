@@ -573,7 +573,7 @@ void NoteGrid::paint(juce::Graphics& g)
     }
 
     // Notes: brighter for higher velocity.
-    const float radius = std::min(3.0f, t.shape.cornerRadius);
+    const float radius = metrics::cornerRadius;
     g.setFont(juce::FontOptions(10.0f));
     const auto& notes = view.notes();
     for (std::size_t i = 0; i < notes.size(); ++i)

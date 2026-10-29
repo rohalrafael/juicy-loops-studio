@@ -51,8 +51,8 @@ To discuss before working on them.
   Windows' ClearType (subpixel) rendering. Done so far: real Medium / SemiBold weights, Settings
   > Interface size. Tried and reverted: all UI text 1 px larger (the UI felt too big). Options
   left:
-  - a theme option to use the system UI font (Segoe UI on Windows), which is hinted for small
-    sizes on screen
+  - a setting (not a theme option: themes are colours only since 2026-10-29) to use the system
+    UI font (Segoe UI on Windows), which is hinted for small sizes on screen
   - patching JUCE's Direct2D text rendering to use ClearType where the background is opaque
     (the real fix for the softness; needs several Windows builds to test, and ClearType can
     fringe on semi-transparent areas)

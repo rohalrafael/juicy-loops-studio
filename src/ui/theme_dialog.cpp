@@ -34,7 +34,7 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
     const auto& c = cardTheme.colours; // the theme being previewed
     const bool selected = cardTheme.id == ui.id;
     auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-    const float radius = ui.shape.cornerRadius;
+    const float radius = metrics::cornerRadius;
 
     g.setColour(colour(ui.colours.panelRaised));
     g.fillRoundedRectangle(bounds, radius);
@@ -51,7 +51,7 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
         g.fillRect(preview);
     }
 
-    const float stepRadius = std::min(cardTheme.shape.stepRadius, 6.0f);
+    const float stepRadius = metrics::stepRadius;
     const int onSteps[] = {0, 2, 4, 7};
     for (int i = 0; i < 8; ++i)
     {
@@ -59,19 +59,13 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
         const juce::Rectangle<float> step(preview.getX() + 12.0f + i * 19.0f +
                                               (i >= 4 ? 4.0f : 0.0f),
                                           preview.getY() + 12.0f, 16.0f, 22.0f);
-        if (on && cardTheme.effects.stepGlow)
-        {
-            juce::Path p;
-            p.addRoundedRectangle(step, stepRadius);
-            juce::DropShadow(colour(*cardTheme.effects.stepGlow), 6, {}).drawForPath(g, p);
-        }
-        g.setColour(colour(on ? c.stepOn : (i < 4 ? c.stepOffA : c.stepOffB)));
+        // Step keys as in the Channel Rack: grey keys whose LED lights up.
+        const auto key = colour(i < 4 ? c.stepOffA : c.stepOffB);
+        g.setColour(key.brighter(on ? 0.18f : 0.04f));
         g.fillRoundedRectangle(step, stepRadius);
-        if (cardTheme.shape.stepOutline > 0.0f)
-        {
-            g.setColour(colour(c.outline));
-            g.drawRoundedRectangle(step.reduced(0.75f), stepRadius, 1.5f);
-        }
+        g.setColour(on ? colour(c.stepOn) : juce::Colours::black.withAlpha(0.45f));
+        g.fillRoundedRectangle(step.getX() + 3.0f, step.getY() + 3.0f, step.getWidth() - 6.0f, 3.0f,
+                               1.5f);
     }
 
     const theme::Argb swatches[] = {c.background, c.panel, c.accent, c.accentAlt, c.text};
@@ -93,12 +87,12 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
     g.setColour(colour(ui.colours.textDim));
     g.setFont(juce::FontOptions(12.0f));
     const bool custom = cardTheme.id.rfind("custom:", 0) == 0;
-    const auto subtitle = custom
-                              ? juce::String("Imported") +
-                                    (cardTheme.author.empty()
-                                         ? juce::String()
-                                         : " · " + juce::String::fromUTF8(cardTheme.author.c_str()))
-                              : juce::String::fromUTF8(cardTheme.description.c_str());
+    const auto subtitle = custom ? juce::String("Imported") +
+                                       (cardTheme.author.empty()
+                                            ? juce::String()
+                                            : juce::String::fromUTF8(" · ") +
+                                                  juce::String::fromUTF8(cardTheme.author.c_str()))
+                                 : juce::String::fromUTF8(cardTheme.description.c_str());
     g.drawText(subtitle, textArea.removeFromTop(18.0f), juce::Justification::centredLeft, true);
 
     // Selection / hover outline.

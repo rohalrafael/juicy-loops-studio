@@ -22,8 +22,8 @@ namespace
 {
 
 constexpr int transportHeight = ui::metrics::transportControlHeight + 16; // the bar around them
-constexpr int margin = 12;
-constexpr int panelGap = 8; // between the docked panels (cards)
+// Docked panels sit edge to edge, this far apart (the background shows as a seam), as in FL.
+constexpr int panelGap = 2;
 
 // Keep keyboard focus on the main component so shortcuts always work.
 void noFocus(juce::Component& c)
@@ -138,6 +138,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     { showSampler(id, toggle); };
     stretchCache.onReady = [this] { publishState(); };
     addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
+    lookAndFeelChanged();           // the rack's shadow
     addChildComponent(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
     mixer.listPlugins = [this]
@@ -904,22 +905,26 @@ void MainComponent::lookAndFeelChanged()
     const auto& c = ui::currentTheme().colours;
     positionLabel.setColour(juce::Label::textColourId, ui::colour(c.displayText));
     timeLabel.setColour(juce::Label::textColourId, ui::colour(c.displayDim));
+
+    rackShadow =
+        std::make_unique<juce::DropShadower>(juce::DropShadow(ui::colour(c.shadow), 18, {0, 6}));
+    rackShadow->setOwner(&channelRack);
 }
 
 void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
-    // The transport bar: a header-coloured strip, dividers between its groups, the clock's box.
+    // The transport bar: a full-width strip with a slight sheen, a line below, dividers between
+    // its groups, the clock's box.
     const auto& t = ui::currentTheme();
-    const auto bar = transportBarBounds.toFloat().reduced(t.shape.borderWidth / 2.0f);
-    g.setColour(ui::colour(t.colours.header));
-    g.fillRoundedRectangle(bar, t.shape.windowRadius);
-    if (t.shape.borderWidth > 0.0f)
-    {
-        g.setColour(ui::colour(t.colours.outline));
-        g.drawRoundedRectangle(bar, t.shape.windowRadius, t.shape.borderWidth);
-    }
+    const auto bar = transportBarBounds.toFloat();
+    g.setGradientFill(juce::ColourGradient::vertical(
+        ui::colour(t.colours.header).brighter(0.06f), bar.getY(),
+        ui::colour(t.colours.header).darker(0.12f), bar.getBottom()));
+    g.fillRect(bar);
+    g.setColour(ui::colour(t.colours.outline));
+    g.fillRect(bar.withTop(bar.getBottom() - 1.0f));
     g.setColour(ui::colour(t.colours.ledOff));
     for (int x : transportDividers)
         g.fillRect(static_cast<float>(x), bar.getCentreY() - 12.0f, 1.0f, 24.0f);
@@ -933,11 +938,11 @@ void MainComponent::resized()
     if (titleBar)
         titleBar->setBounds(bounds.removeFromTop(ui::TitleBar::height));
 
-    auto area = bounds.reduced(margin);
+    auto area = bounds;
     transportBarBounds = area.removeFromTop(transportHeight);
     layoutTransportBar(transportBarBounds.reduced(8, 0));
 
-    area.removeFromTop(margin);
+    area.removeFromTop(panelGap);
     const auto panelsArea = area; // everything below the transport bar
     if (browser.isVisible())
     {
@@ -1799,7 +1804,7 @@ void MainComponent::showAbout()
             juce::MessageBoxIconType::NoIcon, "Juicy Loops Studio",
             "Version " + juce::JUCEApplication::getInstance()->getApplicationVersion() +
                 "\n\nA free, open-source DAW. Licensed under the GNU AGPLv3.\n\n"
-                "Bundled fonts (IBM Plex Sans, Bricolage Grotesque, Sora, Outfit) are under the "
+                "The bundled fonts (IBM Plex Sans and Mono) are under the "
                 "SIL Open Font License.\n\nNot affiliated with Image-Line."),
         nullptr);
 }

@@ -386,3 +386,27 @@ not). Older entries describe the project as it was then; later entries may super
   and is supported until 2031. Surge XT isn't in Ubuntu, so it comes from its pinned official
   `.deb`. Docker 29's BuildKit refuses `docker build --network bridge`, so `sandbox.sh` passes
   `--network` to builds only for `host`.
+
+- 2026-10-29: **A professional look; themes are colours only** (maintainer's choices from a look
+  study: real screenshots of each idea behind prototype switches, judged before / after). The UI
+  read as playful because of its structure as much as its colours: rounded cards floating on a
+  coloured background, a loud focus frame, completely flat controls, phone-style faders. Kept:
+  - **Docked panels** edge to edge with 2 px seams, square corners, the transport bar as a
+    full-width strip; focus is a 2 px accent line along the panel's top instead of a frame.
+  - **Depth**: surfaces lit from above (`fillRaised`: gradient + top highlight), recessed
+    displays (inner shadow), a sheen on headers, a shadow under the floating Channel Rack.
+  - **Console controls**: faders with a groove, scale ticks and a rectangular cap; knobs with a
+    raised body inside a thin value ring.
+  - **LED step keys**: the key stays grey, a small LED on it lights (picked over pads, flat
+    squares, velocity bars and nine other variations; familiar to FL users).
+  - **Themes set colours only.** Shapes (3 px controls, 4 px floating panels, 2 px steps) and
+    the font (IBM Plex Sans) are fixed: the maintainer found rounded themes (Juicy) didn't fit,
+    and one look is easier to keep consistent. Theme format version 2; version 1 files still
+    import, their `font` / `shape` / `effects` skipped quietly. The `shadow` colour now colours
+    the rack's shadow.
+  - **Built-ins: Blackberry (default) and Graphite** (neutral grey, blue accent, amber
+    displays; the maintainer didn't want orange). Juicy, Citrus, Watermelon and Blueberry are
+    gone, with the Bricolage Grotesque, Sora and Outfit fonts; a saved choice of one falls back
+    to Blackberry.
+  Not taken up yet: denser controls, flush mixer strips, per-track colours (prototyped on the
+  `look-experiments` branch).

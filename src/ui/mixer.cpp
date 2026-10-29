@@ -136,9 +136,9 @@ void MixerStrip::paint(juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat().reduced(2.0f, 0.0f);
     g.setColour(colour(selected ? t.colours.activeBackground
                                 : (index == 0 ? t.colours.panelRaised : t.colours.lane)));
-    g.fillRoundedRectangle(bounds, t.shape.cornerRadius);
+    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
     g.setColour(colour(selected ? t.colours.accent : t.colours.outline));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), t.shape.cornerRadius, selected ? 1.5f : 1.0f);
+    g.drawRoundedRectangle(bounds.reduced(0.5f), metrics::cornerRadius, selected ? 1.5f : 1.0f);
 
     g.setColour(colour(t.colours.text));
     g.setFont(juce::FontOptions(11.0f));
@@ -223,9 +223,9 @@ class MixerView::Slots final : public juce::Component
         {
             const auto row = slotBounds(i).toFloat();
             g.setColour(colour(t.colours.lane));
-            g.fillRoundedRectangle(row, t.shape.cornerRadius);
+            g.fillRoundedRectangle(row, metrics::cornerRadius);
             g.setColour(colour(t.colours.outline));
-            g.drawRoundedRectangle(row.reduced(0.5f), t.shape.cornerRadius, 1.0f);
+            g.drawRoundedRectangle(row.reduced(0.5f), metrics::cornerRadius, 1.0f);
 
             if (i < static_cast<int>(track.effects.size()))
             {
@@ -606,14 +606,14 @@ void EffectPanel::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     const auto bounds = getLocalBounds().toFloat();
-    const float radius = t.shape.windowRadius;
+    const float radius = metrics::windowRadius;
     g.setColour(colour(t.colours.panel));
     g.fillRoundedRectangle(bounds, radius);
 
     paintPanelHeader(g, getLocalBounds().removeFromTop(panelHeaderHeight), heading, {},
                      enabled.getX() - metrics::controlGap, radius);
     g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), radius, std::max(1.0f, t.shape.borderWidth));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), radius, std::max(1.0f, metrics::borderWidth));
 }
 
 void EffectPanel::resized()

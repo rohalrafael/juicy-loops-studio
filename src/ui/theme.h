@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-// UI side of theming: the active theme, the LookAndFeel built from it, bundled fonts,
-// user theme files and the saved choice. Colours and shapes come from the active theme;
-// only layout sizes (metrics) are fixed here.
+// UI side of theming: the active theme, the LookAndFeel built from it, the bundled font,
+// user theme files and the saved choice. Colours come from the active theme; sizes, corner
+// radii and the font are the same for every theme (metrics, IBM Plex Sans).
 namespace jls::ui
 {
 
@@ -40,6 +40,12 @@ inline constexpr int controlGap = 6;
 inline constexpr int controlPadding = 10; // inside buttons; panel headers' left inset
 inline constexpr int comboWidth = 76;
 inline constexpr int narrowComboWidth = 52;
+
+// Shapes: small, sharp radii, the same in every theme. Docked panels are square.
+inline constexpr float cornerRadius = 3.0f; // buttons and small controls
+inline constexpr float windowRadius = 4.0f; // floating panels (Channel Rack, Sampler, plugins)
+inline constexpr float stepRadius = 2.0f;
+inline constexpr float borderWidth = 1.0f;
 } // namespace metrics
 
 inline juce::Colour colour(theme::Argb argb)
@@ -50,7 +56,7 @@ inline juce::Colour colour(theme::Argb argb)
 // The active theme. Valid while a ThemeManager exists (before that: the default theme).
 const theme::Theme& currentTheme();
 
-// A bundled font family in the weights the UI uses (any of them may be missing).
+// The bundled font (IBM Plex Sans) in the weights the UI uses (any of them may be missing).
 struct FontFamily
 {
     juce::Typeface::Ptr regular, medium, semibold;
@@ -64,14 +70,20 @@ juce::FontOptions semiboldFont(float size);
 class LookAndFeel final : public juce::LookAndFeel_V4
 {
   public:
-    void applyTheme(const theme::Theme& theme, const FontFamily* bundledFont);
-    // The theme's bundled font in the weight a font asks for (by style name).
+    void applyTheme(const theme::Theme& theme);
+    // Set once at start-up: the font every theme uses.
+    void setFont(const FontFamily& font);
+    // The bundled font in the weight a font asks for (by style name).
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& font) override;
 
     void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour& background,
                               bool highlighted, bool down) override;
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height, float position,
                           float startAngle, float endAngle, juce::Slider&) override;
+    // Vertical faders like a console's: a groove with scale ticks and a rectangular cap.
+    void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height, float sliderPos,
+                          float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle,
+                          juce::Slider&) override;
 
     // Text buttons: the control font for their height (ui/controls).
     juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) override;
@@ -127,7 +139,7 @@ class LookAndFeel final : public juce::LookAndFeel_V4
     int getAlertWindowButtonHeight() override;
 
   private:
-    FontFamily family; // the active theme's bundled font, if it has one
+    FontFamily family; // the bundled font
 };
 
 class ThemeManager final : public juce::ChangeBroadcaster
@@ -162,11 +174,9 @@ class ThemeManager final : public juce::ChangeBroadcaster
 
   private:
     void apply();
-    const FontFamily* bundledFont(const std::string& family) const;
 
     LookAndFeel laf;
     std::unique_ptr<juce::PropertiesFile> settings;
-    std::map<juce::String, FontFamily> fonts; // lower-case family name -> its weights
     std::vector<theme::Theme> userThemes;
     theme::Theme active;
 };

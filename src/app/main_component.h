@@ -54,7 +54,7 @@ class MainComponent final : public juce::AudioAppComponent,
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void lookAndFeelChanged() override; // display colours of the clock
+    void lookAndFeelChanged() override; // display colours of the clock, the rack's shadow
     bool keyPressed(const juce::KeyPress& key) override;
     bool keyStateChanged(bool isKeyDown) override;
     void focusLost(FocusChangeType cause) override;
@@ -196,6 +196,8 @@ class MainComponent final : public juce::AudioAppComponent,
     double formatRate = 0.0;           // engine format the effect pool was last set up for
     int formatBlock = 0;
     ui::ChannelRack channelRack;
+    // The floating rack casts a shadow (the theme's shadow colour) on the panels below it.
+    std::unique_ptr<juce::DropShadower> rackShadow;
     bool channelRackPlaced = false;
     juce::TooltipWindow tooltips{this, 600};
     // Menus, window name and window buttons (not on macOS: native title bar and menu bar).

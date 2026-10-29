@@ -33,7 +33,8 @@ the front (F6 again hides it).
 
 ## Keyboard
 
-**Focus.** The arrow keys and Enter act on the focused area, which has an orange outline:
+**Focus.** The arrow keys and Enter act on the focused area, which shows a line in the accent
+colour along its top edge:
 the Browser, the Channel Rack, the Playlist / Piano Roll, or the Mixer. Click an area to focus
 it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** through the areas that are showing. In
 Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack, Playlist, Mixer) or **Last
@@ -181,7 +182,7 @@ longer than 2 minutes are cut at 2 minutes (for now).
 
 | Do this | To |
 |---|---|
-| Left-click / drag over steps | Turn steps on (or off, if you started on a lit step) |
+| Left-click / drag over steps | Turn steps on (or off, if you started on a lit step); a step that's on lights the LED on its key |
 | Right-click / drag over steps | Turn steps off |
 | Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
 | Right-click a channel name | Piano roll, show plugin / Sampler, Fill, rename, replace sample, use/replace an instrument plugin, delete (press **D** while the menu is open) |
@@ -367,5 +368,6 @@ and MIDI devices are in **Options › Audio settings…**.
 
 ## Themes
 
-**Options › Theme…** offers Juicy, Citrus, Watermelon, Blueberry and Blackberry, and can import or export
-your own theme files. See [themes.md](themes.md).
+**Options › Theme…** offers **Blackberry** (the default) and **Graphite**, and can import or
+export your own theme files. Themes change the colours only; the shapes and the font are the same
+in every theme. See [themes.md](themes.md).

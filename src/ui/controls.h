@@ -129,6 +129,13 @@ class HeaderLayout
 // from the panel's paintOverChildren() so it's drawn over its children.
 void paintCardFrame(juce::Graphics& g, juce::Component& panel);
 
+// Floating panels' frame (the Channel Rack, the Sampler, plugin windows): the panel fill with
+// rounded corners and the header across the top (see paintPanelHeader), then the border along
+// the rounded edge.
+void paintFloatingPanel(juce::Graphics& g, juce::Component& panel, const juce::String& title,
+                        const juce::String& subtitle, int textRight);
+void paintFloatingBorder(juce::Graphics& g, juce::Component& panel);
+
 // Fills `shape` with `fill` as a raised surface, lit from above: lighter at the top, a highlight
 // along the top edge. Buttons, steps, knobs and fader caps use it.
 void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill);

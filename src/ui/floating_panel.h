@@ -56,4 +56,9 @@ class FloatingPanel : public juce::Component, private juce::ComponentListener
     bool moving = false;
 };
 
+// Moves a panel dragged by its title bar (a FloatingPanel, the Channel Rack) as little as needed
+// to keep its title bar inside `area` and some of its width in view, so it can always be grabbed
+// again. Does nothing while `area` is empty.
+void keepTitleBarReachable(juce::Component& panel, juce::Rectangle<int> area);
+
 } // namespace jls::ui

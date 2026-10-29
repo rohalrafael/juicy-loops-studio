@@ -90,32 +90,32 @@ void FloatingPanel::placeInitially(int cascade)
 
 void FloatingPanel::keepReachable()
 {
-    // The title bar never leaves the area, so the panel can always be grabbed again.
-    if (movableArea.isEmpty())
+    keepTitleBarReachable(*this, movableArea);
+}
+
+void keepTitleBarReachable(juce::Component& panel, juce::Rectangle<int> area)
+{
+    // JUCE's constrainer only keeps a few pixels on screen and lets the title bar leave the top
+    // (under the transport bar), where it can't be grabbed again: the drag got "stuck".
+    if (area.isEmpty())
         return;
     constexpr int keepVisible = 80; // of the width, at the left or right edge
-    const int x = std::clamp(getX(), movableArea.getX() - getWidth() + keepVisible,
-                             std::max(movableArea.getX(), movableArea.getRight() - keepVisible));
-    const int y = std::clamp(
-        getY(), movableArea.getY(),
-        std::max(movableArea.getY(), movableArea.getBottom() - metrics::panelHeaderHeight));
-    if (x != getX() || y != getY())
-        setTopLeftPosition(x, y);
+    const int x = std::clamp(panel.getX(), area.getX() - panel.getWidth() + keepVisible,
+                             std::max(area.getX(), area.getRight() - keepVisible));
+    const int y = std::clamp(panel.getY(), area.getY(),
+                             std::max(area.getY(), area.getBottom() - metrics::panelHeaderHeight));
+    if (x != panel.getX() || y != panel.getY())
+        panel.setTopLeftPosition(x, y);
 }
 
 void FloatingPanel::paint(juce::Graphics& g)
 {
-    g.setColour(colour(currentTheme().colours.panel));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), metrics::windowRadius);
-    paintPanelHeader(g, getLocalBounds().removeFromTop(metrics::panelHeaderHeight), title, subtitle,
-                     closeButton.getX() - metrics::controlGap, metrics::windowRadius);
+    paintFloatingPanel(g, *this, title, subtitle, closeButton.getX() - metrics::controlGap);
 }
 
 void FloatingPanel::paintOverChildren(juce::Graphics& g)
 {
-    g.setColour(colour(currentTheme().colours.outline));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f),
-                           metrics::windowRadius, metrics::borderWidth);
+    paintFloatingBorder(g, *this);
 }
 
 void FloatingPanel::resized()

@@ -420,6 +420,22 @@ void paintCardFrame(juce::Graphics& g, juce::Component& panel)
     }
 }
 
+void paintFloatingPanel(juce::Graphics& g, juce::Component& panel, const juce::String& title,
+                        const juce::String& subtitle, int textRight)
+{
+    g.setColour(colour(currentTheme().colours.panel));
+    g.fillRoundedRectangle(panel.getLocalBounds().toFloat(), metrics::windowRadius);
+    paintPanelHeader(g, panel.getLocalBounds().removeFromTop(metrics::panelHeaderHeight), title,
+                     subtitle, textRight, metrics::windowRadius);
+}
+
+void paintFloatingBorder(juce::Graphics& g, juce::Component& panel)
+{
+    g.setColour(colour(currentTheme().colours.outline));
+    g.drawRoundedRectangle(panel.getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f),
+                           metrics::windowRadius, metrics::borderWidth);
+}
+
 void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill)
 {
     const auto b = shape.getBounds();

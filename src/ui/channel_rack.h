@@ -7,10 +7,8 @@
 #include "engine/transport.h"
 #include "io/sample_loader.h"
 #include "model/document.h"
-#include "ui/plugin_menu.h"
-#include "ui/theme.h"
-
 #include "ui/controls.h"
+#include "ui/plugin_menu.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -101,10 +99,11 @@ class InsertBox final : public juce::Component, public juce::SettableTooltipClie
 // The row of step buttons. Left-click toggles a step and dragging paints that value across
 // steps; right-click (and drag) erases, as in FL.
 //
-// A looping channel shows its repeats greyed from `loopStart` on. Clicking one makes the repeats
-// up to there real first (see ChannelRow), so what you hear doesn't change, and then sets that
-// step: on for a left-click (a looped note stays), off for a right-click. Right-click (and drag)
-// only acts on repeats that have a note; empty ones stay looped.
+// A looping channel shows its repeats greyed from `loopStart` on. Left-clicking one sets that
+// step (a looped note stays). When the loop is copied in (copiesLoop), the repeats up to there
+// become real first (see ChannelRow), so what you hear doesn't change, and right-click (and drag)
+// removes repeats that have a note; empty ones stay looped. Otherwise, as in FL, right-click and
+// erasing leave greyed steps alone.
 class StepGrid final : public juce::Component
 {
   public:
@@ -132,8 +131,12 @@ class StepGrid final : public juce::Component
 
   private:
     static int stepX(int step);
+    int numSteps() const { return static_cast<int>(steps.size()); }
     int stepAt(int x) const;
     bool isRepeat(int step) const { return loopStart >= 0 && step >= loopStart; }
+    void paintStepKey(juce::Graphics& g, int step) const;
+    void paintNotePreview(juce::Graphics& g) const;
+    // Applies the press's paint value to `step`, once per step and press.
     void paintStep(int step);
 
     std::vector<bool> steps;
@@ -141,11 +144,13 @@ class StepGrid final : public juce::Component
     std::vector<model::Note> melodicNotes;
     bool melodic = false;
     int playingStep = -1;
-    bool paintValue = true;
+    bool paintValue = true; // what the current press sets steps to (see mouseDown)
     int gestureId = 0;
-    int lastPainted = -1;
+    int lastPainted = -1; // the step the current press painted last
 };
 
+// One channel's row in the rack, left to right: mute LED, pan and volume knobs, mixer track,
+// name button, loop switch and the steps. Its edits go through the rack.
 class ChannelRow final : public juce::Component
 {
   public:
@@ -160,6 +165,18 @@ class ChannelRow final : public juce::Component
     void mouseDown(const juce::MouseEvent& e) override;
 
   private:
+    void setUpMute();
+    void setUpKnob(juce::Slider& knob, double min, double max, double reset,
+                   std::function<void(model::Channel&, float)> apply);
+    void setUpKnobs();
+    void setUpInsert();
+    void setUpName();
+    void setUpLoop();
+    void setUpSteps();
+    // Applies `change` to this row's channel as an undoable edit.
+    void editChannel(const std::function<void(model::Channel&)>& change, int gestureId = 0);
+    // Sets a step clicked or dragged over in the steps (see StepGrid), as an undoable edit.
+    void setStep(int step, bool on, int gestureId);
     void showMenu();
 
     ChannelRack& rack;
@@ -171,7 +188,7 @@ class ChannelRow final : public juce::Component
     juce::TextButton name;
     LoopToggle loop;
     StepGrid steps;
-    int knobGesture = 0;
+    int knobGesture = 0;       // the gesture of the knob being dragged
     bool isInstrument = false; // plays a plugin instead of a sample
     bool selected = false;     // the selected channel: its row is highlighted
 };
@@ -260,10 +277,17 @@ class ChannelRack final : public juce::Component,
     void itemDropped(const SourceDetails& details) override;
 
   private:
+    void setUpButtons();
+    void setUpLengthHandle();
+    // The pattern length shown (the 16 | 32 | 64 buttons and the length handle).
+    void setGridSteps(int steps, int gestureId = 0);
+    // The number of steps the rows show.
+    int stepsShown() const;
     void timerCallback() override;
     void addChannelsFromFiles(const juce::Array<juce::File>& files);
     void replaceSample(model::ChannelId id, const juce::File& file);
-    ChannelRow* rowAt(int y);
+    // The index of the row at `y`, or -1 if there's none.
+    int rowIndexAt(int y) const;
 
     model::Document& doc;
     engine::Transport& transport;
@@ -280,11 +304,10 @@ class ChannelRack final : public juce::Component,
     juce::ComponentDragger dragger;
     juce::Rectangle<int> movableArea;
     bool movingRack = false; // the current mouse press started on the title bar
-    void keepReachable();
     std::unique_ptr<juce::FileChooser> chooser;
-    int dropRow = -1; // row under a file drag, or -1 for "new channel"
-    bool dragging = false;
-    int lastPlayingStep = -2;
+    bool dragOver = false;    // files are being dragged over the rack
+    int dropRow = -1;         // the row under them, or -1 for "new channel"
+    int lastPlayingStep = -2; // -2: none sent yet, so new rows get the playhead on the next tick
 };
 
 } // namespace jls::ui

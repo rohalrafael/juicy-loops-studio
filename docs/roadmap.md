@@ -19,14 +19,6 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
-- Copy and paste in the Channel Rack (2026-10-29, maintainer's request): Ctrl+C / Ctrl+V (and
-  Ctrl+X) with the Channel Rack focused copy the selected channel's steps and notes in the
-  current pattern, and paste them into the selected channel, also in another pattern, as in FL.
-  The commands exist already; today they only act on the Playlist or Piano Roll
-  (`MainComponent::editInMainView`); Delete already has a Channel Rack case. The notes clipboard
-  is `model/clipboard`. Decided: pasting replaces the target channel's steps in that pattern, as
-  in FL (undoable).
-
 - Plugin windows can go to the background (2026-10-29, maintainer's request): today a plugin's
   panel always stays in front of the Playlist, Channel Rack and the rest, because on Linux the
   plugin draws in its own native window that the app can't draw over (user guide, *Windows*).

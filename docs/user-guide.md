@@ -66,7 +66,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Numpad + / − | Next / previous pattern |
 | F5 / F6 / F7 / F9 | Playlist / Channel Rack / Piano Roll / Mixer |
 | Alt+F8 | Browser |
-| Ctrl+C / X / V | Copy / cut / paste (Piano Roll or Playlist) |
+| Ctrl+C / X / V | Copy / cut / paste (Piano Roll, Playlist, or the Channel Rack's selected channel) |
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
 | Ctrl+B | Duplicate: copy the selection and paste it right after (Piano Roll or Playlist) |
 | Shift+↑ / ↓ | Move the selected notes up / down a semitone (Piano Roll) |
@@ -195,6 +195,7 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
 | Right-click a channel name | Piano roll, show plugin / Sampler, Fill, **Clear** (remove its notes from this pattern), **Duplicate** (a copy of the channel right after it: its sample or plugin with the plugin's current settings, volume, pan and mixer track, without notes), rename, replace sample, use/replace an instrument plugin, delete (press **D** while the menu is open). Clear and Duplicate are also in View › Channel rack options, for the selected channel |
 | Delete (Channel Rack focused) | Delete the selected channel (Ctrl+Z brings it back) |
+| Ctrl+C / Ctrl+X / Ctrl+V (Channel Rack focused) | Copy or cut the selected channel's notes in this pattern; paste them into the selected channel (also another channel or pattern), replacing its notes |
 | Right-click › Fill | Replace the channel's notes with one on every step, every 2, 4 or 8 steps (hi-hats), across the steps shown; also on a channel with melodic notes (undo brings them back) |
 | Green light | Mute / unmute |
 | Ctrl+click or right-click the green light | Solo: mute every other channel (again: all play) |

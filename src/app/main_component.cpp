@@ -1365,14 +1365,24 @@ bool MainComponent::perform(const InvocationInfo& info)
     case redo:
         document.redo();
         break;
+    // With the Channel Rack focused, copy / cut / paste act on the selected channel's notes.
     case jls::commands::copy:
-        editInMainView(ui::EditAction::copy);
+        if (focusArea == Area::channelRack && channelRack.isVisible())
+            channelRack.copySelectedChannel();
+        else
+            editInMainView(ui::EditAction::copy);
         break;
     case cut:
-        editInMainView(ui::EditAction::cut);
+        if (focusArea == Area::channelRack && channelRack.isVisible())
+            channelRack.cutSelectedChannel();
+        else
+            editInMainView(ui::EditAction::cut);
         break;
     case paste:
-        editInMainView(ui::EditAction::paste);
+        if (focusArea == Area::channelRack && channelRack.isVisible())
+            channelRack.pasteIntoSelectedChannel();
+        else
+            editInMainView(ui::EditAction::paste);
         break;
     case deleteSelection:
         // With the Channel Rack focused: delete the selected channel (undoable), as in FL.

@@ -1139,6 +1139,29 @@ void ChannelRack::addChannelsFromFiles(const juce::Array<juce::File>& files)
             });
 }
 
+void ChannelRack::copySelectedChannel()
+{
+    const auto& project = doc.project();
+    if (project.findChannel(project.selectedChannel) != nullptr)
+        channelClipboard = project.current().notesFor(project.selectedChannel);
+}
+
+void ChannelRack::cutSelectedChannel()
+{
+    copySelectedChannel();
+    if (const auto channel = doc.project().selectedChannel; channelClipboard && channel != 0)
+        edit([channel](model::Project& p) { p.current().clearNotes(channel); });
+}
+
+void ChannelRack::pasteIntoSelectedChannel()
+{
+    const auto channel = doc.project().selectedChannel;
+    if (!channelClipboard || doc.project().findChannel(channel) == nullptr)
+        return;
+    edit([channel, notes = *channelClipboard](model::Project& p)
+         { p.current().notes[channel] = notes; });
+}
+
 void ChannelRack::rename(model::ChannelId id)
 {
     const auto* channel = doc.project().findChannel(id);

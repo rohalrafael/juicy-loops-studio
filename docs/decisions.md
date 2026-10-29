@@ -488,3 +488,9 @@ not). Older entries describe the project as it was then; later entries may super
   unique (`Project::makeClipsUnique`, as in FL) gives the selected Playlist clips one shared copy
   of their pattern ("Beat 2"), unless every clip of it is selected (it's unique already). It's a
   command in the Patterns menu: clips have no menu of their own, as right-click deletes them.
+
+- 2026-10-29: **Copy and paste in the Channel Rack** (maintainer's request). With the rack focused,
+  Ctrl+C / X / V act on the selected channel's notes in the current pattern; pasting replaces the
+  target channel's notes, as in FL (maintainer's choice), at the same positions. The rack keeps
+  its own clipboard: the Piano Roll's pastes a block after the copied one, which doesn't fit a
+  whole channel.

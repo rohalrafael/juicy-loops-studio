@@ -15,6 +15,7 @@
 #include <array>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace jls::ui
@@ -216,6 +217,12 @@ class ChannelRack final : public juce::Component,
     void chooseSampleFor(model::ChannelId id);
     void rename(model::ChannelId id);
     void select(model::ChannelId id);
+    // Ctrl+C / Ctrl+X / Ctrl+V with the rack focused: the selected channel's notes (steps too) in
+    // the current pattern. Pasting replaces the selected channel's notes, also in another pattern
+    // or channel, as in FL. Cut and paste are undoable.
+    void copySelectedChannel();
+    void cutSelectedChannel();
+    void pasteIntoSelectedChannel();
     // The channels shown as rows: all but audio-clip channels, unless "Show audio clips" is on.
     std::vector<const model::Channel*> shownChannels() const;
     // Selects the channel `offset` rows below (negative: above) the selected one.
@@ -280,6 +287,8 @@ class ChannelRack final : public juce::Component,
     void itemDropped(const SourceDetails& details) override;
 
   private:
+    // What copySelectedChannel() took (empty = nothing copied yet).
+    std::optional<std::vector<model::Note>> channelClipboard;
     void setUpButtons();
     void setUpLengthHandle();
     // The pattern length shown (the 16 | 32 | 64 buttons and the length handle).

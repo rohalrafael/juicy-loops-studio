@@ -114,7 +114,7 @@ void TitleBar::timerCallback()
 void TitleBar::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
-    g.fillAll(colour(t.colours.header));
+    g.fillAll(colour(t.colours.chrome));
     g.setColour(colour(t.colours.outline));
     g.fillRect(0, getHeight() - 1, getWidth(), 1);
 

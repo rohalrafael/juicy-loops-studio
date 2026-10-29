@@ -147,3 +147,17 @@ TEST_CASE("Exported themes read back identically")
         CHECK(copy == builtIn);
     }
 }
+
+TEST_CASE("Themes without a chrome colour use their header colour for it")
+{
+    // "chrome" is newer than "header", which used to colour the title and transport bars too.
+    const auto r = parseTheme(R"({ "name": "Old", "colours": { "header": "#123456" } })");
+    REQUIRE(r.theme);
+    CHECK(r.warnings.empty());
+    CHECK(r.theme->colours.chrome == 0xff123456u);
+
+    const auto withChrome =
+        parseTheme(R"({ "name": "New", "colours": { "header": "#123456", "chrome": "#abcdef" } })");
+    REQUIRE(withChrome.theme);
+    CHECK(withChrome.theme->colours.chrome == 0xffabcdefu);
+}

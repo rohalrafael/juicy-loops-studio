@@ -124,11 +124,13 @@ struct MixerTrack
 {
     static constexpr float minVolumeDb = -60.0f; // the bottom of the fader is silence
     static constexpr float maxVolumeDb = 6.0f;
+    static constexpr float maxWidth = 2.0f;
     static constexpr int maxEffects = 8;
 
     std::string name;
     float volumeDb = 0.0f;
     float pan = 0.0f;
+    float width = 1.0f; // stereo width: 0 = mono, 1 = as it comes in, maxWidth = twice as wide
     bool muted = false;
     bool solo = false;
     std::vector<EffectSlot> effects; // in processing order, at most maxEffects

@@ -68,6 +68,7 @@ enum ID : juce::CommandID
     browserAddFolder,
     previewPlayPause,
     browserUseSample,
+    closeWindow, // the focused Sampler or plugin panel (Esc does it too, see deselect)
 
     // Piano Roll / Playlist editing
     sliceNotes = 0x1501,

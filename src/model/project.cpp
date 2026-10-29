@@ -802,6 +802,7 @@ std::unique_ptr<engine::EngineState> toEngineState(const Project& project,
         const float pan = std::clamp(track.pan, -1.0f, 1.0f);
         ts.gainLeft = gain * std::min(1.0f, 1.0f - pan);
         ts.gainRight = gain * std::min(1.0f, 1.0f + pan);
+        ts.width = std::clamp(track.width, 0.0f, MixerTrack::maxWidth);
         if (effects != nullptr)
             for (const auto& slot : track.effects)
                 if (auto processor =

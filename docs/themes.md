@@ -46,7 +46,8 @@ A full file:
     "background": "#0a0a0d",
     "panel": "#121216",
     "panelRaised": "#1b1b21",
-    "header": "#0e0e12",
+    "chrome": "#28282e",
+    "header": "#1b1b21",
     "outline": "#24242c",
     "text": "#ececf2",
     "textDim": "#8e8e9c",
@@ -81,7 +82,8 @@ solid).
 | `background`       | Window background, and the seams between docked panels       |
 | `panel`            | Panels such as the Channel Rack and dialogs                  |
 | `panelRaised`      | Buttons and other raised controls                            |
-| `header`           | Title bars, headers and the transport bar                    |
+| `chrome`           | The title bar, dialogs' title bars and the transport bar: the lightest surface |
+| `header`           | Panel headers (Playlist, Channel Rack...) and dialog footers, a step between the chrome and the content |
 | `outline`          | Borders and outlines                                         |
 | `text`, `textDim`  | Main and secondary text                                      |
 | `accent`           | Main highlight colour (knob values, selection, the focused panel's top line) |
@@ -102,6 +104,9 @@ solid).
 Version 1 theme files (`"formatVersion": 1`) also set a `font`, a `shape` (corner radii,
 borders) and `effects` (glows, a hard shadow). They still import: their colours are used and
 those three settings are skipped without a warning.
+
+Theme files from before `chrome` existed use their `header` colour for it, as the title and
+transport bars did then.
 
 ### Errors
 

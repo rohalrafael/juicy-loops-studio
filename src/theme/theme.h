@@ -22,7 +22,8 @@ struct Colours
     Argb background = 0xff0a0a0d;
     Argb panel = 0xff121216;
     Argb panelRaised = 0xff1b1b21;
-    Argb header = 0xff0e0e12;
+    Argb chrome = 0xff28282e; // the title bar and transport bar, lightest of the surfaces
+    Argb header = 0xff1b1b21; // panel headers, between the chrome and the content
     Argb outline = 0xff24242c;
     Argb text = 0xffececf2;
     Argb textDim = 0xff8e8e9c;

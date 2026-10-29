@@ -126,6 +126,10 @@ class MainComponent final : public juce::AudioAppComponent,
     // plugin window just comes to the front.
     void bringPluginToFront(plugins::PluginView& view);
     void forgetClosedPlugins(); // drops closed panels from the focus order
+    // Closes the focused plugin panel, or the Sampler if it was opened or clicked last (Esc).
+    // Returns whether one was closed.
+    bool closeFocusedWindow();
+    bool samplerFocused = false; // opened or clicked since the last focus change
     void layoutTransportBar(juce::Rectangle<int> bar);
     void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
     void updateFocusFrames(); // the focused docked panel's accent frame

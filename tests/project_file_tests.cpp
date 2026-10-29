@@ -59,6 +59,7 @@ Project richProject()
     project.mixer.tracks[2].volumeDb = -3.5f;
     project.mixer.tracks[2].solo = true;
     project.mixer.tracks[0].pan = 0.3f;
+    project.mixer.tracks[3].width = 1.5f;
     const auto reverb = project.addEffect(2, "reverb");
     project.findEffect(reverb)->params[0] = 0.9f;
     project.findEffect(reverb)->enabled = false;
@@ -121,6 +122,7 @@ TEST_CASE("Projects survive a save and load round trip")
         CHECK(b.name == a.name);
         CHECK(b.volumeDb == a.volumeDb);
         CHECK(b.pan == a.pan);
+        CHECK(b.width == a.width);
         CHECK(b.muted == a.muted);
         CHECK(b.solo == a.solo);
         CHECK(b.effects == a.effects);

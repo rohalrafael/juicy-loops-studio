@@ -491,6 +491,9 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
     }
     g.setColour(colour(t.colours.outline));
     g.fillRect(area.withTop(area.getBottom() - metrics::borderWidth));
+    // A lit top edge, like a bevel: headers read as the top of their panel.
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.fillRect(area.withHeight(1.0f).reduced(topRadius, 0.0f));
 
     auto text = header.withTrimmedLeft(metrics::controlPadding);
     if (textRight >= 0)

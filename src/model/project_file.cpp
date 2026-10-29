@@ -184,6 +184,7 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
         tracks.push_back({{"name", t.name},
                           {"volumeDb", tidy(t.volumeDb)},
                           {"pan", tidy(t.pan)},
+                          {"width", tidy(t.width)},
                           {"muted", t.muted},
                           {"solo", t.solo},
                           {"effects", effects}});
@@ -427,6 +428,7 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
             track.volumeDb = read.clamped<float>(t, "volumeDb", 0.0f, MixerTrack::minVolumeDb,
                                                  MixerTrack::maxVolumeDb);
             track.pan = read.clamped<float>(t, "pan", 0.0f, -1.0f, 1.0f);
+            track.width = read.clamped<float>(t, "width", 1.0f, 0.0f, MixerTrack::maxWidth);
             track.muted = read.get<bool>(t, "muted", false);
             track.solo = i > 0 && read.get<bool>(t, "solo", false);
             for (const auto& e : read.array(t, "effects"))

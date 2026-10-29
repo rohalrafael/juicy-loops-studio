@@ -37,6 +37,7 @@ constexpr std::array colourFields{
     ColourField{"background", &Colours::background},
     ColourField{"panel", &Colours::panel},
     ColourField{"panelRaised", &Colours::panelRaised},
+    ColourField{"chrome", &Colours::chrome},
     ColourField{"header", &Colours::header},
     ColourField{"outline", &Colours::outline},
     ColourField{"text", &Colours::text},
@@ -189,6 +190,10 @@ ParseResult parseTheme(std::string_view json, const Theme& fallback)
         {
             for (const auto& field : colourFields)
                 read.colour(*c, "colours.", field.key, theme.colours.*field.member);
+            // Before "chrome" existed, the title and transport bars used "header": themes
+            // without it keep that look.
+            if (!c->contains("chrome"))
+                theme.colours.chrome = theme.colours.header;
 
             if (const auto steps = c->find("stepOff"); steps != c->end())
             {
@@ -204,14 +209,31 @@ ParseResult parseTheme(std::string_view json, const Theme& fallback)
                         "colours.stepOff: expected two colours, like [\"#392d44\", \"#4b2f3c\"]");
             }
 
-            read.unknownKeys(*c, "colours.", {"background", "panel",       "panelRaised",
-                                              "header",     "outline",     "text",
-                                              "textDim",    "accent",      "accentAlt",
-                                              "display",    "displayText", "displayDim",
-                                              "stepOff",    "stepOn",      "playhead",
-                                              "led",        "ledOff",      "activeBackground",
-                                              "activeText", "shadow",      "lane",
-                                              "grid",       "clip",        "clipText"});
+            read.unknownKeys(*c, "colours.", {"background",
+                                              "panel",
+                                              "panelRaised",
+                                              "chrome",
+                                              "header",
+                                              "outline",
+                                              "text",
+                                              "textDim",
+                                              "accent",
+                                              "accentAlt",
+                                              "display",
+                                              "displayText",
+                                              "displayDim",
+                                              "stepOff",
+                                              "stepOn",
+                                              "playhead",
+                                              "led",
+                                              "ledOff",
+                                              "activeBackground",
+                                              "activeText",
+                                              "shadow",
+                                              "lane",
+                                              "grid",
+                                              "clip",
+                                              "clipText"});
         }
     }
 

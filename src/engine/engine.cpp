@@ -4,8 +4,8 @@
 //   3. render sampler voices into their mixer-track buses, split at trigger offsets; turn
 //      triggers on instrument channels (and the ends of held notes) into note events
 //   4. render instruments with their events, add them into their mixer-track buses
-//   5. run each insert's effects + fader/pan + meter, sum into the Master
-//   6. Master effects + fader/pan + meter, add to the output; metronome and Browser preview
+//   5. run each insert's effects + width + fader/pan + meter, sum into the Master
+//   6. Master effects + width + fader/pan + meter, add to the output; metronome and Browser preview
 //      on top
 
 #include "engine/engine.h"
@@ -551,6 +551,7 @@ void Engine::processTrack(int track, int numSamples)
 
     float gainLeft = 1.0f;
     float gainRight = 1.0f;
+    float width = 1.0f;
     if (current != nullptr && track < static_cast<int>(current->tracks.size()))
     {
         const auto& state = current->tracks[static_cast<std::size_t>(track)];
@@ -562,7 +563,18 @@ void Engine::processTrack(int track, int numSamples)
             }
         gainLeft = state.gainLeft;
         gainRight = state.gainRight;
+        width = state.width;
     }
+
+    // Stereo width: keep the mid (what both sides share), scale the side (their difference).
+    if (std::abs(width - 1.0f) > 1.0e-6f)
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float mid = 0.5f * (left[i] + right[i]);
+            const float side = 0.5f * (left[i] - right[i]) * width;
+            left[i] = mid + side;
+            right[i] = mid - side;
+        }
 
     float peakLeft = 0.0f;
     float peakRight = 0.0f;

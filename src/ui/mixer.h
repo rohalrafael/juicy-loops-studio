@@ -21,7 +21,8 @@ namespace jls::ui
 
 class MixerView;
 
-// One mixer track: name, stereo peak meter, fader, pan, mute and solo. Click it to select it.
+// One mixer track, drawn like a console strip: number and name, stereo peak meter with a dB
+// scale, fader with its level, pan, mute and solo. Click it to select it.
 class MixerStrip final : public juce::Component
 {
   public:
@@ -37,14 +38,19 @@ class MixerStrip final : public juce::Component
     void mouseDown(const juce::MouseEvent& e) override;
 
   private:
+    static constexpr int nameHeight = 20;
+    juce::Rectangle<float> meterBounds() const;
+
     MixerView& mixer;
     int index;
     juce::Slider fader;
     juce::Slider pan;
+    juce::Slider stereoWidth;
     juce::TextButton mute{"M"};
-    juce::TextButton solo{"S"};
+    LedToggle solo;               // lit while soloed
     std::array<float, 2> shown{}; // meter levels with fall-off, in dB
     bool selected = false;
+    juce::Rectangle<int> readout; // the fader's level, under it
     juce::String name;
     int gesture = 0;
 };

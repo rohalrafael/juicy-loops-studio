@@ -541,3 +541,21 @@ not). Older entries describe the project as it was then; later entries may super
   maximized state at each resize, which GNOME updates just after: JUCE lagged a step (a resize
   border while maximized, none after restoring), so the title bar has JUCE read it again a
   moment later when the two disagree (`refreshNativeWindowState`).
+
+- 2026-10-30: **Surfaces and data: a more serious look** (maintainer's choice from the second
+  look study, branch `pro-look-2`). Three directions were prototyped as real screenshots:
+  compact sizes (A), a tonal hierarchy of surfaces (B) and data drawn like an instrument (C).
+  The maintainer took B and C and left out A, to keep text and controls at today's sizes (the
+  type scale was tuned for legibility before). B: a new theme colour, `chrome`, for the title and
+  transport bars, the lightest surface; `header` (panel headers) a step below, with a lit top
+  edge; the content darkest. Older theme files use their `header` for `chrome`, so they keep
+  their look. C: Playlist clips have a solid name bar over a tinted, outlined body with the notes
+  or waveform in the clip colour; mixer strips are joined like a console, with a number chip,
+  segmented meters with a dB scale and the fader's level in a readout.
+
+- 2026-10-30: **Mixer width, solo light, Esc closes windows** (maintainer's requests). Each
+  mixer track has a stereo width knob, from mono through unchanged (100 %, the middle) to twice
+  as wide, done mid/side after the track's effects and before fader and pan. Solo is a light
+  like the app's other on/off switches. Esc closes the Sampler (after opening or clicking it) or
+  the focused plugin panel, as in FL, and otherwise deselects as before; the action is also the
+  "Close window" command (no default key besides Esc).

@@ -163,9 +163,10 @@ for each chunk:
 1. Clear the per-track stereo **buses** (Master + inserts), preallocated in `prepare()`.
 2. Render sampler voices into the bus of their channel's mixer track.
 3. Render each instrument channel with its note events for the chunk, into its track's bus.
-4. For each insert: run its effect chain in place → apply fader and pan (mute/solo already
-   folded into the gains) → record the peak → add into the Master bus.
-5. Master: effects → fader/pan → peak → add to the device output.
+4. For each insert: run its effect chain in place → stereo width (mid/side: the side scaled by
+   the width) → apply fader and pan (mute/solo already folded into the gains) → record the peak
+   → add into the Master bus.
+5. Master: effects → width → fader/pan → peak → add to the device output.
 6. Metronome clicks and the Browser's sample preview go straight to the output, bypassing the
    mixer.
 7. The finished output (mono mix) is copied into `ScopeBuffer`, a lock-free ring of atomics

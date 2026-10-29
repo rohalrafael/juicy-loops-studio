@@ -78,6 +78,7 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Alt+F8 | Browser |
 | Ctrl+C / X / V | Copy / cut / paste (Piano Roll, Playlist, or the Channel Rack's selected channel) |
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
+| Esc (Sampler or plugin focused) | Close it: the Sampler after opening or clicking it, a plugin panel while it has the focus (View › Close window) |
 | Ctrl+B | Duplicate: copy the selection and paste it right after (Piano Roll or Playlist) |
 | Shift+↑ / ↓ | Move the selected notes up / down a semitone (Piano Roll) |
 | Ctrl+↑ / ↓ | Piano Roll focused: move the selected notes up / down an octave (Browser focused: previous / next sample into the channel) |
@@ -366,8 +367,11 @@ their end, like FL's default sampler.
 
 ## Mixer
 
-- **Strips:** Master plus 16 inserts, each with a stereo meter, fader (double-click = 0 dB),
-  pan, **M**ute and **S**olo. Click a strip to select it.
+- **Strips:** Master plus 16 inserts, drawn like a console: the track's number and name, a
+  stereo meter with a dB scale, the fader (double-click = 0 dB) with its level below it, **pan**
+  and **width** knobs, **M**ute, and the solo light (lit while soloed). Click a strip to select it.
+- **Width** makes a track's stereo image narrower or wider: all the way left is mono, the middle
+  (100 %, double-click) leaves it as it comes in, all the way right (200 %) is twice as wide.
 - **Effect slots** (right side, for the selected track):
   - Click **+ Add effect** to choose Filter, EQ, Delay, Reverb, Compressor or Soft Clipper.
   - Click an effect to open its controls; click its light to bypass it (the effect's panel has

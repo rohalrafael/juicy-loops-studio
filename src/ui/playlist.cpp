@@ -27,6 +27,35 @@ juce::Colour audioClipColour(const theme::Theme& t)
     return colour(t.colours.clip).interpolatedWith(colour(t.colours.accentAlt), 0.35f);
 }
 
+// Clips are drawn as data, as in FL and Ableton: a body tinted with the clip's colour and
+// outlined in it, a solid name bar on top, and the notes or waveform in the colour itself.
+constexpr float nameBarHeight = 14.0f;
+
+void paintClipBody(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour clipColour,
+                   bool selected)
+{
+    const float radius = metrics::cornerRadius;
+    g.setColour(clipColour.withAlpha(0.22f));
+    g.fillRoundedRectangle(bounds, radius);
+    g.setColour(clipColour.withAlpha(0.6f));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), radius, 1.0f);
+    if (selected)
+    {
+        g.setColour(colour(currentTheme().colours.accentAlt));
+        g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
+    }
+}
+
+void paintClipName(juce::Graphics& g, juce::Rectangle<float> bar, juce::Colour clipColour,
+                   const juce::String& name)
+{
+    g.setColour(clipColour);
+    g.fillRect(bar);
+    g.setColour(colour(currentTheme().colours.clipText));
+    g.setFont(mediumFont(metrics::textSmall));
+    g.drawText(name, bar.reduced(4.0f, 0.0f), juce::Justification::centredLeft, true);
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------- Ruler / names
@@ -572,24 +601,13 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         const auto bounds = clipBounds(clip);
         if (!g.getClipBounds().toFloat().intersects(bounds))
             return;
-        const float radius = metrics::cornerRadius;
-        g.setColour(audioClipColour(t));
-        g.fillRoundedRectangle(bounds, radius);
-        if (selected)
-        {
-            g.setColour(colour(t.colours.accentAlt));
-            g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
-        }
+        const auto clipColour = audioClipColour(t);
+        paintClipBody(g, bounds, clipColour, selected);
         juce::Graphics::ScopedSaveState state(g);
         g.reduceClipRegion(bounds.toNearestInt());
         auto body = bounds;
-        const auto strip = body.removeFromTop(13.0f);
-        g.setColour(juce::Colours::black.withAlpha(0.18f));
-        g.fillRect(strip);
-        g.setColour(colour(t.colours.clipText));
-        g.setFont(juce::FontOptions(metrics::textSmall));
-        g.drawText(juce::String::fromUTF8(channel->name.c_str()), strip.reduced(4.0f, 0.0f),
-                   juce::Justification::centredLeft, true);
+        paintClipName(g, body.removeFromTop(nameBarHeight), clipColour,
+                      juce::String::fromUTF8(channel->name.c_str()));
         if (channel->sample != nullptr && channel->sample->numFrames() > 0)
         {
             const auto& peaks = const_cast<PlaylistView&>(view).peaksFor(*channel->sample);
@@ -597,7 +615,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
             const float width = view.xForStep(seconds / project.secondsPerStep());
             const float mid = body.getCentreY();
             const float half = body.getHeight() / 2.0f - 1.0f;
-            g.setColour(colour(t.colours.clipText).withAlpha(0.8f));
+            g.setColour(clipColour);
             const int columns = static_cast<int>(std::min(width, bounds.getWidth()));
             for (int x = 0; x < columns; ++x)
             {
@@ -622,27 +640,15 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
     if (!g.getClipBounds().toFloat().intersects(bounds))
         return;
 
-    const float radius = metrics::cornerRadius;
-    g.setColour(colour(t.colours.clip));
-    g.fillRoundedRectangle(bounds, radius);
-    if (selected)
-    {
-        g.setColour(colour(t.colours.accentAlt));
-        g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
-    }
+    const auto clipColour = colour(t.colours.clip);
+    paintClipBody(g, bounds, clipColour, selected);
 
     juce::Graphics::ScopedSaveState state(g);
     g.reduceClipRegion(bounds.toNearestInt());
 
-    // Name strip.
     auto body = bounds;
-    const auto strip = body.removeFromTop(13.0f);
-    g.setColour(juce::Colours::black.withAlpha(0.18f));
-    g.fillRect(strip);
-    g.setColour(colour(t.colours.clipText));
-    g.setFont(juce::FontOptions(metrics::textSmall));
-    g.drawText(juce::String::fromUTF8(project.clipLabel(*pattern).c_str()),
-               strip.reduced(4.0f, 0.0f), juce::Justification::centredLeft, true);
+    paintClipName(g, body.removeFromTop(nameBarHeight), clipColour,
+                  juce::String::fromUTF8(project.clipLabel(*pattern).c_str()));
 
     // Miniature of the notes, one thin row per channel; repeats when the clip is longer.
     const int numChannels = static_cast<int>(project.channels.size());
@@ -653,7 +659,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         const float pixelsPerTick = view.pixelsPerStep() / model::ticksPerStep;
         const int patternTicks = patternSteps * model::ticksPerStep;
         const int clipTicks = clip.lengthInSteps * model::ticksPerStep;
-        g.setColour(colour(t.colours.clipText).withAlpha(0.85f));
+        g.setColour(clipColour);
         for (int repeat = 0; repeat < clipTicks; repeat += patternTicks)
             for (int ch = 0; ch < numChannels; ++ch)
                 for (const auto& note :
@@ -669,7 +675,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
                                std::max(1.0f, rowHeight - 1.0f));
                 }
 
-        g.setColour(colour(t.colours.clipText).withAlpha(0.35f));
+        g.setColour(clipColour.withAlpha(0.4f));
         for (int r = patternSteps; r < clip.lengthInSteps; r += patternSteps)
             g.fillRect(bounds.getX() + view.xForStep(r), body.getY(), 1.0f, body.getHeight());
     }

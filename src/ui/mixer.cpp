@@ -85,6 +85,26 @@ MixerStrip::MixerStrip(MixerView& owner, int track) : mixer(owner), index(track)
         mixer.editTrack(index, [value](model::MixerTrack& t) { t.pan = value; }, gesture);
     };
 
+    stereoWidth.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    stereoWidth.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    stereoWidth.setRange(0.0, model::MixerTrack::maxWidth, 0.0);
+    stereoWidth.setDoubleClickReturnValue(true, 1.0);
+    stereoWidth.getProperties().set("fillFromCentre", true); // 100% (the middle) is unchanged
+    stereoWidth.setPopupDisplayEnabled(true, true, nullptr);
+    stereoWidth.setTooltip("Stereo width: mono at the left, as it comes in at the middle, wider to "
+                           "the right");
+    stereoWidth.textFromValueFunction = [](double v)
+    {
+        const int percent = juce::roundToInt(v * 100.0);
+        return percent == 0 ? juce::String("Mono") : "Width " + juce::String(percent) + "%";
+    };
+    stereoWidth.onDragStart = [this] { gesture = mixer.document().newGestureId(); };
+    stereoWidth.onValueChange = [this]
+    {
+        const auto value = static_cast<float>(stereoWidth.getValue());
+        mixer.editTrack(index, [value](model::MixerTrack& t) { t.width = value; }, gesture);
+    };
+
     mute.setClickingTogglesState(false);
     mute.setTooltip("Mute");
     mute.onClick = [this]
@@ -93,7 +113,8 @@ MixerStrip::MixerStrip(MixerView& owner, int track) : mixer(owner), index(track)
     solo.onClick = [this]
     { mixer.editTrack(index, [](model::MixerTrack& t) { t.solo = !t.solo; }, 0); };
 
-    for (auto* c : std::initializer_list<juce::Component*>{&fader, &pan, &mute, &solo})
+    for (auto* c :
+         std::initializer_list<juce::Component*>{&fader, &pan, &stereoWidth, &mute, &solo})
     {
         noFocus(*c);
         addAndMakeVisible(c);
@@ -106,6 +127,7 @@ void MixerStrip::update(const model::MixerTrack& track, bool isSelected)
 {
     fader.setValue(track.volumeDb, juce::dontSendNotification);
     pan.setValue(track.pan, juce::dontSendNotification);
+    stereoWidth.setValue(track.width, juce::dontSendNotification);
     mute.setToggleState(track.muted, juce::dontSendNotification);
     solo.setToggleState(track.solo, juce::dontSendNotification);
     name = juce::String::fromUTF8(track.name.c_str());
@@ -127,67 +149,105 @@ void MixerStrip::setLevels(float left, float right)
         shown[i] = clamped;
     }
     if (changed)
-        repaint(getLocalBounds().withTrimmedTop(20).withWidth(22));
+        repaint(meterBounds().toNearestInt());
 }
 
 void MixerStrip::paint(juce::Graphics& g)
 {
+    // Drawn like a console: strips joined edge to edge, a number chip, segmented meters with a
+    // dB scale, and the fader's level in a readout.
     const auto& t = currentTheme();
-    auto bounds = getLocalBounds().toFloat().reduced(2.0f, 0.0f);
-    g.setColour(colour(selected ? t.colours.activeBackground
-                                : (index == 0 ? t.colours.panelRaised : t.colours.lane)));
-    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
-    g.setColour(colour(selected ? t.colours.accent : t.colours.outline));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), metrics::cornerRadius, selected ? 1.5f : 1.0f);
+    const auto bounds = getLocalBounds().toFloat();
+    g.setColour(colour(index == 0 ? t.colours.panelRaised : t.colours.lane));
+    g.fillRect(bounds);
+    if (selected)
+    {
+        g.setColour(colour(t.colours.activeBackground));
+        g.fillRect(bounds.withTrimmedTop(2.0f));
+        g.setColour(colour(t.colours.accent));
+        g.fillRect(bounds.withHeight(2.0f));
+    }
+    g.setColour(colour(t.colours.background));
+    g.fillRect(bounds.withLeft(bounds.getRight() - 1.0f));
 
+    // Number chip and name (the Master has just its name).
+    auto top = getLocalBounds().removeFromTop(nameHeight).reduced(4, 3);
+    if (index != 0)
+    {
+        const auto chip = top.removeFromLeft(18).toFloat();
+        paintDisplayBox(g, chip);
+        g.setColour(colour(t.colours.displayText));
+        g.setFont(juce::FontOptions(metrics::textTiny));
+        g.drawText(juce::String(index), chip, juce::Justification::centred);
+        top.removeFromLeft(3);
+    }
     g.setColour(colour(t.colours.text));
     g.setFont(juce::FontOptions(metrics::textSmall));
-    g.drawText(name, getLocalBounds().removeFromTop(20).reduced(4, 0), juce::Justification::centred,
-               true);
+    g.drawText(name, top,
+               index == 0 ? juce::Justification::centred : juce::Justification::centredLeft, true);
 
-    // Meter: two bars left of the fader, top = +6 dB, red-ish (accent) above 0 dB.
-    const auto meter = juce::Rectangle<float>(8.0f, 24.0f, 12.0f, fader.getHeight() - 8.0f);
+    // Meters: two segmented bars (top = +6 dB, the accent above 0 dB), then the dB scale.
+    const auto meter = meterBounds();
+    const float range = model::MixerTrack::maxVolumeDb - meterFloorDb;
     for (int side = 0; side < 2; ++side)
     {
-        const auto bar = meter.withWidth(5.0f).translated(side * 7.0f, 0.0f);
+        const auto bar = meter.withWidth(6.0f).translated(side * 7.0f, 0.0f);
         g.setColour(colour(t.colours.display));
         g.fillRect(bar);
-        const float fraction = juce::jlimit(0.0f, 1.0f,
-                                            (shown[static_cast<std::size_t>(side)] - meterFloorDb) /
-                                                (model::MixerTrack::maxVolumeDb - meterFloorDb));
-        const auto level = bar.withTop(bar.getBottom() - bar.getHeight() * fraction);
-        const float zeroY = bar.getBottom() - bar.getHeight() * (-meterFloorDb) /
-                                                  (model::MixerTrack::maxVolumeDb - meterFloorDb);
-        g.setColour(colour(t.colours.accentAlt));
-        g.fillRect(level.withTop(std::max(level.getY(), zeroY)));
-        if (level.getY() < zeroY)
+        const float level = shown[static_cast<std::size_t>(side)];
+        for (float y = bar.getBottom() - 2.0f; y >= bar.getY(); y -= 3.0f)
         {
-            g.setColour(colour(t.colours.accent));
-            g.fillRect(level.withBottom(zeroY));
+            const float db = meterFloorDb + (bar.getBottom() - y) / bar.getHeight() * range;
+            const auto segment = colour(db > 0.0f ? t.colours.accent : t.colours.accentAlt);
+            g.setColour(db <= level ? segment : segment.withAlpha(0.08f));
+            g.fillRect(bar.getX(), y, bar.getWidth(), 2.0f);
         }
     }
+    g.setFont(juce::FontOptions(metrics::textTiny - 2.0f));
+    for (const int db : {0, -12, -24, -48})
+    {
+        const float y = meter.getBottom() - meter.getHeight() * (db - meterFloorDb) / range;
+        g.setColour(colour(db == 0 ? t.colours.text : t.colours.textDim));
+        g.fillRect(meter.getRight() + 1.0f, y, 3.0f, 1.0f);
+        g.drawText(juce::String(-db),
+                   juce::Rectangle<float>(meter.getRight() + 6.0f, y - 5.0f, 12.0f, 10.0f),
+                   juce::Justification::centredLeft, false);
+    }
 
-    g.setColour(colour(t.colours.textDim));
+    // The fader's level.
+    paintDisplayBox(g, readout.toFloat());
+    const auto db = fader.getValue();
+    g.setColour(colour(t.colours.displayText));
     g.setFont(juce::FontOptions(metrics::textTiny));
-    g.drawText(index == 0 ? juce::String("M") : juce::String(index),
-               getLocalBounds().removeFromBottom(16), juce::Justification::centred);
+    g.drawText(db <= model::MixerTrack::minVolumeDb ? juce::String("-inf") : juce::String(db, 1),
+               readout, juce::Justification::centred);
+}
+
+juce::Rectangle<float> MixerStrip::meterBounds() const
+{
+    return {6.0f, static_cast<float>(nameHeight) + 6.0f, 13.0f,
+            static_cast<float>(fader.getHeight()) - 8.0f};
 }
 
 void MixerStrip::resized()
 {
     auto area = getLocalBounds().reduced(4, 0);
-    area.removeFromTop(20);
-    area.removeFromBottom(16);
+    area.removeFromTop(nameHeight);
+    area.removeFromBottom(6);
     auto buttons = area.removeFromBottom(22);
+    // Mute, and solo as a light next to it (none on the Master).
     if (index == 0)
         mute.setBounds(buttons.reduced(8, 1));
     else
     {
-        mute.setBounds(buttons.removeFromLeft(buttons.getWidth() / 2).reduced(1));
-        solo.setBounds(buttons.reduced(1));
+        solo.setBounds(buttons.removeFromRight(metrics::ledWidth + 6));
+        mute.setBounds(buttons.reduced(1));
     }
-    pan.setBounds(area.removeFromBottom(30).withSizeKeepingCentre(26, 26));
-    area.removeFromLeft(20); // meter
+    auto knobs = area.removeFromBottom(30);
+    pan.setBounds(knobs.removeFromLeft(knobs.getWidth() / 2).withSizeKeepingCentre(26, 26));
+    stereoWidth.setBounds(knobs.withSizeKeepingCentre(26, 26));
+    readout = area.removeFromBottom(16).reduced(6, 1);
+    area.removeFromLeft(30); // meters and their scale
     fader.setBounds(area.reduced(0, 2));
 }
 

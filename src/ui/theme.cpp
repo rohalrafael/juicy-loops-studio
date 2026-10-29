@@ -338,7 +338,7 @@ void LookAndFeel::drawDocumentWindowTitleBar(juce::DocumentWindow& window, juce:
                                              int h, int, int, const juce::Image*, bool)
 {
     const auto& t = currentTheme();
-    g.setColour(colour(t.colours.header));
+    g.setColour(colour(t.colours.chrome));
     g.fillRect(0, 0, w, h);
     g.setColour(colour(t.colours.outline));
     g.fillRect(0, h - 1, w, 1);
@@ -450,8 +450,10 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     g.setColour(colour(c.display));
     g.strokePath(track, thin);
 
-    // Bipolar knobs (pan) fill from the centre, others from the start.
-    const bool bipolar = slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0;
+    // Bipolar knobs (pan) fill from the centre, others from the start; a knob can ask for the
+    // centre too (stereo width, whose middle is "unchanged").
+    const bool bipolar = (slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0) ||
+                         static_cast<bool>(slider.getProperties()["fillFromCentre"]);
     const float from = bipolar ? (startAngle + endAngle) / 2.0f : startAngle;
     const float to = startAngle + position * (endAngle - startAngle);
     juce::Path value;

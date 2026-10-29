@@ -71,6 +71,8 @@ struct TrackState
 {
     float gainLeft = 1.0f; // fader and pan combined; 0 when muted or soloed out
     float gainRight = 1.0f;
+    // Stereo width, before the gains (mid / side): 0 = mono, 1 = unchanged, 2 = side doubled.
+    float width = 1.0f;
     std::vector<EffectState> effects;
 };
 

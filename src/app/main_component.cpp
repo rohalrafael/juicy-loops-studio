@@ -716,9 +716,30 @@ std::vector<MainComponent::FocusStop> MainComponent::tabOrder()
     return showing;
 }
 
+bool MainComponent::closeFocusedWindow()
+{
+    if (focusArea == Area::plugin)
+        for (auto* views : {&pluginWindows, &instrumentWindows})
+            for (auto it = views->begin(); it != views->end(); ++it)
+                if (dynamic_cast<juce::Component*>(it->second.get()) == focusPlugin)
+                {
+                    views->erase(it);
+                    forgetClosedPlugins(); // the focus goes back to the stop used before
+                    return true;
+                }
+    if (samplerFocused && samplerPanel != nullptr && samplerPanel->isVisible())
+    {
+        closeSampler();
+        return true;
+    }
+    return false;
+}
+
 void MainComponent::setFocusStop(FocusStop stop)
 {
-    focusChosenDuringPress = juce::Desktop::getInstance().getMainMouseSource().getLastMouseDownTime();
+    samplerFocused = false;
+    focusChosenDuringPress =
+        juce::Desktop::getInstance().getMainMouseSource().getLastMouseDownTime();
     // A deliberate choice (click, focus command): it becomes the most recent stop.
     cycleStep = 0;
     std::erase(recentAreas, stop);
@@ -901,7 +922,10 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
         if (toggle && !areas.isCovered(*samplerPanel, &channelRack))
             closeSampler();
         else
+        {
             samplerPanel->toFront(false);
+            samplerFocused = true;
+        }
         return;
     }
     closeSampler();
@@ -920,6 +944,7 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     areas.add(*samplerPanel);
     samplerPanel->setVisible(true);
     samplerPanel->toFront(false);
+    samplerFocused = true;
 }
 
 void MainComponent::closeSampler()
@@ -1167,8 +1192,8 @@ void MainComponent::paint(juce::Graphics& g)
     const auto& t = ui::currentTheme();
     const auto bar = transportBarBounds.toFloat();
     g.setGradientFill(juce::ColourGradient::vertical(
-        ui::colour(t.colours.header).brighter(0.06f), bar.getY(),
-        ui::colour(t.colours.header).darker(0.12f), bar.getBottom()));
+        ui::colour(t.colours.chrome).brighter(0.06f), bar.getY(),
+        ui::colour(t.colours.chrome).darker(0.12f), bar.getBottom()));
     g.fillRect(bar);
     g.setColour(ui::colour(t.colours.outline));
     g.fillRect(bar.withTop(bar.getBottom() - 1.0f));
@@ -1313,7 +1338,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
         add({jls::commands::showPlaylist, jls::commands::toggleChannelRack,
              jls::commands::showPianoRoll, jls::commands::toggleMixer, jls::commands::toggleBrowser,
              jls::commands::browserSwitchSide, jls::commands::browserAddFolder,
-             jls::commands::browserUseSample, 0});
+             jls::commands::browserUseSample, jls::commands::closeWindow, 0});
         juce::PopupMenu rack;
         for (int id :
              {jls::commands::toggleRackLoop, jls::commands::rackShow16, jls::commands::rackShow32,
@@ -1355,9 +1380,15 @@ void MainComponent::mouseDown(const juce::MouseEvent& e)
     // We hear a press after the component it went to: if that already chose the focus (e.g. the
     // Channel Rack's note preview opened the Piano Roll), the click doesn't take it back.
     const bool chosenByClick = focusChosenDuringPress == e.mouseDownTime;
+    // The Sampler isn't a Ctrl+Tab stop, but a click on it makes Esc close it; a click
+    // anywhere else doesn't.
+    const bool inSampler = samplerPanel != nullptr && (samplerPanel.get() == e.eventComponent ||
+                                                       samplerPanel->isParentOf(e.eventComponent));
+    if (!chosenByClick)
+        samplerFocused = inSampler;
     for (const auto& stop : stops)
         if (auto* c = stopComponent(stop);
-            !chosenByClick && c != nullptr && c->isVisible() &&
+            !chosenByClick && !inSampler && c != nullptr && c->isVisible() &&
             (c == e.eventComponent || c->isParentOf(e.eventComponent)))
         {
             setFocusStop(stop);
@@ -1563,7 +1594,9 @@ bool MainComponent::perform(const InvocationInfo& info)
         editInMainView(ui::EditAction::selectAll);
         break;
     case deselect:
-        editInMainView(ui::EditAction::deselect);
+        // Esc closes the focused Sampler or plugin window first, as in FL.
+        if (!closeFocusedWindow())
+            editInMainView(ui::EditAction::deselect);
         break;
 
     case playStop:
@@ -1677,6 +1710,9 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case browserUseSample:
         browser.useSelectedSample();
+        break;
+    case closeWindow:
+        closeFocusedWindow();
         break;
 
     case sliceNotes:

@@ -29,8 +29,9 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
   ],
   "playlist": { "tracks": 16, "clips": [ { "pattern": 1, "track": 0, "start": 0, "length": 16 } ] },
   "mixer": { "tracks": [
-    { "name": "Master", "volumeDb": 0.0, "pan": 0.0, "muted": false, "solo": false, "effects": [] },
-    { "name": "Insert 1", "volumeDb": -3.0, "pan": 0.0, "muted": false, "solo": false,
+    { "name": "Master", "volumeDb": 0.0, "pan": 0.0, "width": 1.0, "muted": false, "solo": false,
+      "effects": [] },
+    { "name": "Insert 1", "volumeDb": -3.0, "pan": 0.0, "width": 1.0, "muted": false, "solo": false,
       "effects": [ { "id": 1, "type": "reverb", "enabled": true,
                      "params": { "Size": 0.6, "Damping": 0.4, "Width": 1.0, "Mix": 0.25 } } ] }
   ] },
@@ -57,7 +58,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `patterns[]` | In pattern-selector order. `gridLength`: steps the Channel Rack shows (older files: `minLength`); the pattern plays as far as its notes, in whole bars. `minPlayLength` (optional, steps): the shortest it plays, set by Split by channel |
 | `patterns[].notes[]` | Per channel: a list of `[start, length, pitch, velocity]`. Start and length are in ticks (96 per beat, 24 per step); pitch is MIDI (60 = C5); velocity is 0 to 1 |
 | `playlist.clips[]` | `start` and `length` in steps. Pattern clips have `pattern` (a clip longer than its pattern repeats it); audio clips have `audio`, the audio-clip channel's id, and `offset` (steps into the sample, from a left-edge trim) |
-| `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6 |
+| `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6. `width` is the stereo width, 0 (mono) to 2 (twice as wide); 1, the default for older files, leaves the sound as it is |
 | `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
 | `effects[].plugin` | For `"type": "plugin"`: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
 | `view` | Selections, PAT/SONG mode, `showAudioClips` (Channel Rack filter) and the Piano Roll scale (`scale`: `none`/`major`/`minor`, `scaleRoot`: 0 = C ... 11 = B), restored on open |

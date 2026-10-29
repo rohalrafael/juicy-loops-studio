@@ -313,6 +313,34 @@ TEST_CASE("Channels play through their insert and the Master")
     }
 }
 
+TEST_CASE("A track's width narrows to mono or widens the stereo image")
+{
+    // A channel panned hard left: all left, nothing right, through insert 1.
+    auto project = oneChannelProject();
+    project.channels[0].pan = -1.0f;
+    const auto render = [&project](float width)
+    {
+        project.mixer.tracks[1].width = width;
+        engine::Engine engine;
+        engine.prepare(rate, 512);
+        renderPeak(project, engine);
+        // renderPeak played the first block; render one more and read a sample from the middle.
+        std::vector<float> left(512, 0.0f), right(512, 0.0f);
+        float* out[] = {left.data(), right.data()};
+        engine.process(out, 2, 512);
+        return std::pair{left[100], right[100]};
+    };
+    const auto [unityLeft, unityRight] = render(1.0f);
+    CHECK(unityLeft == Catch::Approx(1.0f));
+    CHECK(unityRight == Catch::Approx(0.0f).margin(1e-6));
+    const auto [monoLeft, monoRight] = render(0.0f);
+    CHECK(monoLeft == Catch::Approx(0.5f)); // both sides get the mid
+    CHECK(monoRight == Catch::Approx(0.5f));
+    const auto [wideLeft, wideRight] = render(2.0f);
+    CHECK(wideLeft == Catch::Approx(1.5f)); // the side doubled
+    CHECK(wideRight == Catch::Approx(-0.5f));
+}
+
 TEST_CASE("Mixer model: routing, effect slots and snapshot gains")
 {
     auto project = model::makeDefaultProject();

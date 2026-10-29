@@ -143,6 +143,8 @@ class MainComponent final : public juce::AudioAppComponent,
     void updateShortcutHints();
     void changeListenerCallback(juce::ChangeBroadcaster*) override; // shortcuts changed: save
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
+    // Copies a channel (Duplicate channel), with its plugin's current settings, without notes.
+    void duplicateChannel(model::ChannelId channel);
 
     ui::ThemeManager& themes;
 

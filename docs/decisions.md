@@ -473,3 +473,11 @@ not). Older entries describe the project as it was then; later entries may super
   2026-10-17 "only deselects, as in FL". Ctrl+click without dragging (under 4 px) toggles the
   note or clip under the mouse in the selection, like Shift+click; it used to start an empty
   rubber band, which cleared the selection.
+
+- 2026-10-29: **Clear and Duplicate channel; Fill always** (maintainer's requests). Clear removes a
+  channel's notes from the current pattern. Duplicate (`Project::duplicateChannel`) copies a
+  channel right after it, without notes, named "<name> 2" (the next free number; "Kick 2" gives
+  "Kick 3"); for a plugin it first collects the live plugin states (`syncPluginStates`), so the
+  copy gets the current preset and settings, and the pool creates the copy's own instance from
+  that state. Both are commands without default keys (FL has none we know of) and channel-menu
+  items. Fill is offered on melodic channels too; it replaces their notes, undoable.

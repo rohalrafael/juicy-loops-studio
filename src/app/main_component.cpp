@@ -149,6 +149,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
         menuItemsChanged();
     };
     pianoRoll.darkKeys = [this] { return ui::settings::pianoRollDarkKeys(themes.settingsFile()); };
+    channelRack.onDuplicateChannel = [this](model::ChannelId id) { duplicateChannel(id); };
     channelRack.loopedClickCopies = [this]
     { return ui::settings::loopedStepClickCopies(themes.settingsFile()); };
     channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)
@@ -420,6 +421,15 @@ MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInst
                                         parent->repaint();
                                 });
     return panel;
+}
+
+void MainComponent::duplicateChannel(model::ChannelId channel)
+{
+    if (document.project().findChannel(channel) == nullptr)
+        return;
+    // The copy takes the plugin's settings as they are now (preset, knobs), not as last saved.
+    syncPluginStates();
+    document.apply([channel](model::Project& p) { p.duplicateChannel(channel); });
 }
 
 void MainComponent::syncPluginStates()
@@ -1170,6 +1180,9 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
              {jls::commands::toggleRackLoop, jls::commands::rackShow16, jls::commands::rackShow32,
               jls::commands::rackShow64, jls::commands::rackShowAudioClips})
             rack.addCommandItem(&commandManager, id);
+        rack.addSeparator();
+        for (int id : {jls::commands::clearChannel, jls::commands::duplicateChannel})
+            rack.addCommandItem(&commandManager, id);
         menu.addSubMenu("Channel rack options", rack);
         break;
     }
@@ -1307,6 +1320,10 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
         break;
     case rackShowAudioClips:
         info.setTicked(project.showAudioClips);
+        break;
+    case clearChannel:
+    case jls::commands::duplicateChannel:
+        info.setActive(project.findChannel(project.selectedChannel) != nullptr);
         break;
     default:
         break;
@@ -1534,6 +1551,13 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case rackShowAudioClips:
         document.setViewState([](model::Project& p) { p.showAudioClips = !p.showAudioClips; });
+        break;
+    case clearChannel:
+        if (const auto channel = document.project().selectedChannel; channel != 0)
+            document.apply([channel](model::Project& p) { p.current().clearNotes(channel); });
+        break;
+    case jls::commands::duplicateChannel:
+        duplicateChannel(document.project().selectedChannel);
         break;
 
     case showSettings:

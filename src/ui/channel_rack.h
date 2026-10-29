@@ -250,6 +250,9 @@ class ChannelRack final : public juce::Component,
     // Set by the owner (Settings > Clicking a looped step): true copies a channel's loop in before
     // a click on a greyed step, so nothing else changes; false (unset, as in FL) discards it.
     std::function<bool()> loopedClickCopies;
+    // Set by the owner: copy a channel with its sound and settings, without notes (the owner
+    // first collects the plugin's current state).
+    std::function<void(model::ChannelId)> onDuplicateChannel;
     bool copiesLoopOnClick() const { return loopedClickCopies && loopedClickCopies(); }
 
     // Where the rack may be dragged (the owner's area below the transport bar). The title bar

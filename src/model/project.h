@@ -198,6 +198,8 @@ struct Pattern
     // FL's "Fill each N steps": replaces the channel's notes with a step on every `every`th
     // step in [0, lengthInSteps) (hi-hats: every 2 or 4).
     void fillSteps(ChannelId channel, int every, int lengthInSteps);
+    // Removes all of a channel's notes (and steps) from this pattern.
+    void clearNotes(ChannelId channel) { notes.erase(channel); }
 };
 
 // A pattern placed in the Playlist. Positions are in steps (16ths) from the song start.
@@ -292,6 +294,10 @@ struct Project
     // A channel played by a hosted plugin instrument, named after it.
     ChannelId addInstrumentChannel(const std::string& pluginId, const std::string& pluginName);
     void removeChannel(ChannelId id); // also removes its notes from every pattern
+    // A copy of channel `id` right after it: its sound (sample or plugin with its saved state),
+    // Sampler settings, volume, pan, mute, loop and mixer track, named "<name> 2" (or the next
+    // free number), without its notes. Returns the new id, or 0 if there's no such channel.
+    ChannelId duplicateChannel(ChannelId id);
     // Solo, as Ctrl+click on a mute light in FL: mutes every other channel and unmutes this one;
     // if it's already the only one playing, unmutes them all. Audio-clip channels (hidden in the
     // Channel Rack) aren't touched.

@@ -82,6 +82,8 @@ enum ID : juce::CommandID
     rackShow32,
     rackShow64,
     rackShowAudioClips,
+    clearChannel,     // the selected channel's notes in the current pattern
+    duplicateChannel, // the selected channel, with its sound and settings, without notes
 
     // Input
     toggleTypingKeyboard = 0x1701,

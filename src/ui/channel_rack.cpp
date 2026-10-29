@@ -619,6 +619,8 @@ enum ChannelMenuId
     renameId,
     replaceSampleId,
     deleteId,
+    clearId,
+    duplicateId,
     fillFirstId = 100 // + an index into fillEvery
 };
 constexpr std::array fillEvery{1, 2, 4, 8}; // the Fill submenu: every 1, 2, 4 or 8 steps
@@ -679,6 +681,13 @@ void handleChannelMenu(ChannelRack& rack, model::ChannelId channel, int result,
     case deleteId:
         deleteChannel(rack, channel);
         return;
+    case clearId:
+        rack.edit([channel](model::Project& p) { p.current().clearNotes(channel); });
+        return;
+    case duplicateId:
+        if (rack.onDuplicateChannel)
+            rack.onDuplicateChannel(channel);
+        return;
     default:
         rack.handleInstrumentMenu(result, channel, instruments);
     }
@@ -688,8 +697,6 @@ void handleChannelMenu(ChannelRack& rack, model::ChannelId channel, int result,
 
 void ChannelRow::showMenu()
 {
-    // Fill replaces the steps, so it's only offered for channels without melodic notes.
-    const bool stepsOnly = rack.document().project().current().hasOnlySteps(id);
     std::vector<PluginItem> instruments;
     juce::PopupMenu menu;
     menu.addItem(pianoRollId, "Piano roll");
@@ -697,7 +704,10 @@ void ChannelRow::showMenu()
         menu.addItem(showPluginId, "Show plugin");
     else
         menu.addItem(samplerId, "Sampler...");
-    menu.addSubMenu("Fill", fillMenu(), stepsOnly);
+    // Fill replaces the channel's notes, melodic ones too (undo brings them back).
+    menu.addSubMenu("Fill", fillMenu());
+    menu.addItem(clearId, "Clear");
+    menu.addItem(duplicateId, "Duplicate");
     menu.addSeparator();
     menu.addItem(renameId, "Rename...");
     menu.addItem(replaceSampleId, isInstrument ? "Use a sample instead..." : "Replace sample...");

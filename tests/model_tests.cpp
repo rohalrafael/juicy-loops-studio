@@ -76,6 +76,64 @@ TEST_CASE("Channel ids are never reused")
     CHECK(a != b);
 }
 
+TEST_CASE("Duplicating a channel copies its sound and settings, not its notes")
+{
+    auto project = makeDefaultProject();
+    auto& kick = project.channels[0];
+    kick.volume = 0.5f;
+    kick.pan = -0.25f;
+    kick.loop = false;
+    kick.sampler.pitch = 3;
+    const auto kickId = kick.id;
+    project.current().set(kickId, 0, true);
+
+    const auto copyId = project.duplicateChannel(kickId);
+    REQUIRE(copyId != 0);
+    CHECK(copyId != kickId);
+    REQUIRE(project.channels.size() == 5);
+    const auto& copy = project.channels[1]; // right after the original
+    CHECK(copy.id == copyId);
+    CHECK(copy.name == "Kick 2");
+    CHECK(copy.volume == 0.5f);
+    CHECK(copy.pan == -0.25f);
+    CHECK_FALSE(copy.loop);
+    CHECK(copy.sampler.pitch == 3);
+    CHECK(copy.builtinSample == project.channels[0].builtinSample);
+    CHECK(copy.mixerTrack == project.channels[0].mixerTrack);
+    CHECK(project.current().notesFor(copyId).empty());
+    CHECK(project.current().isOn(kickId, 0));
+
+    // The next free number, also when duplicating a copy.
+    CHECK(project.findChannel(project.duplicateChannel(kickId))->name == "Kick 3");
+    CHECK(project.findChannel(project.duplicateChannel(copyId))->name == "Kick 4");
+    CHECK(project.duplicateChannel(999) == 0);
+}
+
+TEST_CASE("Duplicating a plugin channel keeps the plugin and its state")
+{
+    Project project;
+    const auto synth = project.addChannel("Synth", nullptr);
+    project.findChannel(synth)->setInstrument("VST3-Synth-1234", "Synth");
+    project.findChannel(synth)->pluginState = "c3RhdGU=";
+    const auto copy = project.duplicateChannel(synth);
+    REQUIRE(project.findChannel(copy) != nullptr);
+    CHECK(project.findChannel(copy)->pluginId == "VST3-Synth-1234");
+    CHECK(project.findChannel(copy)->pluginState == "c3RhdGU=");
+}
+
+TEST_CASE("Clearing a channel removes its notes from the pattern only")
+{
+    auto project = makeDefaultProject();
+    const auto kick = project.channels[0].id;
+    const auto clap = project.channels[1].id;
+    project.current().set(kick, 0, true);
+    project.current().set(clap, 4, true);
+    project.current().clearNotes(kick);
+    CHECK(project.current().notesFor(kick).empty());
+    CHECK(project.current().isOn(clap, 4));
+    CHECK(project.findChannel(kick) != nullptr);
+}
+
 TEST_CASE("Engine snapshot mirrors steps, mute, volume and pan")
 {
     auto project = makeDefaultProject();

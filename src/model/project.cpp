@@ -6,6 +6,7 @@
 #include "engine/drum_synth.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -239,6 +240,33 @@ void Project::soloChannel(ChannelId id)
     for (auto& c : channels)
         if (!c.audioClip)
             c.muted = alreadySolo ? false : c.id != id;
+}
+
+ChannelId Project::duplicateChannel(ChannelId id)
+{
+    const auto it = std::find_if(channels.begin(), channels.end(),
+                                 [id](const Channel& c) { return c.id == id; });
+    if (it == channels.end())
+        return 0;
+    Channel copy = *it;
+    copy.id = nextChannelId++;
+    // "Kick" -> "Kick 2", "Kick 2" -> "Kick 3"... whichever number is free.
+    const auto taken = [this](const std::string& name)
+    {
+        return std::any_of(channels.begin(), channels.end(),
+                           [&name](const Channel& c) { return c.name == name; });
+    };
+    std::string base = it->name;
+    if (const auto space = base.find_last_of(' ');
+        space != std::string::npos && space + 1 < base.size() &&
+        std::all_of(base.begin() + static_cast<std::ptrdiff_t>(space) + 1, base.end(),
+                    [](unsigned char ch) { return std::isdigit(ch) != 0; }))
+        base.erase(space);
+    for (int n = 2; taken(copy.name); ++n)
+        copy.name = base + " " + std::to_string(n);
+    const auto newId = copy.id;
+    channels.insert(it + 1, std::move(copy));
+    return newId;
 }
 
 void Project::removeChannel(ChannelId id)

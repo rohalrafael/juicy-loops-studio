@@ -21,8 +21,10 @@ starting one.
 
 - LED toggles instead of "On" text buttons (2026-10-29): the Sampler's Cut itself and Volume
   envelope, the effect panel's bypass. Same LED as the step keys and window buttons.
-- Piano Roll look (2026-10-29): calmer keys and grid, notes lit from above, a framed velocity
-  lane; the maintainer is choosing from four prototype designs (branch `piano-roll-look`).
+- Piano Roll look (2026-10-29), chosen from prototypes (branch `piano-roll-look`, design A):
+  ivory keys with labels only on C and the scale's root, the quiet grid (gentle rows, line weights
+  by bar / beat / step), notes lit from above with velocity as brightness, the velocity lane with
+  guides. Plus a setting for ivory or dark keys, and each key's name shown on hover.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

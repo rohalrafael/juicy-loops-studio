@@ -19,6 +19,9 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Rethink Ctrl+Tab and the window buttons (2026-10-29, maintainer's note, to discuss): with
+  plugin panels now stops in the Ctrl+Tab order, the window buttons' LEDs don't show them, and
+  the whole focus / Ctrl+Tab model deserves a fresh look before adding more to it.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

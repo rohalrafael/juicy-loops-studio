@@ -56,6 +56,7 @@ enum ID : juce::CommandID
     nextPattern,
     previousPattern,
     splitByChannel,
+    makeUnique, // the selected Playlist clips get their own copy of their pattern
 
     // View
     showPlaylist = 0x1401,

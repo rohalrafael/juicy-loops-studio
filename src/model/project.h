@@ -311,7 +311,8 @@ struct Project
     PatternId clonePattern(PatternId id);
     // Split by channel, done so the arrangement stays tidy and sounds the same: one new pattern
     // per channel with notes, in the original's place (the original is removed; if it was the
-    // selected pattern, the first part is), named "<pattern> - <channel>".
+    // selected pattern, the first part is), named after its channel ("Kick", or "Kick 2" if
+    // that's taken).
     // Each is exactly as long as the original: a looping channel's repeats are written out, and
     // the length is fixed even where its notes end early. The original's Playlist clips are
     // replaced by one clip per part, each part on its own track: the first takes the original
@@ -319,9 +320,17 @@ struct Project
     // needed). Every clip of the pattern on the same track uses the same set of tracks. Returns
     // the new patterns (none when fewer than two channels have notes).
     std::vector<PatternId> splitByChannel(PatternId id);
-    // A short label for a pattern's clips: a part made by Split by channel (notes on one channel,
-    // named "<pattern> - <that channel>") shows just the channel's name; others their own name.
+    // A short label for a pattern's clips: its name, except for parts split before 2026-10-29
+    // (notes on one channel, named "<pattern> - <that channel>"), which show just the channel.
     std::string clipLabel(const Pattern& pattern) const;
+    // Make unique (as in FL): the given Playlist clips (indices into playlist.clips) get their own
+    // copy of their pattern, so editing it doesn't change the pattern's other clips. Clips of the
+    // same pattern share one copy, named "<name> 2" (or the next free number), placed right after
+    // the original. A pattern all of whose clips are given is already unique and isn't copied.
+    // Audio clips are skipped. Returns the new patterns.
+    std::vector<PatternId> makeClipsUnique(const std::vector<int>& clipIndices);
+    // `base` if no pattern has that name yet, else "<base> 2", "<base> 3"...
+    std::string uniquePatternName(const std::string& base) const;
     // Removes the pattern and its clips. The last remaining pattern can't be removed.
     void removePattern(PatternId id);
     Pattern* findPattern(PatternId id);

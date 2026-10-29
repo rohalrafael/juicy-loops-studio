@@ -342,7 +342,7 @@ std::vector<PatternId> Project::splitByChannel(PatternId id)
     {
         Pattern part;
         part.id = nextPatternId++;
-        part.name = original.name + " - " + channel->name;
+        part.name = uniquePatternName(channel->name);
         part.gridSteps = original.gridSteps;
         part.notes[channel->id] = original.notesFor(channel->id);
         // A channel that looped in the original repeats for real now: on its own it would be
@@ -425,6 +425,52 @@ std::string Project::clipLabel(const Pattern& pattern) const
     const bool isPart = name.size() > suffix.size() &&
                         name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
     return isPart ? only->name : name;
+}
+
+std::string Project::uniquePatternName(const std::string& base) const
+{
+    const auto taken = [this](const std::string& name)
+    {
+        return std::any_of(patterns.begin(), patterns.end(),
+                           [&name](const Pattern& p) { return p.name == name; });
+    };
+    auto name = base;
+    for (int n = 2; taken(name); ++n)
+        name = base + " " + std::to_string(n);
+    return name;
+}
+
+std::vector<PatternId> Project::makeClipsUnique(const std::vector<int>& clipIndices)
+{
+    // The given clips, grouped by pattern.
+    std::map<PatternId, std::vector<std::size_t>> byPattern;
+    for (int index : clipIndices)
+        if (index >= 0 && static_cast<std::size_t>(index) < playlist.clips.size())
+            if (const auto& clip = playlist.clips[static_cast<std::size_t>(index)]; !clip.isAudio())
+                byPattern[clip.pattern].push_back(static_cast<std::size_t>(index));
+
+    std::vector<PatternId> created;
+    for (const auto& [patternId, indices] : byPattern)
+    {
+        const auto uses = std::count_if(playlist.clips.begin(), playlist.clips.end(),
+                                        [id = patternId](const Clip& c)
+                                        { return !c.isAudio() && c.pattern == id; });
+        if (static_cast<std::size_t>(uses) == indices.size())
+            continue; // every clip of it is given: already unique
+        const auto source = std::find_if(patterns.begin(), patterns.end(),
+                                         [id = patternId](const Pattern& p) { return p.id == id; });
+        if (source == patterns.end())
+            continue;
+        Pattern copy = *source;
+        copy.id = nextPatternId++;
+        copy.name = uniquePatternName(source->name);
+        const auto copyId = copy.id;
+        patterns.insert(source + 1, std::move(copy));
+        for (auto index : indices)
+            playlist.clips[index].pattern = copyId;
+        created.push_back(copyId);
+    }
+    return created;
 }
 
 void Project::removePattern(PatternId id)

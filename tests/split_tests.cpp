@@ -51,9 +51,9 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     REQUIRE(parts.size() == 3);                      // the hat has no notes
     CHECK(project.findPattern(original) == nullptr); // only the parts remain
     CHECK(project.currentPattern == parts[0]);       // the first part is selected instead
-    const auto* kick = byName(project, "Pattern 1 - Kick");
-    const auto* clap = byName(project, "Pattern 1 - Clap");
-    const auto* snare = byName(project, "Pattern 1 - Snare");
+    const auto* kick = byName(project, "Kick");
+    const auto* clap = byName(project, "Clap");
+    const auto* snare = byName(project, "Snare");
     REQUIRE(kick != nullptr);
     REQUIRE(clap != nullptr);
     REQUIRE(snare != nullptr);
@@ -67,7 +67,7 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     CHECK(project.patterns[0].id == kick->id);
     CHECK(project.patterns[2].id == snare->id);
 
-    // Their clips are labelled with just the channel; other patterns keep their names.
+    // Parts are named after their channel alone, and so are their clips.
     CHECK(project.clipLabel(*kick) == "Kick");
     CHECK(project.clipLabel(*snare) == "Snare");
 
@@ -75,7 +75,8 @@ TEST_CASE("Split by channel: one pattern per channel, each as long as the origin
     const auto single = project.addPattern();
     project.findPattern(single)->set(project.channels[0].id, 0, true);
     CHECK(project.splitByChannel(single).empty());
-    CHECK(project.clipLabel(*project.findPattern(single)) == "Pattern 2"); // not a part
+    const auto* singlePattern = project.findPattern(single);
+    CHECK(project.clipLabel(*singlePattern) == singlePattern->name); // not a part: its own name
 }
 
 TEST_CASE("Split by channel puts each part on its own free track")
@@ -140,4 +141,50 @@ TEST_CASE("A pattern's fixed length is saved")
     REQUIRE(snare != nullptr);
     CHECK(snare->minLengthSteps == 64);
     CHECK(loaded.project->lengthInSteps(*snare) == 64);
+}
+
+TEST_CASE("Split by channel numbers a part whose channel name is taken")
+{
+    auto project = beatProject();
+    const auto original = project.currentPattern;
+    project.findPattern(project.addPattern())->name = "Kick";
+    project.splitByChannel(original);
+    CHECK(byName(project, "Kick 2") != nullptr);
+    CHECK(byName(project, "Clap") != nullptr);
+}
+
+TEST_CASE("Parts split by older versions still show just the channel on their clips")
+{
+    auto project = beatProject();
+    auto& pattern = *project.findPattern(project.addPattern());
+    pattern.name = "Pattern 1 - Kick";
+    pattern.set(project.channels[0].id, 0, true);
+    CHECK(project.clipLabel(pattern) == "Kick");
+}
+
+TEST_CASE("Make unique gives the chosen clips their own copy of the pattern")
+{
+    auto project = beatProject();
+    const auto beat = project.currentPattern;
+    const auto notes = project.current().notes;
+    project.playlist.clips = {{.pattern = beat, .track = 0, .startStep = 0, .lengthInSteps = 64},
+                              {.pattern = beat, .track = 0, .startStep = 64, .lengthInSteps = 64},
+                              {.pattern = beat, .track = 0, .startStep = 128, .lengthInSteps = 64}};
+
+    const auto created = project.makeClipsUnique({1, 2});
+    REQUIRE(created.size() == 1);
+    const auto* copy = project.findPattern(created[0]);
+    REQUIRE(copy != nullptr);
+    CHECK(copy->name == "Pattern 1 2");
+    CHECK(copy->notes == notes);
+    CHECK(project.patterns[1].id == copy->id); // right after the original
+    CHECK(project.playlist.clips[0].pattern == beat);
+    CHECK(project.playlist.clips[1].pattern == copy->id); // chosen together: one shared copy
+    CHECK(project.playlist.clips[2].pattern == copy->id);
+
+    // Every clip of the copy chosen: already unique, nothing new.
+    CHECK(project.makeClipsUnique({1, 2}).empty());
+    CHECK(project.patterns.size() == 2);
+    CHECK(project.makeClipsUnique({}).empty());
+    CHECK(project.makeClipsUnique({99}).empty());
 }

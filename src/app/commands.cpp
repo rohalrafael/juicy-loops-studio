@@ -131,6 +131,12 @@ const std::vector<Definition>& all()
          "Patterns",
          "One pattern per channel, each as long as the original, on its own Playlist track",
          {}},
+        {makeUnique,
+         "Make unique",
+         "Patterns",
+         "Give the selected Playlist clips their own copy of their pattern, so editing it doesn't "
+         "change the pattern's other clips",
+         {}},
         {nextPattern,
          "Next pattern",
          "Patterns",

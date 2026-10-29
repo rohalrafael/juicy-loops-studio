@@ -254,8 +254,17 @@ installed, the channel stays silent and keeps them.
 | Click an item in the picker | Make it what clicking empty space places |
 | Double-click an item in the picker | A pattern: open it in the Channel Rack; an audio clip: its Sampler |
 | Right-click a pattern in the picker | **Split by channel** (also in the Patterns menu, for the selected pattern) |
+| Drag an item from the picker | Place it where you drop it (a chip with its name follows the mouse) |
+| Ctrl + drag | Select the clips in a rectangle (outlined) |
+| Ctrl + click a clip | Add it to the selection, or take it out (like Shift + click) |
+| Drag a selected clip | Move all selected clips together |
+| Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
+| Patterns › Make unique | Give the selected clips their own copy of their pattern ("Beat 2"), so editing it doesn't change the pattern's other clips (as in FL) |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
+| Ctrl+B | Duplicate the selected clips right after their bars (the copies get selected: press again to keep going) |
 
-**Split by channel** replaces a pattern with one pattern per channel ("Pattern 1 - Kick", ...),
+**Split by channel** replaces a pattern with one pattern per channel, named after the channel
+("Kick", or "Kick 2" if a pattern already has that name),
 in its place in the list (the original is removed). Unlike FL it keeps the arrangement tidy and
 sounding the same:
 - each part is exactly as long as the original: a channel that looped a shorter part gets its
@@ -264,15 +273,7 @@ sounding the same:
   track: the first on the original clip's track, the others on the nearest tracks below that
   are free for that stretch of time (tracks are added at the bottom if needed). Copies of the
   pattern on the same track all use the same tracks.
-The parts' clips are labelled with just the channel ("Kick"); the full names are in the
-picker. It's one step to undo.
-| Drag an item from the picker | Place it where you drop it (a chip with its name follows the mouse) |
-| Ctrl + drag | Select the clips in a rectangle (outlined) |
-| Ctrl + click a clip | Add it to the selection, or take it out (like Shift + click) |
-| Drag a selected clip | Move all selected clips together |
-| Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
-| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
-| Ctrl+B | Duplicate the selected clips right after their bars (the copies get selected: press again to keep going) |
+It's one step to undo.
 
 **Audio clips.** Dropping a sample on the Playlist makes an audio clip: the sample plays at that
 point in the song, shown with its waveform. Move, resize (shorter clips cut the sample off),

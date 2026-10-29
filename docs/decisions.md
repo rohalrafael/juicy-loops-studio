@@ -481,3 +481,10 @@ not). Older entries describe the project as it was then; later entries may super
   copy gets the current preset and settings, and the pool creates the copy's own instance from
   that state. Both are commands without default keys (FL has none we know of) and channel-menu
   items. Fill is offered on melodic channels too; it replaces their notes, undoable.
+
+- 2026-10-29: **Split parts are named after their channel; Make unique** (maintainer's requests).
+  Split by channel names parts "Kick" instead of "Pattern 1 - Kick" (the next free number when
+  the name is taken); clips of parts split by older versions still show just the channel. Make
+  unique (`Project::makeClipsUnique`, as in FL) gives the selected Playlist clips one shared copy
+  of their pattern ("Beat 2"), unless every clip of it is selected (it's unique already). It's a
+  command in the Patterns menu: clips have no menu of their own, as right-click deletes them.

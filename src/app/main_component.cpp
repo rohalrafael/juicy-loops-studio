@@ -1166,8 +1166,8 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
         break;
     case 2:
         add({jls::commands::newPattern, jls::commands::clonePattern, jls::commands::renamePattern,
-             jls::commands::deletePattern, jls::commands::splitByChannel, 0,
-             jls::commands::nextPattern, jls::commands::previousPattern});
+             jls::commands::deletePattern, jls::commands::splitByChannel, jls::commands::makeUnique,
+             0, jls::commands::nextPattern, jls::commands::previousPattern});
         break;
     case 3:
     {
@@ -1321,6 +1321,9 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
     case rackShowAudioClips:
         info.setTicked(project.showAudioClips);
         break;
+    case jls::commands::makeUnique:
+        info.setActive(playlist.isVisible() && !playlist.selection.empty());
+        break;
     case clearChannel:
     case jls::commands::duplicateChannel:
         info.setActive(project.findChannel(project.selectedChannel) != nullptr);
@@ -1439,6 +1442,11 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case jls::commands::splitByChannel:
         splitPattern(document.project().currentPattern);
+        break;
+    case jls::commands::makeUnique:
+        if (!playlist.selection.empty())
+            document.apply([clips = playlist.selection](model::Project& p)
+                           { p.makeClipsUnique(clips); });
         break;
     case jls::commands::renamePattern:
         renamePattern();

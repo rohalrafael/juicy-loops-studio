@@ -326,8 +326,9 @@ while you drag it up or down you hear the new pitch.
 
 Every key is labelled; note names follow FL: C5 is middle C (MIDI 60) and plays a sample at its
 original pitch. With a scale chosen, its notes' rows are lighter, the others darker (their key
-labels faded), and the root's rows are tinted. The scale is saved with the project. Note
-length doesn't change the sound yet: samples always play to their end, like FL's default sampler.
+labels faded), and the root's rows are tinted. The scale is saved with the project. For
+samples, note length only matters with the Sampler's volume envelope on; otherwise they play to
+their end, like FL's default sampler.
 
 ## Mixer
 

@@ -25,6 +25,23 @@ starting one.
   an MCP server.
 - Earlier, deferred: recording live input into the Piano Roll; mixer sends; FL's undo scheme.
 
+## Known gaps
+
+Smaller shortcomings, gathered from the "Known gaps" notes in `decisions.md` and checked against
+the code on 2026-10-29 (the rest of those notes are done, or superseded like pattern length,
+which follows the notes). Not agreed work yet: candidates for the backlog.
+
+- **Channel Rack:** no reordering channels (FL: Alt+↑ / ↓); one selected channel only.
+- **Playlist:** tracks have no names, mute or solo; no way to add tracks by hand.
+- **Mixer:** no renaming tracks; a fixed 16 inserts; no parameter smoothing (fast fader or
+  knob moves can click); the Delay's time is in ms only (no tempo sync).
+- **Samples:** dropping or replacing samples and opening projects decode on the UI thread (only
+  the Browser decodes in the background); samples are cut at 2 minutes.
+- **Files:** export blocks the UI and holds live audio; no recent files; no autosave; no
+  "collect samples into the project folder".
+- **Plugins:** hosted in-process, so a crashing plugin takes the app down.
+- **Soft Clipper:** no oversampling (heavy drive on bright material can alias).
+
 ## Open questions
 
 To discuss before working on them.

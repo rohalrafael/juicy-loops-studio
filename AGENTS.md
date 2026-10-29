@@ -15,7 +15,7 @@ and macOS. Read this file first, then `docs/`.
 | `docs/sandbox.md` | The Docker development sandbox (all tools and test plugins, no local installs) |
 | `docs/user-guide.md` | What users can do: every window, mouse action and shortcut |
 | `docs/project-format.md`, `docs/themes.md` | The `.jlp` project format; the theme format |
-| `docs/roadmap.md` | Milestones and the backlog of agreed features |
+| `docs/roadmap.md` | Milestones, the backlog of agreed features, known gaps |
 | `docs/decisions.md` | Why things are the way they are (read before changing a behaviour) |
 
 ## 2. Source map
@@ -94,5 +94,6 @@ clang-format -i <files you touched>
 
 ## 6. Picking work
 
-Check `docs/roadmap.md`: the backlog lists agreed features, and the "Known gaps" notes in
-`docs/decisions.md` list smaller shortcomings. Discuss anything bigger in an issue first.
+Check `docs/roadmap.md`: the backlog lists agreed features, and "Known gaps" lists smaller
+shortcomings (keep it current: remove what you fix, add what you leave out). Discuss anything
+bigger in an issue first.

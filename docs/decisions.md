@@ -417,3 +417,12 @@ not). Older entries describe the project as it was then; later entries may super
   rack moves or the window resizes), so 16 | 32 | 64 and close stay reachable. Supersedes the
   2026-10-17 "steps shrink to fit (20 -> 8 px)". Dragging from the Playlist's picker shows a chip
   with the item's name instead of JUCE's default snapshot of the whole picker.
+
+- 2026-10-29: **Inter, 1 px larger** (maintainer: text wasn't legible enough). Compared on 1:1
+  screenshots and in the app (prototype switches): every size +1 / +2 px, Medium body text with
+  brighter dim text, Inter at the same size and Inter +1 px. Inter +1 px won: Inter is drawn for
+  screens with a taller x-height, so with JUCE's greyscale anti-aliasing it stays clear at small
+  sizes, and +1 px (13 px in panels, 14 px in the transport bar) fits the denser layout, unlike
+  the 2026-10-18 attempt with the old one. Control sizes are unchanged. IBM Plex Sans is gone;
+  IBM Plex Mono stays for numbers. Inter is OFL, bundled as static instances cut at the small
+  optical size (opsz 14).

@@ -1,7 +1,7 @@
 # Themes
 
 A theme sets the app's **colours**. Shapes (corner radii, borders), sizes and the font
-(IBM Plex Sans) are the same in every theme, so the app looks consistent whichever you pick.
+(Inter) are the same in every theme, so the app looks consistent whichever you pick.
 
 Juicy Loops Studio ships with two themes: **Blackberry** (the default: near-black with
 lavender, mint and pink) and **Graphite** (neutral grey with a blue accent and amber displays).

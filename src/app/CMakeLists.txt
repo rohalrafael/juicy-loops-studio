@@ -33,9 +33,9 @@ target_sources(JuicyLoopsStudio PRIVATE
 target_include_directories(JuicyLoopsStudio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 juce_add_binary_data(JlsFonts SOURCES
-    ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans-Medium.ttf
-    ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexsans/IBMPlexSans-SemiBold.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/inter/Inter.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/inter/Inter-Medium.ttf
+    ${PROJECT_SOURCE_DIR}/resources/fonts/inter/Inter-SemiBold.ttf
     ${PROJECT_SOURCE_DIR}/resources/fonts/ibmplexmono/IBMPlexMono-Medium.ttf)
 
 target_compile_definitions(JuicyLoopsStudio PRIVATE

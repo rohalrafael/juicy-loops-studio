@@ -82,10 +82,10 @@ void ThemeCard::paintButton(juce::Graphics& g, bool highlighted, bool)
     // Name and description in the dialog's own theme.
     auto textArea = bounds.reduced(12.0f, 6.0f);
     g.setColour(colour(ui.colours.text));
-    g.setFont(semiboldFont(15.0f));
+    g.setFont(semiboldFont(16.0f));
     g.drawText(getButtonText(), textArea.removeFromTop(20.0f), juce::Justification::centredLeft);
     g.setColour(colour(ui.colours.textDim));
-    g.setFont(juce::FontOptions(12.0f));
+    g.setFont(juce::FontOptions(13.0f));
     const bool custom = cardTheme.id.rfind("custom:", 0) == 0;
     const auto subtitle = custom ? juce::String("Imported") +
                                        (cardTheme.author.empty()

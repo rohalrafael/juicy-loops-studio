@@ -1804,7 +1804,7 @@ void MainComponent::showAbout()
             juce::MessageBoxIconType::NoIcon, "Juicy Loops Studio",
             "Version " + juce::JUCEApplication::getInstance()->getApplicationVersion() +
                 "\n\nA free, open-source DAW. Licensed under the GNU AGPLv3.\n\n"
-                "The bundled fonts (IBM Plex Sans and Mono) are under the "
+                "The bundled fonts (Inter and IBM Plex Mono) are under the "
                 "SIL Open Font License.\n\nNot affiliated with Image-Line."),
         nullptr);
 }

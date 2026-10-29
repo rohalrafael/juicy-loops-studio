@@ -49,7 +49,8 @@ To discuss before working on them.
 - **Text sharpness on Windows** (2026-10-18). The maintainer finds our text blurrier than FL's
   at 100 % display scaling. Cause: JUCE draws text with grayscale anti-aliasing; FL gets
   Windows' ClearType (subpixel) rendering. Done so far: real Medium / SemiBold weights, Settings
-  > Interface size. Tried and reverted: all UI text 1 px larger (the UI felt too big). Options
+  > Interface size, and (2026-10-29, also for Linux) Inter instead of IBM Plex Sans with all UI
+  text 1 px larger, picked over larger sizes and heavier weights from 1:1 screenshots. Options
   left:
   - a setting (not a theme option: themes are colours only since 2026-10-29) to use the system
     UI font (Segoe UI on Windows), which is hinted for small sizes on screen

@@ -416,7 +416,7 @@ listener on all children) and by a timer while the window is active.
 
 **Theming.** A theme is colours only (`ui::currentTheme().colours`). Components read them in
 `paint()`, so switching themes repaints live. Everything else about the look is fixed, the same
-in every theme: sizes and corner radii (`ui::metrics`) and the font (IBM Plex Sans, IBM Plex
+in every theme: sizes and corner radii (`ui::metrics`) and the font (Inter, IBM Plex
 Mono for numbers). `ThemeManager`:
 - builds the `LookAndFeel` from the active theme
 - loads the bundled font once (`LookAndFeel::setFont`)
@@ -443,7 +443,7 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
 - `fillRaised()`: a raised surface lit from above, for buttons, step keys, knobs and fader caps
 - `FormPanel`: dialogs and the Sampler window as sections of label + control rows and notes
 - fonts: `mediumFont()` / `semiboldFont()` ask for a weight by style name; `ThemeManager` loads
-  IBM Plex Sans in Regular, Medium and SemiBold
+  Inter in Regular, Medium and SemiBold
 The `LookAndFeel` draws the rest to match: drop-downs, segment edges, scrollbars, tooltips and
 tree arrows. Mockups of the layout are on the design canvas (option A, "Compact").
 

@@ -142,10 +142,10 @@ void EnvelopeEditor::paint(juce::Graphics& g)
         const auto below = knobs[i].getBounds().withY(knobs[i].getBottom() + 2).withHeight(30);
         const auto column = below.withSizeKeepingCentre(getWidth() / 6, 30);
         g.setColour(colour(t.colours.text));
-        g.setFont(mediumFont(11.0f));
+        g.setFont(mediumFont(12.0f));
         g.drawText(names[i], column.withHeight(15), juce::Justification::centred, false);
         g.setColour(colour(t.colours.textDim));
-        g.setFont(juce::FontOptions(10.5f));
+        g.setFont(juce::FontOptions(11.5f));
         auto copy = current;
         g.drawText(valueText(i, field(copy, i)), column.withTrimmedTop(15),
                    juce::Justification::centred, false);

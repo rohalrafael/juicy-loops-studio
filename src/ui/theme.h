@@ -14,7 +14,7 @@
 
 // UI side of theming: the active theme, the LookAndFeel built from it, the bundled font,
 // user theme files and the saved choice. Colours come from the active theme; sizes, corner
-// radii and the font are the same for every theme (metrics, IBM Plex Sans).
+// radii and the font are the same for every theme (metrics, Inter).
 namespace jls::ui
 {
 
@@ -56,7 +56,7 @@ inline juce::Colour colour(theme::Argb argb)
 // The active theme. Valid while a ThemeManager exists (before that: the default theme).
 const theme::Theme& currentTheme();
 
-// The bundled font (IBM Plex Sans) in the weights the UI uses (any of them may be missing).
+// The bundled font (Inter) in the weights the UI uses (any of them may be missing).
 struct FontFamily
 {
     juce::Typeface::Ptr regular, medium, semibold;

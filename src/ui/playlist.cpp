@@ -55,7 +55,7 @@ class PlaylistView::Ruler final : public juce::Component, public juce::SettableT
         const float barWidth = view.xForStep(bar);
         const int every = barWidth < 28.0f ? 4 : (barWidth < 48.0f ? 2 : 1); // keep labels apart
 
-        g.setFont(juce::FontOptions(11.0f));
+        g.setFont(juce::FontOptions(12.0f));
         const int first = static_cast<int>(offset / barWidth);
         for (int b = first; view.xForStep(b * bar) - offset < static_cast<float>(getWidth()); ++b)
         {
@@ -96,7 +96,7 @@ class PlaylistView::TrackNames final : public juce::Component
         const auto& t = currentTheme();
         g.fillAll(colour(t.colours.panel));
         const int offset = view.viewport.getViewPositionY();
-        g.setFont(juce::FontOptions(13.0f));
+        g.setFont(juce::FontOptions(14.0f));
         for (int track = 0; track < view.doc.project().playlist.numTracks; ++track)
         {
             const int y = track * trackHeight - offset;
@@ -462,7 +462,7 @@ void PlaylistGrid::paint(juce::Graphics& g)
     if (project.playlist.clips.empty())
     {
         g.setColour(colour(t.colours.textDim));
-        g.setFont(juce::FontOptions(14.0f));
+        g.setFont(juce::FontOptions(15.0f));
         g.drawText("Click to place " + juce::String::fromUTF8(project.current().name.c_str()) +
                        juce::String::fromUTF8(" \xc2\xb7 drag to move \xc2\xb7 right-click "
                                               "deletes \xc2\xb7 press L for song mode"),
@@ -577,7 +577,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         g.setColour(juce::Colours::black.withAlpha(0.18f));
         g.fillRect(strip);
         g.setColour(colour(t.colours.clipText));
-        g.setFont(juce::FontOptions(11.0f));
+        g.setFont(juce::FontOptions(12.0f));
         g.drawText(juce::String::fromUTF8(channel->name.c_str()), strip.reduced(4.0f, 0.0f),
                    juce::Justification::centredLeft, true);
         if (channel->sample != nullptr && channel->sample->numFrames() > 0)
@@ -630,7 +630,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
     g.setColour(juce::Colours::black.withAlpha(0.18f));
     g.fillRect(strip);
     g.setColour(colour(t.colours.clipText));
-    g.setFont(juce::FontOptions(11.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawText(juce::String::fromUTF8(project.clipLabel(*pattern).c_str()),
                strip.reduced(4.0f, 0.0f), juce::Justification::centredLeft, true);
 
@@ -688,7 +688,7 @@ class PlaylistView::Picker final : public juce::Component
         const auto heading = [&](const char* text)
         {
             g.setColour(colour(t.colours.textDim));
-            g.setFont(semiboldFont(11.0f));
+            g.setFont(semiboldFont(12.0f));
             g.drawText(text, 8, y, getWidth() - 12, rowHeight, juce::Justification::centredLeft);
             y += rowHeight;
         };
@@ -702,7 +702,7 @@ class PlaylistView::Picker final : public juce::Component
             g.setColour(swatch);
             g.fillRoundedRectangle(8.0f, y + 6.0f, 8.0f, rowHeight - 12.0f, 2.0f);
             g.setColour(colour(chosen ? t.colours.activeText : t.colours.text));
-            g.setFont(juce::FontOptions(12.5f));
+            g.setFont(juce::FontOptions(13.5f));
             g.drawText(juce::String::fromUTF8(name.c_str()), 22, y, getWidth() - 26, rowHeight,
                        juce::Justification::centredLeft, true);
             y += rowHeight;
@@ -723,7 +723,7 @@ class PlaylistView::Picker final : public juce::Component
         if (!any)
         {
             g.setColour(colour(t.colours.textDim));
-            g.setFont(juce::FontOptions(11.5f));
+            g.setFont(juce::FontOptions(12.5f));
             g.drawFittedText("Drop samples on the Playlist", 8, y, getWidth() - 12, rowHeight * 2,
                              juce::Justification::topLeft, 2);
         }
@@ -798,7 +798,7 @@ class PlaylistView::Picker final : public juce::Component
                     name = juce::String::fromUTF8(pattern.name.c_str());
         }
 
-        const auto font = juce::FontOptions(12.5f);
+        const auto font = juce::FontOptions(13.5f);
         const int w = std::clamp(textWidth(font, name) + 16, 48, 200);
         const float scale = juce::Desktop::getInstance().getGlobalScaleFactor();
         juce::Image image(juce::Image::ARGB, juce::roundToInt(static_cast<float>(w) * scale),
@@ -1199,7 +1199,7 @@ void PlaylistView::resized()
     snapBox.setBounds(header.fromRight(metrics::comboWidth));
     snapLabelArea = header.fromRight(headerLabelWidth("Snap"));
     // Right after the title.
-    header.fromLeft(textWidth(semiboldFont(13.0f), "Playlist") + metrics::controlGap);
+    header.fromLeft(textWidth(semiboldFont(14.0f), "Playlist") + metrics::controlGap);
     pickerButton.setBounds(header.fromLeft(pickerButton.preferredWidth(metrics::controlHeight)));
 
     if (picker->isVisible())

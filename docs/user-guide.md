@@ -21,8 +21,11 @@ drag the window's edges to resize it. Dialogs and separate plugin windows have t
 title bar.
 
 Plugin editors and the Sampler float inside the main window: drag them by their title bar,
-close them with ×, and click one to bring it to the front. Plugin panels always stay in front
-(on Linux a plugin draws in its own native window, which the app can't draw over). If a plugin
+close them with ×, and click one to bring it to the front. On Linux the windows stack as in FL:
+clicking the Playlist, Piano Roll, Mixer, Browser or Channel Rack brings it in front of a plugin
+panel, and the plugin comes back with a click on it or on its channel's name (a second click on
+the name, while the plugin is in front, closes it). On Windows and macOS plugin panels still
+always stay in front (the plugin draws in its own native window). If a plugin
 misbehaves inside the app, switch **Options › Settings › Plugin windows** to *Separate
 windows*.
 

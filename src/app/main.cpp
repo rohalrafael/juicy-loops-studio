@@ -42,6 +42,16 @@ class MainWindow final : public juce::DocumentWindow
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
     }
 
+    // Not "here" where an area's native window covers the window: JUCE's look-ups across
+    // windows (a drag's drop target) then go on to the area (app/area_stack).
+    bool hitTest(int x, int y) override
+    {
+        if (auto* content = dynamic_cast<MainComponent*>(getContentComponent());
+            content != nullptr && content->areaCovers(localPointToGlobal(juce::Point<int>(x, y))))
+            return false;
+        return DocumentWindow::hitTest(x, y);
+    }
+
     void lookAndFeelChanged() override
     {
         DocumentWindow::lookAndFeelChanged();

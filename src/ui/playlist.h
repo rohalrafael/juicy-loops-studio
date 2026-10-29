@@ -92,7 +92,10 @@ class PlaylistGrid final : public juce::Component,
 };
 
 // Playlist panel: header with snap setting, bar ruler, track names and the grid.
-class PlaylistView final : public juce::Component, private juce::Timer
+// A drag container of its own, for the picker's drags (see BrowserPanel).
+class PlaylistView final : public juce::Component,
+                           public juce::DragAndDropContainer,
+                           private juce::Timer
 {
   public:
     static constexpr int trackHeight = 34;

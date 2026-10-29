@@ -472,6 +472,7 @@ constexpr int controlHeight = 96;
 
 EffectPanel::EffectPanel(model::Document& document) : doc(document)
 {
+    setOpaque(true); // paints every pixel: a plain native window (app/area_stack)
     closeButton.setTooltip("Close");
     closeButton.onClick = [this] { setVisible(false); };
     enabled.setTooltip("Turn the effect on or off (bypass)");
@@ -604,6 +605,7 @@ void EffectPanel::setParam(std::size_t index, float value, int gestureId)
 
 void EffectPanel::paint(juce::Graphics& g)
 {
+    g.fillAll(colour(currentTheme().colours.background)); // corners (see paintFloatingPanel)
     const auto& t = currentTheme();
     const auto bounds = getLocalBounds().toFloat();
     const float radius = metrics::windowRadius;

@@ -6,7 +6,7 @@
 #include "ui/title_bar.h"
 
 #include "app/commands.h"
-#include "app/native_focus.h"
+#include "app/native_windows.h"
 #include "ui/settings_dialog.h"
 
 #include "io/audio_export.h"
@@ -128,11 +128,12 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
              &tempoDisplay, &timeSignatureBox, &metronomeButton, &typingButton, &playlistButton,
              &rackButton, &pianoRollButton, &mixerButton, &browserButton, &positionLabel, &scope,
-             &timeLabel, &playlist})
+             &timeLabel})
         addAndMakeVisible(c);
-    addChildComponent(pianoRoll);
-    addChildComponent(mixer);
-    addChildComponent(browser);
+    // The areas, back to front (the floating ones last).
+    for (auto* c : std::initializer_list<juce::Component*>{&playlist, &pianoRoll, &mixer, &browser})
+        areas.add(*c);
+    playlist.setVisible(true);
     browser.setVisible(themes.settingsFile().getBoolValue("browserVisible", true));
     browser.previewSeconds = [this] { return ui::settings::previewSeconds(themes.settingsFile()); };
     browser.onSideChanged = [this] { resized(); };
@@ -151,14 +152,16 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     };
     pianoRoll.darkKeys = [this] { return ui::settings::pianoRollDarkKeys(themes.settingsFile()); };
     channelRack.onDuplicateChannel = [this](model::ChannelId id) { duplicateChannel(id); };
+    channelRack.onSizeChanged = [this] { resized(); };
     channelRack.loopedClickCopies = [this]
     { return ui::settings::loopedStepClickCopies(themes.settingsFile()); };
     channelRack.onShowSampler = [this](model::ChannelId id, bool toggle)
     { showSampler(id, toggle); };
     stretchCache.onReady = [this] { publishState(); };
-    addAndMakeVisible(channelRack); // after the main views, so the floating panels are on top
-    lookAndFeelChanged();           // the rack's shadow
-    addChildComponent(effectPanel);
+    areas.add(channelRack); // after the main views, so the floating panels are on top
+    channelRack.setVisible(true);
+    lookAndFeelChanged(); // the rack's shadow
+    areas.add(effectPanel);
     mixer.onOpenEffect = [this](model::EffectId id) { openEffectEditor(id); };
     mixer.listPlugins = [this]
     {
@@ -320,9 +323,10 @@ void MainComponent::openEffectEditor(model::EffectId id)
         effectPanel.show(id);
         if (!effectPanelPlaced)
         {
-            effectPanel.setCentrePosition(getLocalBounds().getCentre());
+            effectPanel.setCentrePosition(areas.toAreaSpace(getLocalBounds()).getCentre());
             effectPanelPlaced = true;
         }
+        effectPanel.toFront(false);
         return;
     }
 
@@ -364,7 +368,9 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
 
     if (auto it = instrumentWindows.find(id); it != instrumentWindows.end())
     {
-        if (toggle)
+        // As in FL: a covered plugin comes to the front; one already in front closes.
+        const auto* panel = dynamic_cast<const juce::Component*>(it->second.get());
+        if (toggle && (panel == nullptr || !areas.isCovered(*panel, &channelRack)))
             instrumentWindows.erase(it);
         else
             it->second->bringToFront();
@@ -408,7 +414,8 @@ MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInst
     panel->setMovableArea(floatingArea);
     panel->placeInitially(static_cast<int>(pluginWindows.size() + instrumentWindows.size()) % 6);
     panel->setKeyboardReturn([this] { returnKeyboard(); });
-    addAndMakeVisible(*panel);
+    areas.add(*panel);
+    panel->setVisible(true);
     panel->toFront(false);
     // Again once the plugin has settled (some size their editor asynchronously), repainting the
     // window so nothing it drew before moving is left behind.
@@ -576,10 +583,9 @@ void MainComponent::renamePattern()
 
 void MainComponent::toggleChannelRack()
 {
-    // As in FL: a rack hidden behind the Playlist / Piano Roll comes to the front first.
-    const bool behind =
-        getIndexOfChildComponent(&channelRack) <
-        std::max(getIndexOfChildComponent(&playlist), getIndexOfChildComponent(&pianoRoll));
+    // As in FL: a rack covered by another window (the Playlist, a plugin...) comes to the front
+    // first.
+    const bool behind = areas.isCovered(channelRack);
     if (channelRack.isVisible() && !behind)
         channelRack.setVisible(false);
     else
@@ -640,15 +646,10 @@ void MainComponent::setFocusArea(Area area)
 void MainComponent::raiseFocusedArea()
 {
     updateFocusFrames();
-    // The floating Channel Rack sits in front of the Playlist / Piano Roll only while it has the
-    // focus; focusing the main view puts the rack behind it, like windows in FL.
-    if (focusArea == Area::channelRack)
-        channelRack.toFront(false);
-    else if (focusArea == Area::mainView)
-        channelRack.toBehind(getIndexOfChildComponent(&playlist) <
-                                     getIndexOfChildComponent(&pianoRoll)
-                                 ? static_cast<juce::Component*>(&playlist)
-                                 : &pianoRoll);
+    // The focused area comes to the front, like windows in FL: the Playlist / Piano Roll goes over
+    // the floating Channel Rack and plugin windows, the rack over the Playlist.
+    if (auto* c = areaComponent(focusArea); c != nullptr && c->isVisible())
+        areas.raise(*c);
 }
 
 void MainComponent::updateFocusFrames()
@@ -795,7 +796,8 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
         return;
     if (sampler != nullptr && sampler->channel() == id)
     {
-        if (toggle)
+        // As in FL: a covered window comes to the front; one already in front closes.
+        if (toggle && !areas.isCovered(*samplerPanel, &channelRack))
             closeSampler();
         else
             samplerPanel->toFront(false);
@@ -806,7 +808,8 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     sampler = content.get();
     samplerPanel = std::make_unique<ui::FloatingPanel>(std::move(content));
     samplerPanel->onClose = [this] { juce::MessageManager::callAsync([this] { closeSampler(); }); };
-    addAndMakeVisible(*samplerPanel);
+    areas.add(*samplerPanel);
+    samplerPanel->setVisible(true);
     samplerPanel->setMovableArea(floatingArea);
     if (samplerPosition)
         samplerPanel->setTopLeftPosition(*samplerPosition);
@@ -1040,6 +1043,13 @@ void MainComponent::lookAndFeelChanged()
     positionLabel.setColour(juce::Label::textColourId, ui::colour(c.displayText));
     timeLabel.setColour(juce::Label::textColourId, ui::colour(c.displayDim));
 
+    // A shadow only when the rack is an ordinary child component: a native child window can't be
+    // see-through over its siblings (no compositing between child windows).
+    if (areas.isNative())
+    {
+        rackShadow.reset();
+        return;
+    }
     rackShadow =
         std::make_unique<juce::DropShadower>(juce::DropShadow(ui::colour(c.shadow), 18, {0, 6}));
     rackShadow->setOwner(&channelRack);
@@ -1081,9 +1091,9 @@ void MainComponent::resized()
     if (browser.isVisible())
     {
         // Full height next to everything below the transport bar.
-        browser.setBounds(browser.onRight()
-                              ? area.removeFromRight(ui::BrowserPanel::preferredWidth)
-                              : area.removeFromLeft(ui::BrowserPanel::preferredWidth));
+        areas.setBounds(browser, browser.onRight()
+                                     ? area.removeFromRight(ui::BrowserPanel::preferredWidth)
+                                     : area.removeFromLeft(ui::BrowserPanel::preferredWidth));
         if (browser.onRight())
             area.removeFromRight(panelGap);
         else
@@ -1092,11 +1102,11 @@ void MainComponent::resized()
     if (mixer.isVisible())
     {
         const int height = std::min(ui::MixerView::preferredHeight, area.getHeight() / 2);
-        mixer.setBounds(area.removeFromBottom(height));
+        areas.setBounds(mixer, area.removeFromBottom(height));
         area.removeFromBottom(panelGap);
     }
-    playlist.setBounds(area);
-    pianoRoll.setBounds(area);
+    areas.setBounds(playlist, area);
+    areas.setBounds(pianoRoll, area);
 
     // The rack floats: place it once, then keep wherever the user dragged it (sizes follow
     // the channel count).
@@ -1105,18 +1115,20 @@ void MainComponent::resized()
     if (!channelRackPlaced && !area.isEmpty())
     {
         // Below the first tracks, so the Playlist's "click to place" hint stays visible.
-        channelRack.setBounds(area.getX() + 140,
-                              area.getY() + ui::PlaylistView::headerHeight +
-                                  ui::PlaylistView::rulerHeight + 3 * ui::PlaylistView::trackHeight,
-                              width, height);
+        areas.setBounds(channelRack,
+                        {area.getX() + 140,
+                         area.getY() + ui::PlaylistView::headerHeight +
+                             ui::PlaylistView::rulerHeight + 3 * ui::PlaylistView::trackHeight,
+                         width, height});
         channelRackPlaced = true;
     }
     else
     {
         channelRack.setSize(width, height);
     }
-    channelRack.setMovableArea(panelsArea);
-    floatingArea = panelsArea;
+    // Floating areas move in the areas' own coordinates (the main window's, when native).
+    floatingArea = areas.toAreaSpace(panelsArea);
+    channelRack.setMovableArea(floatingArea);
     if (samplerPanel != nullptr)
         samplerPanel->setMovableArea(floatingArea);
     for (auto& [id, view] : pluginWindows)
@@ -1982,6 +1994,8 @@ void MainComponent::showAbout()
 
 void MainComponent::timerCallback()
 {
+    areas.update(); // the main window exists only after construction (and may be recreated)
+
     engine.collectGarbage();
     // Windows are shown and hidden from many places (commands, menus, their close buttons):
     // keep the window buttons' LEDs in step. Cheap when nothing changed.
@@ -2005,10 +2019,13 @@ void MainComponent::timerCallback()
     // Focus can end up nowhere (a dialog or popup closed) or stay in another of our windows:
     // with focus-follows-mouse (Hyprland's default) moving the mouse back from the Sampler
     // focuses this window without a click, and JUCE kept sending keys to the Sampler's
-    // component. Never steals focus from other apps.
+    // component. Never steals focus from other apps, nor from a text field in an area (the
+    // areas are windows of their own on Linux, so not our children).
     if (auto* peer = getPeer(); peer != nullptr && peer->isFocused() && isShowing())
         if (auto* focused = getCurrentlyFocusedComponent();
-            focused == nullptr || (focused != this && !isParentOf(focused)))
+            focused == nullptr ||
+            (focused != this && !isParentOf(focused) &&
+             !(areas.holds(focused) && dynamic_cast<juce::TextEditor*>(focused) != nullptr)))
             grabKeyboardFocus();
     // A plugin's editor keeps the keyboard after a click into it, so typed notes stopped until
     // the main window was clicked: give it back once the mouse leaves the plugin panels (after

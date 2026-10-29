@@ -780,7 +780,8 @@ class PlaylistView::Picker final : public juce::Component
             dragging = true;
             // Only the item follows the mouse (JUCE would show a snapshot of the whole picker).
             const juce::Point<int> offset(-10, -rowHeight / 2);
-            container->startDragging(pressed, this, dragImage(pressed), false, &offset);
+            // May cross windows: areas are native windows on Linux (app/area_stack).
+            container->startDragging(pressed, this, dragImage(pressed), true, &offset);
         }
     }
 

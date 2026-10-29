@@ -5,6 +5,7 @@
 // floating panels, and handles menus and keyboard shortcuts. Whenever the document changes it
 // publishes a new engine snapshot and refreshes the views (see docs/architecture.md).
 
+#include "app/area_stack.h"
 #include "app/live_input.h"
 #include "app/stretch_cache.h"
 #include "engine/effect_pool.h"
@@ -55,6 +56,8 @@ class MainComponent final : public juce::AudioAppComponent,
     void paint(juce::Graphics& g) override;
     void resized() override;
     void lookAndFeelChanged() override; // display colours of the clock, the rack's shadow
+    // Whether one of the areas' native windows is at `screenPos` (see AreaStack::coversPoint).
+    bool areaCovers(juce::Point<int> screenPos) const { return areas.coversPoint(screenPos); }
     bool keyPressed(const juce::KeyPress& key) override;
     bool keyStateChanged(bool isKeyDown) override;
     void focusLost(FocusChangeType cause) override;
@@ -217,7 +220,10 @@ class MainComponent final : public juce::AudioAppComponent,
     // The floating rack casts a shadow (the theme's shadow colour) on the panels below it.
     std::unique_ptr<juce::DropShadower> rackShadow;
     bool channelRackPlaced = false;
-    juce::TooltipWindow tooltips{this, 600};
+    // A window of its own: the areas' native windows would cover it as a child of this.
+    juce::TooltipWindow tooltips{nullptr, 600};
+    // The areas' stacking, and their native windows on Linux (see app/area_stack.h).
+    app::AreaStack areas{*this};
     // Menus, window name and window buttons (not on macOS: native title bar and menu bar).
     std::unique_ptr<ui::TitleBar> titleBar;
 

@@ -19,14 +19,9 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
-- Plugin windows can go to the background (2026-10-29, maintainer's request): today a plugin's
-  panel always stays in front of the Playlist, Channel Rack and the rest, because on Linux the
-  plugin draws in its own native window that the app can't draw over (user guide, *Windows*).
-  Needs a way to lower or hide the native window when another area comes to the front (and to
-  restore it), probably per platform.
 - Plugin windows in the Ctrl+Tab order (2026-10-29): an open plugin window becomes a stop when
-  cycling with Ctrl+Tab (closed ones don't). Depends on the item above, since Ctrl+Tab away from
-  a plugin should put it behind. The window buttons' LEDs only cover the five main windows; the
+  cycling with Ctrl+Tab (closed ones don't); Ctrl+Tab away from a plugin puts it behind (Linux
+  can since the areas became native windows). The window buttons' LEDs only cover the five main windows; the
   plugin panel's own focus line can show that it has the focus.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run

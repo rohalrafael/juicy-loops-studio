@@ -93,7 +93,7 @@ solid).
 | `playhead`         | Outline on the step that's playing                           |
 | `led`, `ledOff`    | Channel mute lights                                          |
 | `activeBackground`, `activeText` | Pressed / toggled-on buttons, highlighted menu items |
-| `shadow`           | The shadow under the floating Channel Rack                   |
+| `shadow`           | The shadow under the floating Channel Rack (not on Linux)    |
 | `lane`, `grid`     | Playlist track background and bar lines                      |
 | `clip`, `clipText` | Pattern clips in the Playlist and their labels               |
 

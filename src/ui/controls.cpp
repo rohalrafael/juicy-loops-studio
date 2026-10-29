@@ -559,6 +559,9 @@ void paintCardFrame(juce::Graphics& g, juce::Component& panel)
 void paintFloatingPanel(juce::Graphics& g, juce::Component& panel, const juce::String& title,
                         const juce::String& subtitle, int textRight)
 {
+    // Outside the rounded corners, the window background: a native area window (app/area_stack)
+    // has nothing behind it there, so they'd come out black.
+    g.fillAll(colour(currentTheme().colours.background));
     g.setColour(colour(currentTheme().colours.panel));
     g.fillRoundedRectangle(panel.getLocalBounds().toFloat(), metrics::windowRadius);
     paintPanelHeader(g, panel.getLocalBounds().removeFromTop(metrics::panelHeaderHeight), title,

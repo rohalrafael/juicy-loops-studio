@@ -503,6 +503,19 @@ not). Older entries describe the project as it was then; later entries may super
   component, so the existing safety net never fired. Now the app takes the keyboard back when the
   mouse leaves the plugin panels (after any drag), and from a keyboard button in plugin panels'
   title bars (maintainer's choice: both), setting the X input focus with Xlib
-  (`app/native_focus`, the app now links libX11, already loaded by JUCE). Only while the focus is
+  (`app/native_windows`, the app now links libX11, already loaded by JUCE). Only while the focus is
   inside our window, so other apps are never affected. Verified on Xvfb with Surge XT. Windows and
   macOS: not done (no-op there), untested.
+
+- 2026-10-29: **Plugin panels can go behind other windows (Linux)** (maintainer's request and
+  proposal). A plugin draws in its own native window, which JUCE can't paint over, so plugin
+  panels always covered the Playlist, Channel Rack and the rest. Now, as in FL, the areas that
+  can overlap a plugin are native child windows of the main window (`addToDesktop` with the
+  main window as parent), and `app::AreaStack` restacks them with Xlib: clicking an area, its
+  window button, Ctrl+Tab or a channel's name brings it to the front. Alternatives were hiding
+  the plugin's window while covered (it would vanish rather than sit behind) or separate
+  top-level windows (the window manager would stack them, and they'd leave the main window).
+  Costs: child windows can't be semi-transparent (no Rack shadow, opaque panel corners), and
+  JUCE's cross-window drag lookup and the shortcut safety net needed adjusting (architecture,
+  *UI*). Windows and macOS keep the old behaviour until someone restacks there;
+  `JLS_NO_NATIVE_AREAS=1` turns it off on Linux, as a fallback.

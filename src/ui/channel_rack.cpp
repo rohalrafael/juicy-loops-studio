@@ -740,6 +740,7 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
                          io::SampleLoader& sampleLoader)
     : doc(document), transport(transportToShow), loader(sampleLoader)
 {
+    setOpaque(true); // paints every pixel: a plain native window (app/area_stack)
     // Cached as an image so dragging the rack doesn't redraw every row each frame.
     setBufferedToImage(true);
     setUpButtons();
@@ -949,8 +950,8 @@ void ChannelRack::refresh()
         lengthButtons[i].setToggleState(gridSteps == (16 << i), juce::dontSendNotification);
     resized(); // places new rows; the step area (and the handle) follow the pattern length
 
-    if (auto* parent = getParentComponent())
-        parent->resized();
+    if (onSizeChanged)
+        onSizeChanged();
 }
 
 int ChannelRack::preferredWidth() const
@@ -1001,9 +1002,9 @@ void ChannelRack::resized()
     // right edge of the part that's in view.
     constexpr int minHeaderWidth = 300;
     auto headerArea = bounds.removeFromTop(headerHeight);
-    if (const auto* parent = getParentComponent())
+    if (!movableArea.isEmpty())
         headerArea.setRight(
-            std::min(getWidth(), std::max(minHeaderWidth, parent->getWidth() - getX())));
+            std::min(getWidth(), std::max(minHeaderWidth, movableArea.getRight() - getX())));
     HeaderLayout header(headerArea);
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
     // 16 | 32 | 64 as one segmented control: the segments touch.
@@ -1049,6 +1050,7 @@ void ChannelRack::setMovableArea(juce::Rectangle<int> area)
 {
     movableArea = area;
     keepTitleBarReachable(*this, movableArea);
+    resized(); // the header's controls follow the visible part (see resized())
 }
 
 void ChannelRack::timerCallback()

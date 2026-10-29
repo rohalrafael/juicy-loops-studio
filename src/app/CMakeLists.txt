@@ -8,7 +8,8 @@ juce_add_gui_app(JuicyLoopsStudio
 target_sources(JuicyLoopsStudio PRIVATE
     commands.cpp
     live_input.cpp
-    native_focus.cpp
+    native_windows.cpp
+    area_stack.cpp
     stretch_cache.cpp
     main.cpp
     main_component.cpp
@@ -48,8 +49,8 @@ target_compile_definitions(JuicyLoopsStudio PRIVATE
     JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:JuicyLoopsStudio,JUCE_PRODUCT_NAME>"
     JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:JuicyLoopsStudio,JUCE_VERSION>")
 
-# Xlib for app/native_focus (giving the keyboard back from plugin windows). JUCE loads libX11 at
-# run time anyway; its development package is already a build requirement.
+# Xlib for app/native_windows (keyboard focus and stacking of our child windows). JUCE loads
+# libX11 at run time anyway; its development package is already a build requirement.
 if(UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
     target_link_libraries(JuicyLoopsStudio PRIVATE X11::X11)

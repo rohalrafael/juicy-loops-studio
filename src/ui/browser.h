@@ -19,7 +19,11 @@
 namespace jls::ui
 {
 
-class BrowserPanel final : public juce::Component, private juce::Timer
+// A drag container of its own: as a native area (app/area_stack) it has no parent to start
+// drags from, and its drags (samples onto the Channel Rack or the Playlist) cross windows.
+class BrowserPanel final : public juce::Component,
+                           public juce::DragAndDropContainer,
+                           private juce::Timer
 {
   public:
     static constexpr int preferredWidth = 260;

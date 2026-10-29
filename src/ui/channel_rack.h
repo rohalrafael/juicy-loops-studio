@@ -254,6 +254,8 @@ class ChannelRack final : public juce::Component,
     std::function<void(model::ChannelId, bool toggle)> onShowInstrument;
     // Set by the owner: show a sample channel's Sampler window (`toggle` as above).
     std::function<void(model::ChannelId, bool toggle)> onShowSampler;
+    // Set by the owner: the rack's preferred size changed (rows, pattern length); lay it out.
+    std::function<void()> onSizeChanged;
     // Set by the owner (Settings > Clicking a looped step): true copies a channel's loop in before
     // a click on a greyed step, so nothing else changes; false (unset, as in FL) discards it.
     std::function<bool()> loopedClickCopies;
@@ -271,7 +273,7 @@ class ChannelRack final : public juce::Component,
     void resized() override;
     // The header's controls follow the visible part of the rack (see resized()).
     void moved() override { resized(); }
-    void parentSizeChanged() override { resized(); }
+    void parentSizeChanged() override { resized(); } // as a child component (not native)
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
 

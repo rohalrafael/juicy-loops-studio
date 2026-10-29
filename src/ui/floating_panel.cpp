@@ -14,6 +14,7 @@ constexpr int cascadeStep = 24; // offset between panels opened one after anothe
 
 FloatingPanel::FloatingPanel(std::unique_ptr<juce::Component> content) : held(std::move(content))
 {
+    setOpaque(true); // paints every pixel (see paintFloatingPanel): a plain native window
     closeButton.setTooltip("Close");
     closeButton.onClick = [this]
     {

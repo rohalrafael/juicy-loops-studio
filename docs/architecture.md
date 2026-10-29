@@ -394,13 +394,26 @@ which gives:
   bar: the **Channel Rack** (F6), the **effect panel**, and `ui::FloatingPanel`s holding the
   **Sampler** (`SamplerPanel`) and plugin editors (`plugins::PluginPanel`). A plugin editor is
   a native window on Linux (`juce::XEmbedComponent`): it follows only its own moves, so the
-  panel calls `updateEmbeddedBounds()` when it moves, and plugin panels stay in front since
-  JUCE can't draw over them. `plugins::PluginView` hides whether an editor is a panel or a
+  panel calls `updateEmbeddedBounds()` when it moves. `plugins::PluginView` hides whether an editor is a panel or a
   separate `PluginWindow` (Settings › Plugin windows). A click into an editor gives the plugin
   the keyboard; `MainComponent::returnKeyboard` takes it back when the mouse leaves the plugin
   panels (the timer) or from the panel's keyboard button. JUCE won't move the X input focus while
-  it's inside our window (a plugin's child window counts), so `app/native_focus` sets it with
+  it's inside our window (a plugin's child window counts), so `app/native_windows` sets it with
   Xlib (the app links libX11 for this).
+- **Areas as native windows (Linux).** JUCE can't draw over a plugin's native window, so on
+  Linux every area that can overlap a plugin panel (Browser, Playlist, Piano Roll, Mixer,
+  Channel Rack, effect panel, Sampler and the plugin panels themselves) is a native child window
+  of the main window, and `app::AreaStack` keeps their stacking order: `raise()` restacks them
+  with Xlib (`XRestackWindows`; JUCE's `toFront()` only asks the window manager, which doesn't
+  restack child windows) and moves the area forward in JUCE's own desktop list, which drag and
+  drop follows. `MainComponent` places areas through the stack (`setBounds`, `toAreaSpace`)
+  since they aren't its children; it listens to their mouse events, and the main window's
+  `hitTest` says "not here" where an area covers it (`coversPoint`) so drags find the area.
+  Keys still go to whichever component has JUCE's focus, in any of our windows; the shortcut
+  safety net spares text fields inside areas (`holds`). Child windows can't be
+  semi-transparent, so floating panels are opaque and the Channel Rack has no shadow there.
+  Elsewhere (and with `JLS_NO_NATIVE_AREAS=1`) the areas are ordinary children and plugin
+  panels stay in front.
 - separate windows: the Settings / Keyboard shortcuts / Theme / Plugins / Audio settings
   dialogs, and plugin editors when set to separate windows
 - window frames: no system title bars (except on macOS). The main window's top row is

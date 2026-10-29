@@ -32,7 +32,8 @@ void TitleButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.fillRect(getLocalBounds());
     }
     const auto ink = close && (highlighted || down) ? colour(c.background) : colour(c.text);
-    drawIcon(g, icon, getLocalBounds().toFloat().withSizeKeepingCentre(14.0f, 14.0f), ink);
+    const auto iconSize = static_cast<float>(metrics::iconSize);
+    drawIcon(g, icon, getLocalBounds().toFloat().withSizeKeepingCentre(iconSize, iconSize), ink);
 }
 
 void useOwnTitleBar(juce::DocumentWindow* window)

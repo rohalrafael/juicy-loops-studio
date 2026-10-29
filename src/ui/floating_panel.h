@@ -6,6 +6,8 @@
 // a plugin's editor) and sizes itself around it, following the content when that resizes itself
 // (plugin editors do, e.g. when zoomed).
 
+#include "ui/controls.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
@@ -48,8 +50,7 @@ class FloatingPanel : public juce::Component, private juce::ComponentListener
 
     std::unique_ptr<juce::Component> held;
     juce::String title, subtitle;
-    class CloseButton;
-    std::unique_ptr<juce::Button> closeButton;
+    IconButton closeButton{Icon::close};
     juce::ComponentDragger dragger;
     juce::Rectangle<int> movableArea;
     bool moving = false;

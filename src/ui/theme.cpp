@@ -14,6 +14,9 @@ const theme::Theme* activeTheme = nullptr;
 constexpr const char* themeSettingKey = "theme";
 constexpr const char* customPrefix = "custom:";
 
+// The drop-down chevron's distance from the right edge.
+constexpr int chevronInset = 6;
+
 } // namespace
 
 const theme::Theme& currentTheme()
@@ -118,27 +121,18 @@ void LookAndFeel::applyTheme(const theme::Theme& t)
 void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
                                        const juce::Colour& background, bool highlighted, bool down)
 {
-    auto bounds = button.getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f);
-
-    auto fill = background;
-    if (down)
-        fill = fill.contrasting(0.15f);
-    else if (highlighted)
-        fill = fill.contrasting(0.07f);
-
     // Segments of a joined control (ui::joinSegments) are square where they meet and share
     // one border line there.
     const bool left = button.isConnectedOnLeft();
     const bool right = button.isConnectedOnRight();
+    auto bounds = button.getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f);
     if (left)
         bounds.setLeft(bounds.getX() - metrics::borderWidth / 2.0f);
     juce::Path box;
     box.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
                             metrics::cornerRadius, metrics::cornerRadius, !left, !right, !left,
                             !right);
-    fillRaised(g, box, fill);
-    g.setColour(colour(currentTheme().colours.outline));
-    g.strokePath(box, juce::PathStrokeType(metrics::borderWidth));
+    fillRaisedOutlined(g, box, buttonFill(background, highlighted, down));
 }
 
 juce::Font LookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight)
@@ -149,37 +143,30 @@ juce::Font LookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight)
 void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool, int, int, int, int,
                                juce::ComboBox& box)
 {
-    const auto& t = currentTheme();
+    const auto& c = currentTheme().colours;
     const auto bounds =
-        juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
+        juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
             .reduced(metrics::borderWidth / 2.0f);
-    auto fill = colour(t.colours.panelRaised);
-    if (box.isMouseOver(true) && box.isEnabled())
-        fill = fill.contrasting(0.07f);
-    g.setColour(fill);
-    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
-    g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(bounds, metrics::cornerRadius, metrics::borderWidth);
+    const bool hover = box.isMouseOver(true) && box.isEnabled();
+    paintOutlinedBox(g, bounds, buttonFill(colour(c.panelRaised), hover, false));
     const float icon = static_cast<float>(metrics::iconSize);
     const auto chevron =
-        juce::Rectangle<float>(static_cast<float>(width) - icon - 6.0f,
+        juce::Rectangle<float>(static_cast<float>(width - metrics::iconSize - chevronInset),
                                (static_cast<float>(height) - icon) / 2.0f, icon, icon);
     drawIcon(g, Icon::chevronDown, chevron,
-             colour(t.colours.textDim).withMultipliedAlpha(box.isEnabled() ? 1.0f : 0.5f));
+             colour(c.textDim).withMultipliedAlpha(box.isEnabled() ? 1.0f : 0.5f));
 }
 
 juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& box)
 {
     // Regular weight: a value, not an action.
-    return juce::Font(juce::FontOptions(box.getHeight() >= metrics::transportControlHeight
-                                            ? metrics::textLarge
-                                            : metrics::textBody));
+    return juce::Font(juce::FontOptions(controlTextSize(box.getHeight())));
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& box, juce::Label& label)
 {
     label.setBounds(metrics::controlPadding - 2, 1,
-                    box.getWidth() - metrics::controlPadding - metrics::iconSize - 6,
+                    box.getWidth() - metrics::controlPadding - metrics::iconSize - chevronInset,
                     box.getHeight() - 2);
     label.setBorderSize({});
     label.setFont(getComboBoxFont(box));
@@ -217,10 +204,10 @@ void LookAndFeel::drawTreeviewPlusMinusBox(juce::Graphics& g, const juce::Rectan
 void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int height,
                                          juce::Button& button, const juce::String& keyDescription)
 {
-    const auto& t = currentTheme();
-    const auto& c = t.colours;
-    auto bounds = juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
-                      .reduced(1.0f, 2.0f);
+    const auto& c = currentTheme().colours;
+    const auto bounds =
+        juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
+            .reduced(1.0f, 2.0f);
     if (keyDescription.isEmpty())
     {
         // The "+" that adds a key.
@@ -228,10 +215,7 @@ void LookAndFeel::drawKeymapChangeButton(juce::Graphics& g, int width, int heigh
                  colour(button.isOver() ? c.text : c.textDim));
         return;
     }
-    g.setColour(colour(c.panelRaised).contrasting(button.isOver() ? 0.07f : 0.0f));
-    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
-    g.setColour(colour(c.outline));
-    g.drawRoundedRectangle(bounds, metrics::cornerRadius, 1.0f);
+    paintOutlinedBox(g, bounds, colour(c.panelRaised).contrasting(button.isOver() ? 0.07f : 0.0f));
     g.setColour(colour(c.text));
     g.setFont(mediumFont(metrics::textSmall));
     g.drawFittedText(keyDescription, bounds.toNearestInt().reduced(4, 0),
@@ -278,19 +262,18 @@ void LookAndFeel::drawTableHeaderColumn(juce::Graphics& g, juce::TableHeaderComp
 void LookAndFeel::drawTickBox(juce::Graphics& g, juce::Component&, float x, float y, float w,
                               float h, bool ticked, bool isEnabled, bool isMouseOverButton, bool)
 {
-    const auto& t = currentTheme();
-    const auto& c = t.colours;
+    const auto& c = currentTheme().colours;
     const float size = std::min({w, h, 16.0f});
     const auto box = juce::Rectangle<float>(x, y, w, h).withSizeKeepingCentre(size, size);
-    const float radius = metrics::cornerRadius;
     g.setColour(colour(ticked ? c.accent : c.panelRaised)
                     .withMultipliedAlpha(isEnabled ? 1.0f : 0.5f)
                     .brighter(isMouseOverButton ? 0.1f : 0.0f));
-    g.fillRoundedRectangle(box, radius);
+    g.fillRoundedRectangle(box, metrics::cornerRadius);
     if (!ticked)
     {
         g.setColour(colour(c.outline).brighter(0.2f));
-        g.drawRoundedRectangle(box.reduced(0.5f), radius, 1.0f);
+        g.drawRoundedRectangle(box.reduced(metrics::borderWidth / 2.0f), metrics::cornerRadius,
+                               metrics::borderWidth);
         return;
     }
     juce::Path tick;
@@ -304,8 +287,7 @@ void LookAndFeel::drawTickBox(juce::Graphics& g, juce::Component&, float x, floa
 
 void LookAndFeel::drawLevelMeter(juce::Graphics& g, int width, int height, float level)
 {
-    const auto& t = currentTheme();
-    const auto& c = t.colours;
+    const auto& c = currentTheme().colours;
     const auto bounds =
         juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height));
     paintDisplayBox(g, bounds);
@@ -423,15 +405,12 @@ int LookAndFeel::getAlertWindowButtonHeight()
 
 void LookAndFeel::drawTooltip(juce::Graphics& g, const juce::String& text, int width, int height)
 {
-    const auto& t = currentTheme();
+    const auto& c = currentTheme().colours;
     const auto bounds =
-        juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
-            .reduced(0.5f);
-    g.setColour(colour(t.colours.panelRaised));
-    g.fillRoundedRectangle(bounds, metrics::cornerRadius);
-    g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(bounds, metrics::cornerRadius, 1.0f);
-    g.setColour(colour(t.colours.text));
+        juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
+            .reduced(metrics::borderWidth / 2.0f);
+    paintOutlinedBox(g, bounds, colour(c.panelRaised));
+    g.setColour(colour(c.text));
     g.setFont(juce::FontOptions(metrics::textBody));
     g.drawFittedText(text, juce::Rectangle<int>(width, height).reduced(8, 4),
                      juce::Justification::centredLeft, 6);
@@ -483,9 +462,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     const float bodyR = radius - ring - 1.5f;
     juce::Path body;
     body.addEllipse(centre.x - bodyR, centre.y - bodyR, 2.0f * bodyR, 2.0f * bodyR);
-    fillRaised(g, body, colour(c.panelRaised).brighter(0.15f));
-    g.setColour(colour(c.outline));
-    g.strokePath(body, juce::PathStrokeType(1.0f));
+    fillRaisedOutlined(g, body, colour(c.panelRaised).brighter(0.15f));
     const juce::Point<float> dir(std::sin(to), -std::cos(to));
     g.setColour(colour(c.text));
     g.drawLine({centre + dir * (bodyR * 0.25f), centre + dir * (bodyR * 0.9f)}, 1.5f);
@@ -522,9 +499,7 @@ void LookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, i
     const auto cap = juce::Rectangle<float>(cx - capW / 2.0f, sliderPos - 9.0f, capW, 18.0f);
     juce::Path capShape;
     capShape.addRoundedRectangle(cap, 2.0f);
-    fillRaised(g, capShape, colour(c.panelRaised).brighter(0.3f));
-    g.setColour(colour(c.outline));
-    g.strokePath(capShape, juce::PathStrokeType(1.0f));
+    fillRaisedOutlined(g, capShape, colour(c.panelRaised).brighter(0.3f));
     g.setColour(colour(c.text));
     g.fillRect(cap.getX() + 3.0f, sliderPos - 0.5f, cap.getWidth() - 6.0f, 1.5f);
 }
@@ -647,12 +622,14 @@ ThemeManager::ImportResult ThemeManager::importFile(const juce::File& file)
     juce::String message;
     if (!parsed.warnings.empty())
     {
+        constexpr std::size_t maxListed = 8;
         message << "Imported \"" << juce::String::fromUTF8(parsed.theme->name.c_str())
                 << "\", but some settings were skipped:\n";
-        for (std::size_t i = 0; i < parsed.warnings.size() && i < 8; ++i)
+        for (std::size_t i = 0; i < parsed.warnings.size() && i < maxListed; ++i)
             message << "\n- " << juce::String::fromUTF8(parsed.warnings[i].c_str());
-        if (parsed.warnings.size() > 8)
-            message << "\n(and " << static_cast<int>(parsed.warnings.size() - 8) << " more)";
+        if (parsed.warnings.size() > maxListed)
+            message << "\n(and " << static_cast<int>(parsed.warnings.size() - maxListed)
+                    << " more)";
     }
     return {true, message};
 }

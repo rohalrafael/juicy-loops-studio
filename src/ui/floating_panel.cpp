@@ -1,6 +1,5 @@
 #include "ui/floating_panel.h"
 
-#include "ui/controls.h"
 #include "ui/theme.h"
 
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -9,24 +8,19 @@ namespace jls::ui
 {
 namespace
 {
-constexpr int border = 1; // around the content, inside the frame
+constexpr int border = 1;       // around the content, inside the frame
+constexpr int cascadeStep = 24; // offset between panels opened one after another
 } // namespace
 
-class FloatingPanel::CloseButton final : public IconButton
+FloatingPanel::FloatingPanel(std::unique_ptr<juce::Component> content) : held(std::move(content))
 {
-  public:
-    CloseButton() : IconButton(Icon::close) { setTooltip("Close"); }
-};
-
-FloatingPanel::FloatingPanel(std::unique_ptr<juce::Component> content)
-    : held(std::move(content)), closeButton(std::make_unique<CloseButton>())
-{
-    closeButton->onClick = [this]
+    closeButton.setTooltip("Close");
+    closeButton.onClick = [this]
     {
         if (onClose)
             onClose();
     };
-    addAndMakeVisible(*closeButton);
+    addAndMakeVisible(closeButton);
     addAndMakeVisible(*held);
     // Kept as an image: dragging the panel then only copies it instead of drawing every label,
     // knob and waveform again for each frame (measured: ~9 ms per frame for the Sampler).
@@ -88,8 +82,9 @@ void FloatingPanel::placeInitially(int cascade)
     const auto area = movableArea.isEmpty() && getParentComponent() != nullptr
                           ? getParentComponent()->getLocalBounds()
                           : movableArea;
-    setTopLeftPosition(area.getCentreX() - getWidth() / 2 + cascade * 24,
-                       std::max(area.getY(), area.getCentreY() - getHeight() / 2) + cascade * 24);
+    setTopLeftPosition(area.getCentreX() - getWidth() / 2 + cascade * cascadeStep,
+                       std::max(area.getY(), area.getCentreY() - getHeight() / 2) +
+                           cascade * cascadeStep);
     keepReachable();
 }
 
@@ -110,26 +105,23 @@ void FloatingPanel::keepReachable()
 
 void FloatingPanel::paint(juce::Graphics& g)
 {
-    const auto& t = currentTheme();
-    const float radius = metrics::windowRadius;
-    g.setColour(colour(t.colours.panel));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), radius);
+    g.setColour(colour(currentTheme().colours.panel));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), metrics::windowRadius);
     paintPanelHeader(g, getLocalBounds().removeFromTop(metrics::panelHeaderHeight), title, subtitle,
-                     closeButton->getX() - metrics::controlGap, radius);
+                     closeButton.getX() - metrics::controlGap, metrics::windowRadius);
 }
 
 void FloatingPanel::paintOverChildren(juce::Graphics& g)
 {
-    const auto& t = currentTheme();
-    g.setColour(colour(t.colours.outline));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), metrics::windowRadius,
-                           std::max(1.0f, metrics::borderWidth));
+    g.setColour(colour(currentTheme().colours.outline));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(metrics::borderWidth / 2.0f),
+                           metrics::windowRadius, metrics::borderWidth);
 }
 
 void FloatingPanel::resized()
 {
     HeaderLayout header(getLocalBounds().removeFromTop(metrics::panelHeaderHeight));
-    closeButton->setBounds(header.fromRight(metrics::controlHeight));
+    closeButton.setBounds(header.fromRight(metrics::controlHeight));
     if (held != nullptr)
         held->setTopLeftPosition(border, metrics::panelHeaderHeight);
 }

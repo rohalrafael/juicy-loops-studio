@@ -163,10 +163,15 @@ void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::C
                                                 juce::PathStrokeType::rounded));
 }
 
+float controlTextSize(int controlHeight)
+{
+    return controlHeight >= metrics::transportControlHeight ? metrics::textLarge
+                                                            : metrics::textBody;
+}
+
 juce::FontOptions controlFont(int controlHeight)
 {
-    return mediumFont(controlHeight >= metrics::transportControlHeight ? metrics::textLarge
-                                                                       : metrics::textBody);
+    return mediumFont(controlTextSize(controlHeight));
 }
 
 juce::FontOptions displayFont(float height)
@@ -220,16 +225,16 @@ int IconButton::preferredWidth(int height) const
 
 void IconButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
 {
-    const auto& t = currentTheme();
-    const auto& c = t.colours;
+    const auto& c = currentTheme().colours;
     const bool on = getToggleState();
     auto bounds = getLocalBounds().toFloat();
 
-    auto fill = colour(on ? c.activeBackground : (flat ? c.panel : c.panelRaised));
-    if (down)
-        fill = fill.contrasting(0.15f);
-    else if (highlighted)
-        fill = fill.contrasting(0.07f);
+    auto base = c.panelRaised;
+    if (on)
+        base = c.activeBackground;
+    else if (flat)
+        base = c.panel;
+    const auto fill = buttonFill(colour(base), highlighted, down);
     if (flat)
     {
         g.setColour(fill);
@@ -349,7 +354,7 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
         g.fillRect(area);
     }
     g.setColour(colour(t.colours.outline));
-    g.fillRect(area.withTop(area.getBottom() - std::max(1.0f, metrics::borderWidth)));
+    g.fillRect(area.withTop(area.getBottom() - metrics::borderWidth));
 
     auto text = header.withTrimmedLeft(metrics::controlPadding);
     if (textRight >= 0)
@@ -380,24 +385,23 @@ int headerLabelWidth(const juce::String& text)
     return textWidth(juce::FontOptions(metrics::textBody), text) + 6;
 }
 
-HeaderLayout::HeaderLayout(juce::Rectangle<int> header, int controlHeight)
-    : height(controlHeight > 0 ? controlHeight : metrics::controlHeight)
+HeaderLayout::HeaderLayout(juce::Rectangle<int> header)
 {
     // Controls sit as far from the right edge as from the top, so they look centred.
-    const int inset = std::max(0, (header.getHeight() - height) / 2);
+    const int inset = std::max(0, (header.getHeight() - metrics::controlHeight) / 2);
     area = header.withTrimmedRight(inset).withTrimmedLeft(metrics::controlPadding);
 }
 
 juce::Rectangle<int> HeaderLayout::fromRight(int width)
 {
-    auto r = area.removeFromRight(width).withSizeKeepingCentre(width, height);
+    auto r = area.removeFromRight(width).withSizeKeepingCentre(width, metrics::controlHeight);
     area.removeFromRight(metrics::controlGap);
     return r;
 }
 
 juce::Rectangle<int> HeaderLayout::fromLeft(int width)
 {
-    auto r = area.removeFromLeft(width).withSizeKeepingCentre(width, height);
+    auto r = area.removeFromLeft(width).withSizeKeepingCentre(width, metrics::controlHeight);
     area.removeFromLeft(metrics::controlGap);
     return r;
 }
@@ -408,7 +412,7 @@ void paintCardFrame(juce::Graphics& g, juce::Component& panel)
     const auto bounds = panel.getLocalBounds().toFloat();
     // Square, edge to edge; focus is a line along the top instead of a frame.
     g.setColour(colour(t.colours.outline));
-    g.drawRect(bounds, 1.0f);
+    g.drawRect(bounds, metrics::borderWidth);
     if (panel.getProperties()["focused"])
     {
         g.setColour(colour(t.colours.accent));
@@ -428,6 +432,30 @@ void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill)
     g.fillRect(b.getX(), b.getY() + 1.0f, b.getWidth(), 1.0f);
 }
 
+void fillRaisedOutlined(juce::Graphics& g, const juce::Path& shape, juce::Colour fill)
+{
+    fillRaised(g, shape, fill);
+    g.setColour(colour(currentTheme().colours.outline));
+    g.strokePath(shape, juce::PathStrokeType(metrics::borderWidth));
+}
+
+void paintOutlinedBox(juce::Graphics& g, juce::Rectangle<float> box, juce::Colour fill)
+{
+    g.setColour(fill);
+    g.fillRoundedRectangle(box, metrics::cornerRadius);
+    g.setColour(colour(currentTheme().colours.outline));
+    g.drawRoundedRectangle(box, metrics::cornerRadius, metrics::borderWidth);
+}
+
+juce::Colour buttonFill(juce::Colour base, bool highlighted, bool down)
+{
+    if (down)
+        return base.contrasting(0.15f);
+    if (highlighted)
+        return base.contrasting(0.07f);
+    return base;
+}
+
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
 {
     const auto& t = currentTheme();
@@ -436,14 +464,15 @@ void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
     g.fillRoundedRectangle(box, metrics::cornerRadius);
     {
         // Recessed: a shadow falling in from the top edge.
+        constexpr float shadowDepth = 6.0f;
         juce::Path p;
         p.addRoundedRectangle(box, metrics::cornerRadius);
         juce::Graphics::ScopedSaveState state(g);
         g.reduceClipRegion(p);
-        g.setGradientFill(
-            juce::ColourGradient::vertical(juce::Colours::black.withAlpha(0.55f), box.getY(),
-                                           juce::Colours::transparentBlack, box.getY() + 6.0f));
-        g.fillRect(box.withHeight(6.0f));
+        g.setGradientFill(juce::ColourGradient::vertical(
+            juce::Colours::black.withAlpha(0.55f), box.getY(), juce::Colours::transparentBlack,
+            box.getY() + shadowDepth));
+        g.fillRect(box.withHeight(shadowDepth));
     }
     g.setColour(colour(t.colours.outline));
     g.drawRoundedRectangle(box, metrics::cornerRadius, metrics::borderWidth);
@@ -453,7 +482,21 @@ void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area)
 
 namespace
 {
+
 constexpr int displayInset = 5;
+
+// The side of the square -/+ buttons: 5 px clear of the top and bottom.
+int nudgeSize(int height)
+{
+    return height - 10;
+}
+
+// The space the unit text takes, its gaps included.
+int unitWidth(const juce::String& unit)
+{
+    return unit.isEmpty() ? 0 : textWidth(juce::FontOptions(metrics::textTiny), unit) + 10;
+}
+
 } // namespace
 
 NumberField::NumberField(const juce::String& unitText, int decimalPlaces,
@@ -512,12 +555,9 @@ float NumberField::numberHeight() const
 
 int NumberField::preferredWidth(int height) const
 {
-    const int nudge = height - 10;
-    const int unitWidth =
-        unit.isEmpty() ? 0 : textWidth(juce::FontOptions(metrics::textTiny), unit) + 10;
-    return 2 * displayInset + 2 * nudge +
-           textWidth(displayFont(std::round(static_cast<float>(height) * 0.5f)), widest) + 10 +
-           unitWidth;
+    const auto font = displayFont(std::round(static_cast<float>(height) * 0.5f));
+    return 2 * displayInset + 2 * nudgeSize(height) + textWidth(font, widest) + 10 +
+           unitWidth(unit);
 }
 
 void NumberField::change(double newValue)
@@ -555,11 +595,10 @@ void NumberField::paint(juce::Graphics& g)
 void NumberField::resized()
 {
     auto area = getLocalBounds().reduced(displayInset, 0);
-    const int nudge = getHeight() - 10;
+    const int nudge = nudgeSize(getHeight());
     down.setBounds(area.removeFromLeft(nudge).withSizeKeepingCentre(nudge, nudge));
     up.setBounds(area.removeFromRight(nudge).withSizeKeepingCentre(nudge, nudge));
-    if (unit.isNotEmpty())
-        area.removeFromRight(textWidth(juce::FontOptions(metrics::textTiny), unit) + 10);
+    area.removeFromRight(unitWidth(unit));
     number.setBounds(area);
     number.setFont(displayFont(numberHeight()));
 }
@@ -656,7 +695,7 @@ void DialogFrame::resized()
 
 void FormPanel::addSection(const juce::String& heading)
 {
-    items.push_back({Item::Kind::section, heading, {}, 0, {}, {}});
+    items.push_back({.kind = Item::Kind::section, .text = heading});
 }
 
 void FormPanel::addRow(const juce::String& label,
@@ -664,44 +703,45 @@ void FormPanel::addRow(const juce::String& label,
 {
     for (const auto& [control, width] : controls)
         addAndMakeVisible(control);
-    items.push_back({Item::Kind::row, label, controls, 0, {}, {}});
+    items.push_back({.kind = Item::Kind::row, .text = label, .controls = controls});
 }
 
 int FormPanel::addNote(const juce::String& text)
 {
-    items.push_back({Item::Kind::note, text, {}, 0, {}, {}});
+    items.push_back({.kind = Item::Kind::note, .text = text});
     return static_cast<int>(items.size()) - 1;
 }
 
 void FormPanel::setNote(int index, const juce::String& text)
 {
-    if (index < 0 || index >= static_cast<int>(items.size()) ||
-        items[static_cast<std::size_t>(index)].text == text)
+    if (index < 0 || index >= static_cast<int>(items.size()))
         return;
-    items[static_cast<std::size_t>(index)].text = text;
-    repaint(items[static_cast<std::size_t>(index)].bounds);
+    auto& item = items[static_cast<std::size_t>(index)];
+    if (item.text == text)
+        return;
+    item.text = text;
+    repaint(item.bounds);
 }
 
 void FormPanel::addComponent(juce::Component& component, int height)
 {
     addAndMakeVisible(component);
-    Item item{Item::Kind::component, {}, {}, height, {}, {}};
-    item.component = &component;
-    items.push_back(std::move(item));
+    items.push_back({.kind = Item::Kind::component, .height = height, .component = &component});
 }
 
 void FormPanel::addPainted(int height,
                            std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter)
 {
-    items.push_back({Item::Kind::painted, {}, {}, height, std::move(painter), {}});
+    items.push_back({.kind = Item::Kind::painted, .height = height, .painter = std::move(painter)});
 }
 
-int FormPanel::heightOf(const Item& item, int width) const
+int FormPanel::heightOf(std::size_t index, int width) const
 {
+    const auto& item = items[index];
     switch (item.kind)
     {
     case Item::Kind::section:
-        return 34;
+        return index == 0 ? 24 : 34; // no gap above the first heading
     case Item::Kind::row:
         return metrics::controlHeight + 8;
     case Item::Kind::note:
@@ -715,16 +755,15 @@ int FormPanel::heightOf(const Item& item, int width) const
 
 int FormPanel::preferredHeight(int width) const
 {
-    int h = margin;
+    int h = 2 * margin;
     for (std::size_t i = 0; i < items.size(); ++i)
-        h += (i == 0 && items[i].kind == Item::Kind::section ? -10 : 0) +
-             heightOf(items[i], width - 2 * margin);
-    return h + margin + footerHeight;
+        h += heightOf(i, width - 2 * margin);
+    return h;
 }
 
 juce::Rectangle<int> FormPanel::itemsArea() const
 {
-    auto area = getLocalBounds().withTrimmedBottom(footerHeight);
+    auto area = getLocalBounds();
     if (itemsWidth > 0)
         area = area.withWidth(itemsWidth);
     return area.reduced(margin);
@@ -736,10 +775,7 @@ void FormPanel::resized()
     for (std::size_t i = 0; i < items.size(); ++i)
     {
         auto& item = items[i];
-        int h = heightOf(item, area.getWidth());
-        if (i == 0 && item.kind == Item::Kind::section)
-            h -= 10; // no gap above the first heading
-        item.bounds = area.removeFromTop(h);
+        item.bounds = area.removeFromTop(heightOf(i, area.getWidth()));
         if (item.kind == Item::Kind::component)
             item.component->setBounds(item.bounds.withTrimmedBottom(8));
         if (item.kind != Item::Kind::row)
@@ -782,8 +818,6 @@ void FormPanel::paint(juce::Graphics& g)
             break;
         }
     }
-    if (footerHeight > 0)
-        paintDialogFooter(g, getLocalBounds().removeFromBottom(footerHeight));
 }
 
 } // namespace jls::ui

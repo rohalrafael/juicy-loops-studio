@@ -1,20 +1,18 @@
 #pragma once
 
 // The JUCE side of theming: the active theme, colour helpers, fixed layout sizes (metrics), the
-// LookAndFeel built from the theme, and ThemeManager (choosing, importing, exporting themes).
+// bundled font (Inter), the LookAndFeel built from the theme, and ThemeManager (choosing,
+// importing, exporting themes, and the saved choice). Colours come from the active theme; sizes,
+// corner radii and the font are the same for every theme.
 
 #include "theme/theme.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-// UI side of theming: the active theme, the LookAndFeel built from it, the bundled font,
-// user theme files and the saved choice. Colours come from the active theme; sizes, corner
-// radii and the font are the same for every theme (metrics, Inter).
 namespace jls::ui
 {
 
@@ -71,11 +69,13 @@ struct FontFamily
     juce::Typeface::Ptr regular, medium, semibold;
 };
 
-// Font weights by style name: FontOptions(size).withStyle("Medium") for control labels,
-// "SemiBold" for titles and headings (ui/controls has helpers).
+// Inter's heavier weights, chosen by style name (LookAndFeel::getTypefaceForFont): Medium for
+// control labels, SemiBold for titles and headings.
 juce::FontOptions mediumFont(float size);
 juce::FontOptions semiboldFont(float size);
 
+// JUCE's widgets (and the window frames we draw ourselves) in the active theme's colours, with the
+// shapes and text sizes of metrics.
 class LookAndFeel final : public juce::LookAndFeel_V4
 {
   public:
@@ -106,12 +106,12 @@ class LookAndFeel final : public juce::LookAndFeel_V4
                        bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                        bool isMouseOver, bool isMouseDown) override;
     void drawTooltip(juce::Graphics&, const juce::String& text, int width, int height) override;
+    juce::Rectangle<int> getTooltipBounds(const juce::String& tipText, juce::Point<int> screenPos,
+                                          juce::Rectangle<int> parentArea) override;
     // Tree open/close arrows (the Browser) as chevrons in the dim text colour.
     void drawTreeviewPlusMinusBox(juce::Graphics&, const juce::Rectangle<float>& area,
                                   juce::Colour backgroundColour, bool isOpen,
                                   bool isMouseOver) override;
-    juce::Rectangle<int> getTooltipBounds(const juce::String& tipText, juce::Point<int> screenPos,
-                                          juce::Rectangle<int> parentArea) override;
     // Shortcut chips in the Keyboard shortcuts window, and message boxes.
     void drawKeymapChangeButton(juce::Graphics&, int width, int height, juce::Button&,
                                 const juce::String& keyDescription) override;
@@ -151,6 +151,8 @@ class LookAndFeel final : public juce::LookAndFeel_V4
     FontFamily family; // the bundled font
 };
 
+// Owns the LookAndFeel and the settings file, loads the user's themes and switches between
+// themes. Broadcasts a change after each switch.
 class ThemeManager final : public juce::ChangeBroadcaster
 {
   public:

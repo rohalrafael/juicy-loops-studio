@@ -441,7 +441,9 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
   with the bundled IBM Plex Mono so digits keep their width
 - `paintCardFrame()`: docked panels' frame (square, a thin border; an accent line along the top
   while focused, from the "focused" property MainComponent sets)
-- `fillRaised()`: a raised surface lit from above, for buttons, step keys, knobs and fader caps
+- `fillRaised()`: a raised surface lit from above, for buttons, step keys, knobs and fader caps;
+  `fillRaisedOutlined()` adds the outline, `paintOutlinedBox()` is the flat equivalent
+  (drop-downs, tooltips), and `buttonFill()` shades a fill for hover and press
 - `FormPanel`: dialogs and the Sampler window as sections of label + control rows and notes
 - fonts: `mediumFont()` / `semiboldFont()` ask for a weight by style name; `ThemeManager` loads
   Inter in Regular, Medium and SemiBold

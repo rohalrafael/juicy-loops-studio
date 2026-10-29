@@ -1,14 +1,18 @@
 #pragma once
 
 // Shared building blocks for a consistent look: drawn icons, IconButton (icon, icon + label, or
-// label; can toggle), segmented buttons, panel headers, the recessed display boxes of the
-// transport bar and its tempo display. Sizes come from ui::metrics, colours from the active
-// theme, so every panel lines up and restyles with the theme.
+// label; can toggle), letter keys for popup menus, segmented buttons, panel headers, raised and
+// recessed surfaces, NumberField, and the parts of forms and dialogs. Sizes come from
+// ui::metrics, colours from the active theme, so every panel lines up and restyles with the
+// theme.
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
 #include <initializer_list>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace jls::ui
 {
@@ -39,8 +43,9 @@ enum class Icon
 // Draws `icon` centred in `area`, scaled to fit, stroked (or filled) in `colour`.
 void drawIcon(juce::Graphics& g, Icon icon, juce::Rectangle<float> area, juce::Colour colour);
 
-// Label font for a control of the given height (Medium weight): textBody in panels, textLarge in
-// the transport bar.
+// Text size for a control of the given height: textBody in panels, textLarge in the transport bar.
+float controlTextSize(int controlHeight);
+// Label font for a control of the given height: controlTextSize in the Medium weight.
 juce::FontOptions controlFont(int controlHeight);
 // Font for numbers in displays (tempo, clock): the bundled IBM Plex Mono, whose digits all
 // have the same width so values don't jitter while they change.
@@ -56,7 +61,6 @@ class IconButton : public juce::Button
     explicit IconButton(Icon icon, const juce::String& label = {});
 
     void setIcon(Icon newIcon);
-    Icon getIcon() const { return icon; }
     // The width that fits the icon and label at `height` (square for an icon alone).
     int preferredWidth(int height) const;
     // Flat (no border, a quieter fill): the -/+ buttons inside the tempo display.
@@ -104,12 +108,12 @@ void paintPanelHeader(juce::Graphics& g, juce::Rectangle<int> header, const juce
 void paintHeaderLabel(juce::Graphics& g, const juce::String& text, juce::Rectangle<int> area);
 int headerLabelWidth(const juce::String& text);
 
-// Places a header's controls: each is control-high and vertically centred, taken from the right
-// (or left) with the standard gap in between.
+// Places a header's controls: each is metrics::controlHeight high and vertically centred, taken
+// from the right (or left) with the standard gap in between.
 class HeaderLayout
 {
   public:
-    explicit HeaderLayout(juce::Rectangle<int> header, int controlHeight = -1);
+    explicit HeaderLayout(juce::Rectangle<int> header);
     juce::Rectangle<int> fromRight(int width);
     juce::Rectangle<int> fromLeft(int width);
     void space(int pixels) { area.removeFromRight(pixels); }
@@ -118,7 +122,6 @@ class HeaderLayout
 
   private:
     juce::Rectangle<int> area;
-    int height;
 };
 
 // Docked panels' frame: square, a thin border, and a line in the accent colour along the top
@@ -129,6 +132,14 @@ void paintCardFrame(juce::Graphics& g, juce::Component& panel);
 // Fills `shape` with `fill` as a raised surface, lit from above: lighter at the top, a highlight
 // along the top edge. Buttons, steps, knobs and fader caps use it.
 void fillRaised(juce::Graphics& g, const juce::Path& shape, juce::Colour fill);
+// fillRaised with the theme's outline around it (buttons, knobs, fader caps).
+void fillRaisedOutlined(juce::Graphics& g, const juce::Path& shape, juce::Colour fill);
+
+// A flat rounded box in `fill` with the theme's outline (drop-downs, tooltips, shortcut chips).
+void paintOutlinedBox(juce::Graphics& g, juce::Rectangle<float> box, juce::Colour fill);
+
+// A button's fill while it's pressed or under the mouse: `base` shifted towards contrast.
+juce::Colour buttonFill(juce::Colour base, bool highlighted, bool down);
 
 // A recessed box for numbers (the tempo and the clock).
 void paintDisplayBox(juce::Graphics& g, juce::Rectangle<float> area);
@@ -217,16 +228,13 @@ class FormPanel : public juce::Component
     void addPainted(int height, std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter);
     // A component spanning the column (e.g. the Sampler's envelope editor).
     void addComponent(juce::Component& component, int height);
-    // The height the items need at `width` (plus `extra` below, e.g. a footer).
+    // The height the items need at `width`, margins included.
     int preferredHeight(int width) const;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
   protected:
-    // Below the items (for a footer); laid out by subclasses.
-    juce::Rectangle<int> itemsArea() const;
-    int footerHeight = 0;
     int itemsWidth = -1; // the items' column width (a second column beside it); -1 = all
 
   private:
@@ -240,14 +248,18 @@ class FormPanel : public juce::Component
             painted,
             component
         } kind;
-        juce::String text;
-        std::vector<std::pair<juce::Component*, int>> controls;
+        juce::String text{};
+        std::vector<std::pair<juce::Component*, int>> controls{};
         int height = 0;
-        std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter;
-        juce::Rectangle<int> bounds;
+        std::function<void(juce::Graphics&, juce::Rectangle<int>)> painter{};
+        juce::Rectangle<int> bounds{}; // set by resized()
         juce::Component* component = nullptr;
     };
-    int heightOf(const Item& item, int width) const;
+    // The height of items[index] at `width`, its gap below included.
+    int heightOf(std::size_t index, int width) const;
+    // Where the items go: inside the margin, in the first `itemsWidth` pixels.
+    juce::Rectangle<int> itemsArea() const;
+
     std::vector<Item> items;
 };
 

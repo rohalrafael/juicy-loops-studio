@@ -19,6 +19,14 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Copy and paste in the Channel Rack (2026-10-29, maintainer's request): Ctrl+C / Ctrl+V (and
+  Ctrl+X) with the Channel Rack focused copy the selected channel's steps and notes in the
+  current pattern, and paste them into the selected channel, also in another pattern, as in FL.
+  The commands exist already; today they only act on the Playlist or Piano Roll
+  (`MainComponent::editInMainView`); Delete already has a Channel Rack case. The notes clipboard
+  is `model/clipboard`. To decide when building it: whether pasting replaces the channel's steps
+  (FL) or adds to them.
+
 - A click in empty space deselects and adds a note (2026-10-29, maintainer's request): with notes
   selected in the Piano Roll, a left-click elsewhere should both clear the selection and place a
   note, instead of only deselecting. This reverses the 2026-10-17 choice ("a click outside a

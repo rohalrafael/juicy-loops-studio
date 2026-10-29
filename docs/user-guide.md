@@ -105,6 +105,8 @@ recorded yet.
 
 ## Projects and export
 
+- **Opening from outside the app:** `juicy-loops-studio song.jlp` starts the app with that project
+  open.
 - **File › Save** writes a `.jlp` project file. Projects saved before the rename (`.jls`) still
   open; saving one writes a `.jlp` beside it and leaves the old file alone. The title bar shows the project name, with `*`
   when there are unsaved changes. You're asked before unsaved changes would be lost (New, Open,

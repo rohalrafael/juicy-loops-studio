@@ -1,7 +1,9 @@
 // Application entry point: creates the ThemeManager (which owns the LookAndFeel), then the main
-// window. Shutdown closes dialogs first because they reference the ThemeManager.
+// window, and opens a project named on the command line. Shutdown closes dialogs first because
+// they reference the ThemeManager.
 
 #include "main_component.h"
+#include "model/project_file.h"
 #include "ui/settings_dialog.h"
 #include "ui/theme.h"
 
@@ -63,6 +65,19 @@ class Application final : public juce::JUCEApplication
         juce::LookAndFeel::setDefaultLookAndFeel(&themes->lookAndFeel());
         ui::settings::applyUiScale(themes->settingsFile());
         mainWindow = std::make_unique<MainWindow>(getApplicationName(), *themes);
+
+        // `juicy-loops-studio song.jlp` opens the project (file managers pass it this way too).
+        for (const auto& arg : getCommandLineParameterArray())
+        {
+            const auto file = juce::File::getCurrentWorkingDirectory().getChildFile(arg.unquoted());
+            if (file.existsAsFile() && (file.hasFileExtension(model::projectFileExtension) ||
+                                        file.hasFileExtension(model::legacyProjectFileExtension)))
+            {
+                if (auto* content = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                    content->openFile(file);
+                break;
+            }
+        }
     }
 
     void shutdown() override

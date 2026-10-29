@@ -62,6 +62,8 @@ class MainComponent final : public juce::AudioAppComponent,
 
     // Quits, after asking to save unsaved changes (called for the window's close button too).
     void requestQuit();
+    // Opens a project file without asking (the app's command line); errors and repairs are shown.
+    void openFile(const juce::File& file);
     void parentHierarchyChanged() override;
 
     juce::StringArray getMenuBarNames() override;
@@ -119,7 +121,6 @@ class MainComponent final : public juce::AudioAppComponent,
     void confirmDiscard(std::function<void()> then);
     void newProject();
     void openProject();
-    void openFile(const juce::File& file);
     void saveProject(std::function<void(bool saved)> done = {});
     void saveProjectAs(std::function<void(bool saved)> done = {});
     bool writeProject(const juce::File& file);

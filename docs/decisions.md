@@ -494,3 +494,15 @@ not). Older entries describe the project as it was then; later entries may super
   target channel's notes, as in FL (maintainer's choice), at the same positions. The rack keeps
   its own clipboard: the Piano Roll's pastes a block after the copied one, which doesn't fit a
   whole channel.
+
+- 2026-10-29: **The keyboard comes back from plugins** (maintainer's report, VST3; FL has a
+  button for the same problem). After a click into a plugin's editor, X sent keys to the
+  plugin's window and typed notes stopped, even after clicking the main window: on Linux JUCE
+  counts the focus as ours while it's in any child window and `ComponentPeer::grabFocus()` does
+  nothing then; plugins without XEmbed (Surge XT) also leave JUCE's own focus on the main
+  component, so the existing safety net never fired. Now the app takes the keyboard back when the
+  mouse leaves the plugin panels (after any drag), and from a keyboard button in plugin panels'
+  title bars (maintainer's choice: both), setting the X input focus with Xlib
+  (`app/native_focus`, the app now links libX11, already loaded by JUCE). Only while the focus is
+  inside our window, so other apps are never affected. Verified on Xvfb with Surge XT. Windows and
+  macOS: not done (no-op there), untested.

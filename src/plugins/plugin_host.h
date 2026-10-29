@@ -93,6 +93,9 @@ class PluginView
     virtual const void* owner() const = 0;
     virtual void bringToFront() = 0;
     virtual void setCloseHandler(std::function<void()> handler) = 0;
+    // A way to give the keyboard back to the app (a button on plugin panels); separate windows
+    // don't need one, clicking the main window does it.
+    virtual void setKeyboardReturn(std::function<void()>) {}
 };
 
 // The plugin's editor, or a generic one with a control per parameter when it has none.
@@ -125,6 +128,10 @@ class PluginPanel final : public ui::FloatingPanel, public PluginView
     const void* owner() const override { return keepAlive.get(); }
     void bringToFront() override { toFront(false); }
     void setCloseHandler(std::function<void()> handler) override { onClose = std::move(handler); }
+    void setKeyboardReturn(std::function<void()> handler) override
+    {
+        ui::FloatingPanel::setKeyboardReturn(std::move(handler));
+    }
 
   private:
     std::shared_ptr<void> keepAlive;

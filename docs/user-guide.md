@@ -26,6 +26,11 @@ close them with ×, and click one to bring it to the front. Plugin panels always
 misbehaves inside the app, switch **Options › Settings › Plugin windows** to *Separate
 windows*.
 
+Clicking inside a plugin gives it the keyboard (for its own text fields and keys). The app takes
+the keyboard back as soon as the mouse leaves the plugin panel, so typed notes and shortcuts work
+again without a click; the keyboard button in a plugin panel's title bar does the same while the
+mouse is still on the panel.
+
 The Playlist and Piano Roll share the main area; F5 and F7 switch between them. The Channel
 Rack floats in front of them while you work in it; clicking the Playlist or Piano Roll (or
 opening one with F5 / F7) puts the rack behind it, as in FL. F6 or Ctrl+Tab brings it back to

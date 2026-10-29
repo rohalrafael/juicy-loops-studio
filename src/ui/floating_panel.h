@@ -34,6 +34,9 @@ class FloatingPanel : public juce::Component, private juce::ComponentListener
     void placeInitially(int cascade);
 
     std::function<void()> onClose; // the close button (the owner deletes or hides the panel)
+    // Shows a keyboard button in the title bar that runs `handler`: plugin panels use it to give
+    // the keyboard back to the app, which a plugin's editor keeps after a click into it.
+    void setKeyboardReturn(std::function<void()> handler);
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
@@ -51,6 +54,7 @@ class FloatingPanel : public juce::Component, private juce::ComponentListener
     std::unique_ptr<juce::Component> held;
     juce::String title, subtitle;
     IconButton closeButton{Icon::close};
+    IconButton keyboardButton{Icon::keys}; // shown with setKeyboardReturn()
     juce::ComponentDragger dragger;
     juce::Rectangle<int> movableArea;
     bool moving = false;

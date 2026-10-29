@@ -396,7 +396,11 @@ which gives:
   a native window on Linux (`juce::XEmbedComponent`): it follows only its own moves, so the
   panel calls `updateEmbeddedBounds()` when it moves, and plugin panels stay in front since
   JUCE can't draw over them. `plugins::PluginView` hides whether an editor is a panel or a
-  separate `PluginWindow` (Settings › Plugin windows).
+  separate `PluginWindow` (Settings › Plugin windows). A click into an editor gives the plugin
+  the keyboard; `MainComponent::returnKeyboard` takes it back when the mouse leaves the plugin
+  panels (the timer) or from the panel's keyboard button. JUCE won't move the X input focus while
+  it's inside our window (a plugin's child window counts), so `app/native_focus` sets it with
+  Xlib (the app links libX11 for this).
 - separate windows: the Settings / Keyboard shortcuts / Theme / Plugins / Audio settings
   dialogs, and plugin editors when set to separate windows
 - window frames: no system title bars (except on macOS). The main window's top row is

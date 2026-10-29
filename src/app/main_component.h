@@ -143,6 +143,11 @@ class MainComponent final : public juce::AudioAppComponent,
     void updateShortcutHints();
     void changeListenerCallback(juce::ChangeBroadcaster*) override; // shortcuts changed: save
     void syncPluginStates(); // copies live plugin states into the project (before save/export)
+    // Plugin panels keep the keyboard after a click into them: whether the mouse is over one,
+    // and taking the keyboard back (the panels' button, and automatically once the mouse leaves).
+    bool mouseOverPluginPanel() const;
+    void returnKeyboard();
+    bool mouseWasOverPlugin = false;
     // Copies a channel (Duplicate channel), with its plugin's current settings, without notes.
     void duplicateChannel(model::ChannelId channel);
 

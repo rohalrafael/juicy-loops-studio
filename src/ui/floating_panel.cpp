@@ -21,6 +21,8 @@ FloatingPanel::FloatingPanel(std::unique_ptr<juce::Component> content) : held(st
             onClose();
     };
     addAndMakeVisible(closeButton);
+    keyboardButton.setTooltip("Give the keyboard back to the app: typed notes and shortcuts");
+    addChildComponent(keyboardButton);
     addAndMakeVisible(*held);
     // Kept as an image: dragging the panel then only copies it instead of drawing every label,
     // knob and waveform again for each frame (measured: ~9 ms per frame for the Sampler).
@@ -110,7 +112,8 @@ void keepTitleBarReachable(juce::Component& panel, juce::Rectangle<int> area)
 
 void FloatingPanel::paint(juce::Graphics& g)
 {
-    paintFloatingPanel(g, *this, title, subtitle, closeButton.getX() - metrics::controlGap);
+    const auto& firstButton = keyboardButton.isVisible() ? keyboardButton : closeButton;
+    paintFloatingPanel(g, *this, title, subtitle, firstButton.getX() - metrics::controlGap);
 }
 
 void FloatingPanel::paintOverChildren(juce::Graphics& g)
@@ -118,10 +121,20 @@ void FloatingPanel::paintOverChildren(juce::Graphics& g)
     paintFloatingBorder(g, *this);
 }
 
+void FloatingPanel::setKeyboardReturn(std::function<void()> handler)
+{
+    keyboardButton.onClick = std::move(handler);
+    keyboardButton.setVisible(keyboardButton.onClick != nullptr);
+    resized();
+    repaint();
+}
+
 void FloatingPanel::resized()
 {
     HeaderLayout header(getLocalBounds().removeFromTop(metrics::panelHeaderHeight));
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
+    if (keyboardButton.isVisible())
+        keyboardButton.setBounds(header.fromRight(metrics::controlHeight));
     if (held != nullptr)
         held->setTopLeftPosition(border, metrics::panelHeaderHeight);
 }

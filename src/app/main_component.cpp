@@ -6,6 +6,7 @@
 #include "ui/title_bar.h"
 
 #include "app/commands.h"
+#include "app/native_focus.h"
 #include "ui/settings_dialog.h"
 
 #include "io/audio_export.h"
@@ -406,6 +407,7 @@ MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInst
     auto panel = std::make_unique<plugins::PluginPanel>(std::move(owner), plugin, title);
     panel->setMovableArea(floatingArea);
     panel->placeInitially(static_cast<int>(pluginWindows.size() + instrumentWindows.size()) % 6);
+    panel->setKeyboardReturn([this] { returnKeyboard(); });
     addAndMakeVisible(*panel);
     panel->toFront(false);
     // Again once the plugin has settled (some size their editor asynchronously), repainting the
@@ -421,6 +423,27 @@ MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInst
                                         parent->repaint();
                                 });
     return panel;
+}
+
+bool MainComponent::mouseOverPluginPanel() const
+{
+    const auto mouse = juce::Desktop::getMousePosition();
+    for (const auto* views : {&pluginWindows, &instrumentWindows})
+        for (const auto& [id, view] : *views)
+            if (const auto* panel = dynamic_cast<const ui::FloatingPanel*>(view.get());
+                panel != nullptr && panel->isShowing() && panel->getScreenBounds().contains(mouse))
+                return true;
+    return false;
+}
+
+void MainComponent::returnKeyboard()
+{
+    // Taking JUCE's focus makes an embedded editor that uses XEmbed give up the keyboard. Others
+    // (Surge XT, for one) hold the X input focus in their own window, which JUCE won't take back
+    // while it's inside ours (ComponentPeer::grabFocus does nothing then): set it directly.
+    grabKeyboardFocus();
+    if (auto* peer = getPeer())
+        app::focusNativeWindow(peer->getNativeHandle());
 }
 
 void MainComponent::duplicateChannel(model::ChannelId channel)
@@ -1987,6 +2010,18 @@ void MainComponent::timerCallback()
         if (auto* focused = getCurrentlyFocusedComponent();
             focused == nullptr || (focused != this && !isParentOf(focused)))
             grabKeyboardFocus();
+    // A plugin's editor keeps the keyboard after a click into it, so typed notes stopped until
+    // the main window was clicked: give it back once the mouse leaves the plugin panels (after
+    // any drag). Only while our window has the focus, so other apps are never affected.
+    if (const bool overPlugin = mouseOverPluginPanel(); overPlugin)
+        mouseWasOverPlugin = true;
+    else if (mouseWasOverPlugin && !juce::ModifierKeys::currentModifiers.isAnyMouseButtonDown())
+    {
+        mouseWasOverPlugin = false;
+        if (auto* peer = getPeer(); peer != nullptr && peer->isFocused())
+            returnKeyboard();
+    }
+
     // Typed notes can't hang if the window loses focus without a focusLost() (e.g. alt-tab
     // while a child window had focus).
     if (liveInput.anyKeyDown())

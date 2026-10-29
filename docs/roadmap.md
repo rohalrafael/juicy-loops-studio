@@ -28,14 +28,6 @@ starting one.
   cycling with Ctrl+Tab (closed ones don't). Depends on the item above, since Ctrl+Tab away from
   a plugin should put it behind. The window buttons' LEDs only cover the five main windows; the
   plugin panel's own focus line can show that it has the focus.
-- Typing notes stop after clicking inside a plugin (2026-10-29, maintainer's report with a VST3):
-  the plugin's native window takes the keyboard, so the typing keyboard no longer plays notes
-  until the main window is clicked. Shortcuts are forwarded from other windows
-  (`MainComponent::forwardShortcuts`), but notes are played in `MainComponent::keyStateChanged`,
-  which only sees keys while the main window has them. FL has the same problem at times and a
-  button to give the keyboard back. Decided: both, the keyboard returns automatically when the
-  mouse leaves the plugin's window, and plugin panels' title bars get a button for it.
-
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

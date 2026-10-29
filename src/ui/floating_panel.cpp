@@ -120,6 +120,14 @@ void FloatingPanel::paint(juce::Graphics& g)
 void FloatingPanel::paintOverChildren(juce::Graphics& g)
 {
     paintFloatingBorder(g, *this);
+    // Focus (the "focused" property, set by MainComponent for plugin panels in the Ctrl+Tab
+    // order): a line in the accent colour along the top, as on the Channel Rack.
+    if (getProperties()["focused"])
+    {
+        g.setColour(colour(currentTheme().colours.accent));
+        g.fillRect(
+            getLocalBounds().toFloat().reduced(metrics::windowRadius, 0.0f).withHeight(2.0f));
+    }
 }
 
 void FloatingPanel::setKeyboardReturn(std::function<void()> handler)

@@ -519,3 +519,11 @@ not). Older entries describe the project as it was then; later entries may super
   JUCE's cross-window drag lookup and the shortcut safety net needed adjusting (architecture,
   *UI*). Windows and macOS keep the old behaviour until someone restacks there;
   `JLS_NO_NATIVE_AREAS=1` turns it off on Linux, as a fallback.
+
+- 2026-10-29: **Plugin panels in the Ctrl+Tab order** (maintainer's request). Each open plugin
+  panel is a stop of its own, after the Mixer in the fixed order and by use in "Last used
+  first". Reaching one brings it to the front and shows the focus line along its top (as on the
+  Channel Rack), but the keyboard stays with the app, so Ctrl+Tab can go on: typing into a
+  plugin still takes a click into it. Opening a plugin, or bringing it up from its channel's
+  name, focuses it. Separate plugin windows aren't stops (the window manager owns their focus),
+  and the window buttons' LEDs still cover only the five main windows.

@@ -44,9 +44,11 @@ the front (F6 again hides it).
 **Focus.** The arrow keys and Enter act on the focused area, which shows a line in the accent
 colour along its top edge:
 the Browser, the Channel Rack, the Playlist / Piano Roll, or the Mixer. Click an area to focus
-it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** through the areas that are showing. In
-Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack, Playlist, Mixer) or **Last
-used first**, which works like Alt+Tab: one press goes back to the area you came from (twice:
+it, or cycle with **Ctrl+Tab** / **Ctrl+Shift+Tab** through the areas that are showing. Open
+plugin panels are stops too: Ctrl+Tab to one brings it to the front (the keyboard stays with the
+app; click into the plugin to type in it), and opening a plugin, clicking its title bar or its
+channel's name focuses it. In Settings › Ctrl+Tab order choose **Fixed** (Browser, Channel Rack,
+Playlist, Mixer, then the open plugins) or **Last used first**, which works like Alt+Tab: one press goes back to the area you came from (twice:
 back again), and keeping Ctrl held while pressing Tab again goes further back. In the Channel
 Rack ↑ / ↓ select the previous / next channel; in the Mixer ← / → select the previous / next
 track. The selected channel's row is highlighted: that's where the Browser loads samples.

@@ -106,9 +106,26 @@ class MainComponent final : public juce::AudioAppComponent,
         channelRack,
         mainView, // the Playlist or the Piano Roll, whichever is showing
         mixer,
+        plugin, // a plugin's panel (`focusPlugin` says which)
+    };
+    // A stop in the Ctrl+Tab order: an area, or one open plugin panel.
+    struct FocusStop
+    {
+        Area area;
+        juce::Component* plugin = nullptr; // for Area::plugin
+        bool operator==(const FocusStop&) const = default;
     };
     juce::Component* areaComponent(Area area);
-    void setFocusArea(Area area);
+    juce::Component* stopComponent(const FocusStop& stop); // null when it isn't open
+    std::vector<juce::Component*> pluginPanels() const;    // the open plugin panels (not windows)
+    // The stops showing, in the order Ctrl+Tab walks them (Settings > Ctrl+Tab order).
+    std::vector<FocusStop> tabOrder();
+    void setFocusArea(Area area) { setFocusStop({area}); }
+    void setFocusStop(FocusStop stop);
+    // A plugin panel brought up (opened, clicked, its channel's name) gets the focus; a separate
+    // plugin window just comes to the front.
+    void bringPluginToFront(plugins::PluginView& view);
+    void forgetClosedPlugins(); // drops closed panels from the focus order
     void layoutTransportBar(juce::Rectangle<int> bar);
     void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
     void updateFocusFrames(); // the focused docked panel's accent frame
@@ -192,9 +209,11 @@ class MainComponent final : public juce::AudioAppComponent,
     ui::MixerView mixer;         // docked below them (F9)
     ui::BrowserPanel browser;    // docked at the left or right (Alt+F8)
     Area focusArea = Area::mainView;
+    juce::Component* focusPlugin = nullptr; // the focused plugin panel, with Area::plugin
     // "Last used first" focus order: most recent first; while cycling (modifier held), the order
     // is frozen and `cycleStep` says how far back we are.
-    std::vector<Area> recentAreas{Area::mainView, Area::channelRack, Area::browser, Area::mixer};
+    std::vector<FocusStop> recentAreas{
+        {Area::mainView}, {Area::channelRack}, {Area::browser}, {Area::mixer}};
     int cycleStep = 0; // 0 = not cycling
     ui::EffectPanel effectPanel;
     bool effectPanelPlaced = false;

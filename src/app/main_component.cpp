@@ -332,7 +332,7 @@ void MainComponent::openEffectEditor(model::EffectId id)
 
     if (auto it = pluginWindows.find(id); it != pluginWindows.end())
     {
-        it->second->bringToFront();
+        bringPluginToFront(*it->second);
         return;
     }
     auto processor = effectPool.find(id);
@@ -358,6 +358,7 @@ void MainComponent::openEffectEditor(model::EffectId id)
     view->setCloseHandler(
         [this, id] { juce::MessageManager::callAsync([this, id] { pluginWindows.erase(id); }); });
     pluginWindows[id] = std::move(view);
+    bringPluginToFront(*pluginWindows[id]);
 }
 
 void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
@@ -373,7 +374,7 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
         if (toggle && (panel == nullptr || !areas.isCovered(*panel, &channelRack)))
             instrumentWindows.erase(it);
         else
-            it->second->bringToFront();
+            bringPluginToFront(*it->second);
         return;
     }
     auto instrument = effectPool.findInstrument(id);
@@ -395,6 +396,7 @@ void MainComponent::showInstrumentEditor(model::ChannelId id, bool toggle)
         [this, id]
         { juce::MessageManager::callAsync([this, id] { instrumentWindows.erase(id); }); });
     instrumentWindows[id] = std::move(view);
+    bringPluginToFront(*instrumentWindows[id]);
 }
 
 std::unique_ptr<plugins::PluginView>
@@ -625,22 +627,87 @@ juce::Component* MainComponent::areaComponent(Area area)
         return pianoRoll.isVisible() ? static_cast<juce::Component*>(&pianoRoll) : &playlist;
     case Area::mixer:
         return &mixer;
+    case Area::plugin:
+        return stopComponent({Area::plugin, focusPlugin});
     }
     return nullptr;
 }
 
-void MainComponent::setFocusArea(Area area)
+juce::Component* MainComponent::stopComponent(const FocusStop& stop)
 {
-    // A deliberate choice (click, focus command): it becomes the most recent area.
-    cycleStep = 0;
-    std::erase(recentAreas, area);
-    recentAreas.insert(recentAreas.begin(), area);
-    if (area != focusArea)
+    if (stop.area != Area::plugin)
+        return areaComponent(stop.area);
+    const auto panels = pluginPanels();
+    return std::find(panels.begin(), panels.end(), stop.plugin) != panels.end() ? stop.plugin
+                                                                                : nullptr;
+}
+
+std::vector<juce::Component*> MainComponent::pluginPanels() const
+{
+    std::vector<juce::Component*> panels;
+    for (const auto* views : {&pluginWindows, &instrumentWindows})
+        for (const auto& [id, view] : *views)
+            if (auto* panel = dynamic_cast<ui::FloatingPanel*>(view.get()))
+                panels.push_back(panel);
+    return panels;
+}
+
+std::vector<MainComponent::FocusStop> MainComponent::tabOrder()
+{
+    std::vector<FocusStop> all;
+    if (ui::settings::focusOrderRecent(themes.settingsFile()))
+        all = recentAreas;
+    else
     {
-        focusArea = area;
+        all = {{Area::browser}, {Area::channelRack}, {Area::mainView}, {Area::mixer}};
+        for (auto* panel : pluginPanels())
+            all.push_back({Area::plugin, panel});
+    }
+    std::vector<FocusStop> showing;
+    for (const auto& stop : all)
+        if (auto* c = stopComponent(stop); c != nullptr && c->isVisible())
+            showing.push_back(stop);
+    return showing;
+}
+
+void MainComponent::setFocusStop(FocusStop stop)
+{
+    // A deliberate choice (click, focus command): it becomes the most recent stop.
+    cycleStep = 0;
+    std::erase(recentAreas, stop);
+    recentAreas.insert(recentAreas.begin(), stop);
+    if (stop.area != focusArea || stop.plugin != focusPlugin)
+    {
+        focusArea = stop.area;
+        focusPlugin = stop.plugin;
         repaint();
     }
     raiseFocusedArea();
+}
+
+void MainComponent::bringPluginToFront(plugins::PluginView& view)
+{
+    if (auto* panel = dynamic_cast<ui::FloatingPanel*>(&view))
+        setFocusStop({Area::plugin, panel});
+    else
+        view.bringToFront();
+}
+
+void MainComponent::forgetClosedPlugins()
+{
+    // Closed panels leave the order; if the focused one closed, the focus goes back to the
+    // stop used before it.
+    std::erase_if(recentAreas, [this](const FocusStop& stop)
+                  { return stop.area == Area::plugin && stopComponent(stop) == nullptr; });
+    if (focusArea != Area::plugin || stopComponent({Area::plugin, focusPlugin}) != nullptr)
+        return;
+    for (const auto& stop : recentAreas)
+        if (auto* c = stopComponent(stop); c != nullptr && c->isVisible())
+        {
+            setFocusStop(stop);
+            return;
+        }
+    setFocusArea(Area::mainView);
 }
 
 void MainComponent::raiseFocusedArea()
@@ -654,42 +721,35 @@ void MainComponent::raiseFocusedArea()
 
 void MainComponent::updateFocusFrames()
 {
-    // Panels draw their own focus frame (ui::paintCardFrame; the Channel Rack its own), so
-    // floating panels above them cover it.
-    const std::array<std::pair<juce::Component*, Area>, 5> panels{
-        {{&browser, Area::browser},
-         {&channelRack, Area::channelRack},
-         {&playlist, Area::mainView},
-         {&pianoRoll, Area::mainView},
-         {&mixer, Area::mixer}}};
-    for (const auto& [panel, area] : panels)
-    {
-        const bool focused = area == focusArea;
-        if (static_cast<bool>(panel->getProperties()["focused"]) != focused)
+    // Panels draw their own focus frame (ui::paintCardFrame; the Channel Rack and plugin panels a
+    // line along the top), so floating panels above them cover it.
+    std::vector<std::pair<juce::Component*, FocusStop>> panels{{&browser, {Area::browser}},
+                                                               {&channelRack, {Area::channelRack}},
+                                                               {&playlist, {Area::mainView}},
+                                                               {&pianoRoll, {Area::mainView}},
+                                                               {&mixer, {Area::mixer}}};
+    for (auto* panel : pluginPanels())
+        panels.push_back({panel, {Area::plugin, panel}});
+    const FocusStop focused{focusArea, focusArea == Area::plugin ? focusPlugin : nullptr};
+    for (const auto& [panel, stop] : panels)
+        if (static_cast<bool>(panel->getProperties()["focused"]) != (stop == focused))
         {
-            panel->getProperties().set("focused", focused);
+            panel->getProperties().set("focused", stop == focused);
             panel->repaint();
         }
-    }
     updateWindowButtons();
 }
 
 int MainComponent::tabSteps(Area area)
 {
-    // The areas showing, in the order Ctrl+Tab walks them (as in cycleFocus).
-    std::vector<Area> order;
-    const bool recent = ui::settings::focusOrderRecent(themes.settingsFile());
-    const std::array fixed{Area::browser, Area::channelRack, Area::mainView, Area::mixer};
-    for (auto a : recent ? recentAreas : std::vector<Area>(fixed.begin(), fixed.end()))
-        if (auto* c = areaComponent(a); c != nullptr && c->isVisible())
-            order.push_back(a);
-    const auto index = [&order](Area a)
-    { return static_cast<int>(std::find(order.begin(), order.end(), a) - order.begin()); };
+    const auto order = tabOrder();
+    const auto index = [&order](const FocusStop& stop)
+    { return static_cast<int>(std::find(order.begin(), order.end(), stop) - order.begin()); };
     const int n = static_cast<int>(order.size());
-    const int at = index(area);
+    const int at = index({area});
     if (at == n)
         return -1;
-    const int from = index(focusArea);
+    const int from = index({focusArea, focusArea == Area::plugin ? focusPlugin : nullptr});
     if (from == n) // the focused area was just hidden: count from before the first
         return at + 1;
     return (at - from + n) % n;
@@ -707,47 +767,39 @@ void MainComponent::updateWindowButtons()
 
 void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
 {
-    // Releasing the modifiers ends a "last used first" cycle on the area reached.
+    // Releasing the modifiers ends a "last used first" cycle on the stop reached.
     if (cycleStep != 0 && !modifiers.isAnyModifierKeyDown())
-        setFocusArea(focusArea);
+        setFocusStop({focusArea, focusPlugin});
     juce::Component::modifierKeysChanged(modifiers);
 }
 
 void MainComponent::cycleFocus(int direction)
 {
+    // Like Alt+Tab, through the areas and plugin panels that are showing.
+    const auto showing = tabOrder();
+    const int n = static_cast<int>(showing.size());
+    if (n < 2)
+        return;
     if (ui::settings::focusOrderRecent(themes.settingsFile()))
     {
-        // Like Alt+Tab: step back through the areas in last-used order while the modifier is
-        // held; the order only changes once it's released (modifierKeysChanged).
-        std::vector<Area> showing;
-        for (auto area : recentAreas)
-            if (auto* c = areaComponent(area); c != nullptr && c->isVisible())
-                showing.push_back(area);
-        if (showing.size() < 2)
-            return;
-        // The current area is first in `showing` until it changes.
-        const int n = static_cast<int>(showing.size());
+        // Step back in last-used order while the modifier is held; the order only changes once
+        // it's released (modifierKeysChanged). The current stop is first until then.
         cycleStep = ((cycleStep + direction) % n + n) % n;
-        focusArea = showing[static_cast<std::size_t>(cycleStep)];
+        const auto& stop = showing[static_cast<std::size_t>(cycleStep)];
+        focusArea = stop.area;
+        focusPlugin = stop.plugin;
         raiseFocusedArea();
         repaint();
         if (!juce::ModifierKeys::currentModifiers.isAnyModifierKeyDown())
-            setFocusArea(focusArea); // invoked without a held modifier: commit right away
+            setFocusStop(stop); // invoked without a held modifier: commit right away
         return;
     }
-
-    // Like Alt+Tab, through the areas that are showing.
-    const std::array order{Area::browser, Area::channelRack, Area::mainView, Area::mixer};
-    const auto current = std::find(order.begin(), order.end(), focusArea) - order.begin();
-    for (int step = 1; step <= 4; ++step)
-    {
-        const auto next = order[static_cast<std::size_t>((current + direction * step + 8) % 4)];
-        if (auto* c = areaComponent(next); c != nullptr && c->isVisible())
-        {
-            setFocusArea(next);
-            return;
-        }
-    }
+    const FocusStop current{focusArea, focusArea == Area::plugin ? focusPlugin : nullptr};
+    const auto it = std::find(showing.begin(), showing.end(), current);
+    // A hidden focused area: start before the first (or after the last, going back).
+    const int at =
+        it != showing.end() ? static_cast<int>(it - showing.begin()) : (direction > 0 ? -1 : n);
+    setFocusStop(showing[static_cast<std::size_t>(((at + direction) % n + n) % n)]);
 }
 
 void MainComponent::navigate(juce::CommandID command)
@@ -785,6 +837,8 @@ void MainComponent::navigate(juce::CommandID command)
         if (pianoRoll.isVisible() && (command == navUpLoad || command == navDownLoad))
             pianoRoll.edit(command == navUpLoad ? ui::EditAction::moveOctaveUp
                                                 : ui::EditAction::moveOctaveDown);
+        break;
+    case Area::plugin: // the plugin's own keys need a click into it
         break;
     }
 }
@@ -1242,13 +1296,18 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
 
 void MainComponent::mouseDown(const juce::MouseEvent& e)
 {
-    // A click in an area gives it the navigation keys (arrows, Enter).
-    for (auto area : {Area::browser, Area::channelRack, Area::mixer, Area::mainView})
-        if (auto* c = areaComponent(area);
+    // A click in an area gives it the navigation keys (arrows, Enter); a click on a plugin panel
+    // (its title bar: clicks into the editor go to the plugin) makes it the focused stop.
+    std::vector<FocusStop> stops{
+        {Area::browser}, {Area::channelRack}, {Area::mixer}, {Area::mainView}};
+    for (auto* panel : pluginPanels())
+        stops.insert(stops.begin(), {Area::plugin, panel});
+    for (const auto& stop : stops)
+        if (auto* c = stopComponent(stop);
             c != nullptr && c->isVisible() &&
             (c == e.eventComponent || c->isParentOf(e.eventComponent)))
         {
-            setFocusArea(area);
+            setFocusStop(stop);
             break;
         }
 
@@ -1995,6 +2054,12 @@ void MainComponent::showAbout()
 void MainComponent::timerCallback()
 {
     areas.update(); // the main window exists only after construction (and may be recreated)
+    forgetClosedPlugins();
+    // JUCE tells the component under the mouse when modifiers change, which reaches us only
+    // through its parents: not from an area that is a native window of its own. Catch the
+    // release that ends a "last used first" cycle here too.
+    if (cycleStep != 0 && !juce::ModifierKeys::getCurrentModifiersRealtime().isAnyModifierKeyDown())
+        setFocusStop({focusArea, focusPlugin});
 
     engine.collectGarbage();
     // Windows are shown and hidden from many places (commands, menus, their close buttons):

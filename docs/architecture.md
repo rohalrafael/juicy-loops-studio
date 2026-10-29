@@ -366,12 +366,18 @@ which gives:
   own tooltip (remembered in the component's `baseTooltip` property), and runs again whenever
   the mappings change. Views expose the controls that have commands (`loopSwitch()`,
   `lengthButton()`, `sliceControl()`, `snapControl()`...). Add new ones there.
-- **Focus areas:** `MainComponent::Area` (Browser, Channel Rack, main view, Mixer) says where
-  the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on the window. A click
-  in an area focuses it (`mouseDown`), Ctrl+Tab cycles (`cycleFocus`), `paintOverChildren`
-  marks the focused one (an accent line along its top), and `navigate()` dispatches. With Settings › Ctrl+Tab order = "Last
-  used first", `recentAreas` keeps the areas most-recent-first; while the modifier is held the
-  order is frozen and `cycleStep` walks it, and `modifierKeysChanged` commits on release.
+- **Focus areas:** `MainComponent::Area` (Browser, Channel Rack, main view, Mixer, a plugin
+  panel) says where the navigation commands (arrows, Enter) go; JUCE's keyboard focus stays on
+  the window. Ctrl+Tab walks `FocusStop`s: an area, or one open plugin panel (`focusPlugin`;
+  `tabOrder()` lists the stops showing; separate plugin windows aren't stops). A click in an
+  area or on a plugin panel focuses it (`mouseDown`), as does bringing a plugin up
+  (`bringPluginToFront`); Ctrl+Tab cycles (`cycleFocus`); each panel draws its own focus line
+  from its "focused" property (`updateFocusFrames`), and `navigate()` dispatches (a plugin
+  takes none). With Settings › Ctrl+Tab order = "Last used first", `recentAreas` keeps the
+  stops most-recent-first; while the modifier is held the order is frozen and `cycleStep`
+  walks it, and the release commits (`modifierKeysChanged`, and the timer, since a native area
+  doesn't pass modifier changes up to us). The timer also drops closed plugin panels
+  (`forgetClosedPlugins`).
   `raiseFocusedArea()` also sets the floating Channel Rack's stacking: in front while it has the
   focus, behind the Playlist / Piano Roll while they do.
 - **Note keys vs commands:** the typing keyboard only claims plain character keys (codes below

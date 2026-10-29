@@ -19,10 +19,6 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
-- Plugin windows in the Ctrl+Tab order (2026-10-29): an open plugin window becomes a stop when
-  cycling with Ctrl+Tab (closed ones don't); Ctrl+Tab away from a plugin puts it behind (Linux
-  can since the areas became native windows). The window buttons' LEDs only cover the five main windows; the
-  plugin panel's own focus line can show that it has the focus.
 - Agent CLI (2026-10-18, proposed, postponed): a headless `juicy-loops-cli` (project info,
   render to WAV, validate) and later an opt-in localhost control channel in the app (run
   commands by string id, read project state, load / save, screenshots), possibly wrapped as

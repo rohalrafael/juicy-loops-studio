@@ -211,8 +211,9 @@ looped notes, and leaves empty greyed steps alone. With **Loop** on (the default
 repeats them: its notes are rounded up to 1, 2, 4, 8... bars, and that block plays again and
 again. Example: a 4-bar bass line with a 1-bar drum beat gives 4 bars of drums. Those repeats
 are greyed too. Because the loop length comes from the notes, a looping channel can't end with
-empty bars; switch its loop off (the arrow) to have it play once per pattern. Long patterns
-shrink the step buttons to fit.
+empty bars; switch its loop off (the arrow) to have it play once per pattern. Steps are always full
+size: at 32 or 64 steps the rack gets wider, past the window's edge if need be. Drag it by its
+title bar to see the rest; its Loop, 16 | 32 | 64 and close buttons stay in view.
 
 **Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
 with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its
@@ -253,7 +254,7 @@ sounding the same:
   pattern on the same track all use the same tracks.
 The parts' clips are labelled with just the channel ("Kick"); the full names are in the
 picker. It's one step to undo.
-| Drag an item from the picker | Place it where you drop it |
+| Drag an item from the picker | Place it where you drop it (a chip with its name follows the mouse) |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
 | Drag a selected clip | Move all selected clips together |
 | Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |

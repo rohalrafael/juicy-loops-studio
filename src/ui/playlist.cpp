@@ -768,8 +768,53 @@ class PlaylistView::Picker final : public juce::Component
         if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor(this))
         {
             dragging = true;
-            container->startDragging(pressed, this);
+            // Only the item follows the mouse (JUCE would show a snapshot of the whole picker).
+            const juce::Point<int> offset(-10, -rowHeight / 2);
+            container->startDragging(pressed, this, dragImage(pressed), false, &offset);
         }
+    }
+
+    // What follows the mouse while an item is dragged: a chip like the clip it will place.
+    juce::ScaledImage dragImage(const juce::String& item) const
+    {
+        const auto& t = currentTheme();
+        const auto& project = view.doc.project();
+        const auto id = item.fromFirstOccurrenceOf(":", false, false).getLargeIntValue();
+        juce::String name;
+        auto fill = colour(t.colours.clip);
+        auto ink = colour(t.colours.clipText);
+        if (item.startsWith("audio:"))
+        {
+            fill = audioClipColour(t);
+            ink = colour(t.colours.text);
+            for (const auto& channel : project.channels)
+                if (channel.id == static_cast<model::ChannelId>(id))
+                    name = juce::String::fromUTF8(channel.name.c_str());
+        }
+        else
+        {
+            for (const auto& pattern : project.patterns)
+                if (pattern.id == static_cast<model::PatternId>(id))
+                    name = juce::String::fromUTF8(pattern.name.c_str());
+        }
+
+        const auto font = juce::FontOptions(12.5f);
+        const int w = std::clamp(textWidth(font, name) + 16, 48, 200);
+        const float scale = juce::Desktop::getInstance().getGlobalScaleFactor();
+        juce::Image image(juce::Image::ARGB, juce::roundToInt(static_cast<float>(w) * scale),
+                          juce::roundToInt(static_cast<float>(rowHeight) * scale), true);
+        juce::Graphics g(image);
+        g.addTransform(juce::AffineTransform::scale(scale));
+        const auto box = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(w),
+                                                static_cast<float>(rowHeight));
+        g.setColour(fill);
+        g.fillRoundedRectangle(box, metrics::cornerRadius);
+        g.setColour(colour(t.colours.outline));
+        g.drawRoundedRectangle(box.reduced(0.5f), metrics::cornerRadius, 1.0f);
+        g.setColour(ink);
+        g.setFont(font);
+        g.drawText(name, box.reduced(8.0f, 0.0f), juce::Justification::centredLeft, true);
+        return {image, scale};
     }
 
     void mouseUp(const juce::MouseEvent&) override

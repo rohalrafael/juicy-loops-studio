@@ -410,3 +410,10 @@ not). Older entries describe the project as it was then; later entries may super
     to Blackberry.
   Not taken up yet: denser controls, flush mixer strips, per-track colours (prototyped on the
   `look-experiments` branch).
+
+- 2026-10-29: **Channel Rack steps are always full size** (maintainer: 32 / 64 squeezed the
+  buttons). A long pattern makes the rack wider, past the window's edge, as a floating window
+  would; the header's controls stay at the right edge of the visible part (re-laid out when the
+  rack moves or the window resizes), so 16 | 32 | 64 and close stay reachable. Supersedes the
+  2026-10-17 "steps shrink to fit (20 -> 8 px)". Dragging from the Playlist's picker shows a chip
+  with the item's name instead of JUCE's default snapshot of the whole picker.

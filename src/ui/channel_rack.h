@@ -113,30 +113,28 @@ class StepGrid final : public juce::Component
     // Melodic channel: show its notes instead of editable steps; a click calls onOpenNotes.
     void setMelodicPreview(std::vector<model::Note> notes, int lengthInSteps, int loopStart = -1);
     void setPlayingStep(int step);
-    // Step button width in pixels (the rack shrinks steps to fit long patterns).
-    void setStepWidth(int width);
     std::function<void()> onOpenNotes;
 
     // (step, on, gestureId): one gesture per mouse press so a drag undoes as one step.
     std::function<void(int, bool, int)> onStepPainted;
     std::function<int()> newGestureId;
 
-    static int widthFor(int numSteps, int stepWidth = metrics::stepWidth);
+    // Width of `numSteps` step keys with their gaps. Steps are always full size: a long pattern
+    // makes the rack wider, past the window's edge if need be (drag it to see the rest).
+    static int widthFor(int numSteps);
 
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
 
   private:
-    static int stepX(int step, int stepWidth);
-    int stepX(int step) const { return stepX(step, stepWidth); }
+    static int stepX(int step);
     int stepAt(int x) const;
     bool isRepeat(int step) const { return loopStart >= 0 && step >= loopStart; }
     void paintStep(int step);
 
     std::vector<bool> steps;
     int loopStart = -1;
-    int stepWidth = metrics::stepWidth;
     std::vector<model::Note> melodicNotes;
     bool melodic = false;
     int playingStep = -1;
@@ -153,7 +151,6 @@ class ChannelRow final : public juce::Component
     model::ChannelId channelId() const { return id; }
     void update(const model::Channel& channel, const model::Project& project);
     void setPlayingStep(int step) { steps.setPlayingStep(step); }
-    void setStepWidth(int width) { steps.setStepWidth(width); }
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -192,8 +189,6 @@ class ChannelRack final : public juce::Component,
 
     int preferredWidth() const;
     int preferredHeight() const;
-    // Step width that fits the current pattern into the space right of the rack's position.
-    int stepWidth() const;
 
     // Used by rows.
     model::Document& document() { return doc; }
@@ -240,6 +235,9 @@ class ChannelRack final : public juce::Component,
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
+    // The header's controls follow the visible part of the rack (see resized()).
+    void moved() override { resized(); }
+    void parentSizeChanged() override { resized(); }
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
 

@@ -23,7 +23,6 @@ constexpr int padding = 8;
 constexpr int headerHeight = metrics::panelHeaderHeight; // title bar; drag it to move the rack
 constexpr int loopWidth = 20;   // a row's loop switch, between the name and the steps
 constexpr int handleWidth = 12; // the length handle after the last step column
-constexpr int minStepWidth = 8; // steps shrink down to this to fit long patterns
 // Everything in a row except the steps.
 constexpr int rowFixedWidth = metrics::ledWidth + 4 + 2 * (metrics::knobSize + 4) +
                               metrics::insertWidth + 4 + metrics::nameWidth + loopWidth;
@@ -169,8 +168,8 @@ void LengthHandle::mouseDown(const juce::MouseEvent&)
 
 void LengthHandle::mouseDrag(const juce::MouseEvent& e)
 {
-    // Measured against the step size at the start of the drag: the rack resizes (and its steps
-    // may shrink) while dragging, which would otherwise make the handle jump.
+    // Measured against the group size at the start of the drag, from where the drag began: the
+    // rack resizes while dragging, which would otherwise make the handle jump.
     const int groups = static_cast<int>(
         std::lround(static_cast<float>(e.getDistanceFromDragStartX()) / startGroupWidth));
     const int length = std::clamp(startLength + 4 * groups, 4, model::Pattern::maxSteps);
@@ -180,42 +179,20 @@ void LengthHandle::mouseDrag(const juce::MouseEvent& e)
 
 // ----------------------------------------------------------------------------------- StepGrid
 
-namespace
+int StepGrid::stepX(int step)
 {
-// Gaps shrink with the steps so long patterns still read as groups of 4.
-int stepGapFor(int stepWidth)
-{
-    return stepWidth >= 14 ? metrics::stepGap : 2;
-}
-int groupGapFor(int stepWidth)
-{
-    return stepWidth >= 14 ? metrics::beatGap : 4;
-}
-} // namespace
-
-int StepGrid::stepX(int step, int width)
-{
-    return step * (width + stepGapFor(width)) + (step / 4) * groupGapFor(width);
+    return step * (metrics::stepWidth + metrics::stepGap) + (step / 4) * metrics::beatGap;
 }
 
-int StepGrid::widthFor(int numSteps, int width)
+int StepGrid::widthFor(int numSteps)
 {
-    return numSteps <= 0 ? 0 : stepX(numSteps - 1, width) + width;
-}
-
-void StepGrid::setStepWidth(int width)
-{
-    if (width != stepWidth)
-    {
-        stepWidth = width;
-        repaint();
-    }
+    return numSteps <= 0 ? 0 : stepX(numSteps - 1) + metrics::stepWidth;
 }
 
 int StepGrid::stepAt(int x) const
 {
     for (int s = 0; s < static_cast<int>(steps.size()); ++s)
-        if (x < stepX(s) + stepWidth + stepGapFor(stepWidth))
+        if (x < stepX(s) + metrics::stepWidth + metrics::stepGap)
             return s;
     return static_cast<int>(steps.size()) - 1;
 }
@@ -306,7 +283,8 @@ void StepGrid::paint(juce::Graphics& g)
     {
         const bool on = steps[static_cast<std::size_t>(s)];
         const bool repeat = loopStart > 0 && s >= loopStart; // greyed loop repeat
-        const auto r = juce::Rectangle<int>(stepX(s), 3, stepWidth, getHeight() - 6).toFloat();
+        const auto r =
+            juce::Rectangle<int>(stepX(s), 3, metrics::stepWidth, getHeight() - 6).toFloat();
 
         // A drum machine's step key: the key stays grey (a little lighter while on) and a small
         // LED on it lights up. Keys alternate A / B every beat; a greyed repeat is faded.
@@ -748,11 +726,7 @@ ChannelRack::ChannelRack(model::Document& document, engine::Transport& transport
 
     lengthHandle.currentLength = [this]
     { return doc.project().gridLengthInSteps(doc.project().current()); };
-    lengthHandle.groupWidth = [this]
-    {
-        const int w = stepWidth();
-        return StepGrid::widthFor(8, w) - StepGrid::widthFor(4, w);
-    };
+    lengthHandle.groupWidth = [] { return StepGrid::widthFor(8) - StepGrid::widthFor(4); };
     lengthHandle.newGestureId = [this] { return doc.newGestureId(); };
     lengthHandle.onLengthChanged = [this](int steps, int gesture)
     {
@@ -897,12 +871,8 @@ void ChannelRack::refresh()
         resized();
     }
 
-    const int width = stepWidth();
     for (std::size_t i = 0; i < rows.size(); ++i)
-    {
         rows[i]->update(*shown[i], project);
-        rows[i]->setStepWidth(width);
-    }
 
     loopButton.setToggleState(project.loopChannels, juce::dontSendNotification);
     const int gridSteps = project.current().gridSteps;
@@ -914,26 +884,10 @@ void ChannelRack::refresh()
         parent->resized();
 }
 
-int ChannelRack::stepWidth() const
-{
-    // As wide as possible up to the normal size, shrinking so the rack fits to the right of
-    // where it sits in its parent.
-    const auto& project = doc.project();
-    const int steps = project.gridLengthInSteps(project.current());
-    const int parentWidth = getParentWidth() > 0 ? getParentWidth() : 1280;
-    const int room =
-        parentWidth - std::max(12, getX()) - 12 - padding * 2 - rowFixedWidth - handleWidth;
-    int width = metrics::stepWidth;
-    while (width > minStepWidth && StepGrid::widthFor(steps, width) > room)
-        --width;
-    return width;
-}
-
 int ChannelRack::preferredWidth() const
 {
     return padding * 2 + rowFixedWidth + handleWidth +
-           StepGrid::widthFor(doc.project().gridLengthInSteps(doc.project().current()),
-                              stepWidth());
+           StepGrid::widthFor(doc.project().gridLengthInSteps(doc.project().current()));
 }
 
 int ChannelRack::preferredHeight() const
@@ -984,7 +938,12 @@ void ChannelRack::paintOverChildren(juce::Graphics& g)
 void ChannelRack::resized()
 {
     auto bounds = getLocalBounds();
-    HeaderLayout header(bounds.removeFromTop(headerHeight));
+    // A long pattern can make the rack wider than the window: the header's controls stay at the
+    // right edge of the part that's in view.
+    auto headerArea = bounds.removeFromTop(headerHeight);
+    if (const auto* parent = getParentComponent())
+        headerArea.setRight(std::min(getWidth(), std::max(300, parent->getWidth() - getX())));
+    HeaderLayout header(headerArea);
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
     // 16 | 32 | 64 as one segmented control: the segments touch.
     const int segment = buttonWidth("64", metrics::controlHeight);
@@ -1003,8 +962,7 @@ void ChannelRack::resized()
     // The handle sits right after the last step column, the height of the rows.
     const auto& project = doc.project();
     const int stepsRight =
-        padding + rowFixedWidth +
-        StepGrid::widthFor(project.gridLengthInSteps(project.current()), stepWidth());
+        padding + rowFixedWidth + StepGrid::widthFor(project.gridLengthInSteps(project.current()));
     lengthHandle.setBounds(stepsRight + 2, rowsTop, handleWidth - 2,
                            std::max(metrics::rowHeight, area.getY() - rowsTop - metrics::rowGap));
     const int nameX =

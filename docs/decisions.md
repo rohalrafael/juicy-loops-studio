@@ -461,3 +461,9 @@ not). Older entries describe the project as it was then; later entries may super
   Sampler's Cut itself and Volume envelope and the effect panel's bypass were buttons labelled
   "On" whether on or off. They're now `LedToggle`s: the same round light as a channel's mute
   light (`paintLed`, which the mute light uses too), lit in the theme's `led` colour when on.
+
+- 2026-10-29: **Note edits are silent while playing** (maintainer's request): clicking, adding or
+  dragging notes in the Piano Roll previews them only while stopped or paused
+  (`PianoRollView::previewNote`), and a preview still sounding stops as soon as playback starts
+  (the view's timer). Clicking a keyboard key still sounds while playing: that's a deliberate "let
+  me hear this note".

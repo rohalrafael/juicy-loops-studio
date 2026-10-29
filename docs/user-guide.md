@@ -338,7 +338,7 @@ The slicer is for rolls (hi-hats, snares): draw one long note, slice it, then sh
 velocities. The pieces stay selected, so slicing again makes them finer.
 With a selection, a click elsewhere only deselects (it doesn't add a note), as in FL.
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
-while you drag it up or down you hear the new pitch.
+while you drag it up or down you hear the new pitch. That's only while the song is stopped or paused: during playback, editing notes is silent (and a preview still sounding stops when playback starts), while clicking a key on the keyboard still plays it.
 
 The keyboard labels each C and, with a scale on, the scale's root (in the accent colour); point
 at any key, or at its row in the grid, to see its name. Note names follow FL: C5 is middle C

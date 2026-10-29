@@ -426,7 +426,7 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
         grabTick = view.tickAtX(e.position.x);
         grabPitch = view.pitchAtY(e.position.y);
         grabNotePitch = note.pitch;
-        view.audition(note.pitch, note.velocity);
+        view.previewNote(note.pitch, note.velocity);
         return;
     }
     if (!view.selection.empty())
@@ -448,7 +448,7 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
     drag = Drag::move;
     grabOffsetTicks = view.tickAtX(e.position.x) - note.startTick;
     grabPitch = note.pitch;
-    view.audition(note.pitch, note.velocity);
+    view.previewNote(note.pitch, note.velocity);
 }
 
 void NoteGrid::mouseDrag(const juce::MouseEvent& e)
@@ -487,7 +487,7 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
                 n.startTick += dt;
                 n.pitch += dp;
             }
-            view.audition(grabNotePitch + dp, moveOriginals.front().velocity);
+            view.previewNote(grabNotePitch + dp, moveOriginals.front().velocity);
         }
         else
         {
@@ -526,7 +526,7 @@ void NoteGrid::mouseDrag(const juce::MouseEvent& e)
     }
 
     if (note.pitch != original.pitch)
-        view.audition(note.pitch, note.velocity); // hear where the note is going
+        view.previewNote(note.pitch, note.velocity); // hear where the note is going
     if (note == original)
         return;
     const int index = dragNote;
@@ -828,6 +828,14 @@ double PianoRollView::playheadTick() const
     return length > 0.0 ? std::fmod(position, length) : -1.0;
 }
 
+void PianoRollView::previewNote(int pitch, float velocity)
+{
+    if (transport.isPlaying())
+        return;
+    audition(pitch, velocity);
+    previewingEdit = auditionPitch >= 0;
+}
+
 void PianoRollView::audition(int pitch, float velocity)
 {
     if (pitch == auditionPitch)
@@ -857,6 +865,7 @@ void PianoRollView::stopAudition()
     if (onAuditionStop)
         onAuditionStop(auditionPitch);
     auditionPitch = -1;
+    previewingEdit = false;
     keyboard->repaint();
 }
 
@@ -1168,6 +1177,10 @@ void PianoRollView::resized()
 
 void PianoRollView::timerCallback()
 {
+    // An edit's preview stops as soon as playback starts (previewNote).
+    if (previewingEdit && transport.isPlaying())
+        stopAudition();
+
     const double tick = playheadTick();
     const float x = tick >= 0.0 ? xForTick(tick) : -1.0f;
     if (std::abs(x - lastPlayheadX) < 0.5f)

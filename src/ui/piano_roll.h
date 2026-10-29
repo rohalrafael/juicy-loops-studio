@@ -141,11 +141,16 @@ class PianoRollView final : public juce::Component, private juce::Timer
     // into pieces of the chosen size (slice box), keeping the pieces selected.
     void sliceNotes();
 
-    // Audition: plays `pitch` on the channel until stopAudition() (or another pitch). Clicking
-    // notes and keyboard keys uses it; the owner connects it to the engine.
+    // Audition: plays `pitch` on the channel until stopAudition() (or another pitch). Keyboard
+    // keys use it, note edits previewNote(); the owner connects it to the engine.
     void audition(int pitch, float velocity);
     void stopAudition();
-    int auditionPitch = -1; // sounding now, or -1
+    // The same for editing notes (clicking, adding, dragging them): silent while the pattern or
+    // song plays, and stopped as soon as playback starts. Keyboard keys use audition() and still
+    // sound while playing.
+    void previewNote(int pitch, float velocity);
+    int auditionPitch = -1;      // sounding now, or -1
+    bool previewingEdit = false; // the sound is an edit's preview (previewNote)
 
     // The key under the mouse, on the keyboard or in its row of the grid: the keyboard shows its
     // name (only C and the scale's root are labelled otherwise). -1 for none.

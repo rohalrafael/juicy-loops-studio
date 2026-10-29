@@ -33,12 +33,6 @@ starting one.
   selection only deselects, as in FL"; user guide, *Piano Roll*). Decided: the Playlist follows
   (a click in empty space deselects and places a clip).
 
-- No note preview while playing (2026-10-29, maintainer's request): in the Piano Roll, clicking,
-  adding or dragging notes plays them (`PianoRollView::audition`). While the pattern or song is
-  playing that should stay silent; while stopped or paused it stays as it is. A preview still
-  sounding when playback starts stops at once. Decided: clicking the Piano Roll's keyboard keys
-  still sounds while playing (a deliberate "let me hear this note").
-
 - Plugin windows can go to the background (2026-10-29, maintainer's request): today a plugin's
   panel always stays in front of the Playlist, Channel Rack and the rest, because on Linux the
   plugin draws in its own native window that the app can't draw over (user guide, *Windows*).

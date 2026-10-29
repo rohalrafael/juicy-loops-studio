@@ -109,6 +109,10 @@ class MainComponent final : public juce::AudioAppComponent,
     void layoutTransportBar(juce::Rectangle<int> bar);
     void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
     void updateFocusFrames(); // the focused docked panel's accent frame
+    // How many Ctrl+Tab presses reach `area` from the focused one (0 = it has the focus), or -1
+    // while it's hidden. Follows Settings > Ctrl+Tab order, and a cycle in progress.
+    int tabSteps(Area area);
+    void updateWindowButtons(); // their LEDs: the windows' Ctrl+Tab order
     void cycleFocus(int direction);
     void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
     void navigate(juce::CommandID command);
@@ -160,7 +164,14 @@ class MainComponent final : public juce::AudioAppComponent,
     juce::ComboBox timeSignatureBox;
     ui::IconButton metronomeButton{ui::Icon::metronome, "Metronome"};
     ui::IconButton typingButton{ui::Icon::keys, "Keys"}; // typing keyboard to piano (Ctrl+T)
-    juce::Label positionLabel;                           // bar:beat:step, in the clock display
+    // Window buttons, in shortcut order (F5, F6, F7, F9, Alt+F8). Their LEDs show the Ctrl+Tab
+    // order (updateWindowButtons).
+    ui::WindowButton playlistButton{ui::Icon::playlist, "Playlist"};
+    ui::WindowButton rackButton{ui::Icon::channelRack, "Channel rack"};
+    ui::WindowButton pianoRollButton{ui::Icon::pianoRoll, "Piano roll"};
+    ui::WindowButton mixerButton{ui::Icon::mixer, "Mixer"};
+    ui::WindowButton browserButton{ui::Icon::browser, "Browser"};
+    juce::Label positionLabel;              // bar:beat:step, in the clock display
     juce::Label timeLabel;                  // next to it: current / total time of what's looping
     ui::Oscilloscope scope{engine.scope()}; // right end of the transport bar, when there's room
     // Painted by paint(): the transport bar's background, its dividers and the clock's box.

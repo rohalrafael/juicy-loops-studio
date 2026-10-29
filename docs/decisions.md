@@ -437,3 +437,12 @@ not). Older entries describe the project as it was then; later entries may super
   steps alone (with Loop on, dropping copies without adding a note would only bring them back).
   *Copies the loop in*: the 2026-10-18 behaviour, unchanged. The setting is an app preference,
   not project data, like the other Settings.
+
+- 2026-10-29: **Window buttons in the transport bar** (maintainer's request and choices from
+  mockups): Playlist, Channel rack, Piano roll, Mixer and Browser, in shortcut order, right-aligned
+  next to the oscilloscope. They run the window commands. An **LED** on each shows the Ctrl+Tab
+  order (brightest for the focused area, 60 / 35 / 18 % further along, dark when hidden; the same
+  LED as the step keys), picked over a colour tint, underlines and numbers. Icons are drawn like
+  the others (no image files, nothing from FL). Labels only when the oscilloscope still fits
+  beside them (the maintainer wanted the buttons next to it), so a 1600 px window shows icons and
+  a wider one icons and labels.

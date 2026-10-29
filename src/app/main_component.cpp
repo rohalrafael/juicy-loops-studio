@@ -96,6 +96,18 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
                             "channel. MIDI keyboards always play it.");
     typingButton.onClick = [this] { setTypingKeyboard(typingButton.getToggleState()); };
 
+    // Window buttons run their window's command, the same as its key and the View menu.
+    for (const auto& [button, command, tooltip] :
+         {std::tuple{&playlistButton, jls::commands::showPlaylist, "Playlist"},
+          std::tuple{&rackButton, jls::commands::toggleChannelRack, "Channel rack"},
+          std::tuple{&pianoRollButton, jls::commands::showPianoRoll, "Piano roll"},
+          std::tuple{&mixerButton, jls::commands::toggleMixer, "Mixer"},
+          std::tuple{&browserButton, jls::commands::toggleBrowser, "Browser"}})
+    {
+        button->setTooltip(tooltip);
+        button->onClick = [this, id = command] { commandManager.invokeDirectly(id, false); };
+    }
+
     ui::joinSegments({&patButton, &songButton});
     positionLabel.setJustificationType(juce::Justification::centred);
     positionLabel.setFont(ui::displayFont(16.0f));
@@ -107,13 +119,15 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
-             &timeSignatureBox, &metronomeButton, &typingButton})
+             &timeSignatureBox, &metronomeButton, &typingButton, &playlistButton, &rackButton,
+             &pianoRollButton, &mixerButton, &browserButton})
         noFocus(*c);
 
     for (auto* c : std::initializer_list<juce::Component*>{
              &patButton, &songButton, &patternBox, &newPatternButton, &playButton, &stopButton,
-             &tempoDisplay, &timeSignatureBox, &metronomeButton, &typingButton, &positionLabel,
-             &scope, &timeLabel, &playlist})
+             &tempoDisplay, &timeSignatureBox, &metronomeButton, &typingButton, &playlistButton,
+             &rackButton, &pianoRollButton, &mixerButton, &browserButton, &positionLabel, &scope,
+             &timeLabel, &playlist})
         addAndMakeVisible(c);
     addChildComponent(pianoRoll);
     addChildComponent(mixer);
@@ -622,6 +636,38 @@ void MainComponent::updateFocusFrames()
             panel->repaint();
         }
     }
+    updateWindowButtons();
+}
+
+int MainComponent::tabSteps(Area area)
+{
+    // The areas showing, in the order Ctrl+Tab walks them (as in cycleFocus).
+    std::vector<Area> order;
+    const bool recent = ui::settings::focusOrderRecent(themes.settingsFile());
+    const std::array fixed{Area::browser, Area::channelRack, Area::mainView, Area::mixer};
+    for (auto a : recent ? recentAreas : std::vector<Area>(fixed.begin(), fixed.end()))
+        if (auto* c = areaComponent(a); c != nullptr && c->isVisible())
+            order.push_back(a);
+    const auto index = [&order](Area a)
+    { return static_cast<int>(std::find(order.begin(), order.end(), a) - order.begin()); };
+    const int n = static_cast<int>(order.size());
+    const int at = index(area);
+    if (at == n)
+        return -1;
+    const int from = index(focusArea);
+    if (from == n) // the focused area was just hidden: count from before the first
+        return at + 1;
+    return (at - from + n) % n;
+}
+
+void MainComponent::updateWindowButtons()
+{
+    const int main = tabSteps(Area::mainView);
+    playlistButton.setOrder(playlist.isVisible() ? main : -1);
+    pianoRollButton.setOrder(pianoRoll.isVisible() ? main : -1);
+    rackButton.setOrder(tabSteps(Area::channelRack));
+    mixerButton.setOrder(tabSteps(Area::mixer));
+    browserButton.setOrder(tabSteps(Area::browser));
 }
 
 void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
@@ -815,9 +861,11 @@ void MainComponent::releaseResources() {}
 
 void MainComponent::layoutTransportBar(juce::Rectangle<int> bar)
 {
-    // Groups: mode and pattern | play, stop | tempo, clock | time signature, metronome, keys.
-    // When the window is narrow, the last group loses its labels, then the clock its time, then
-    // the time signature and finally the toggles.
+    // Groups: mode and pattern | play, stop | tempo, clock | time signature, metronome, keys, and
+    // at the right end the window buttons, then the oscilloscope. The window buttons only get
+    // their labels when the oscilloscope still fits beside them; when the window is narrower, the
+    // oscilloscope goes, then the metronome's and keys' labels, the clock's time, the time
+    // signature, and finally the toggles and the window buttons.
     constexpr int h = ui::metrics::transportControlHeight;
     constexpr int gap = ui::metrics::controlGap;
     constexpr int dividerSpace = 2 * gap + 1;
@@ -827,22 +875,52 @@ void MainComponent::layoutTransportBar(juce::Rectangle<int> bar)
     metronomeButton.setButtonText("Metronome");
     typingButton.setButtonText("Keys");
 
-    const auto widths = [&](int stage)
+    const std::array<std::pair<ui::WindowButton*, const char*>, 5> windows{
+        {{&playlistButton, "Playlist"},
+         {&rackButton, "Channel rack"},
+         {&pianoRollButton, "Piano roll"},
+         {&mixerButton, "Mixer"},
+         {&browserButton, "Browser"}}};
+    std::array<int, 5> labelledWidths{};
+    int windowsLabelled = dividerSpace;
+    for (std::size_t i = 0; i < windows.size(); ++i)
+    {
+        windows[i].first->setButtonText(windows[i].second);
+        labelledWidths[i] = windows[i].first->preferredWidth(h);
+        windowsLabelled += labelledWidths[i] + gap;
+    }
+    const int windowsIconsOnly = dividerSpace + static_cast<int>(windows.size()) * (h + gap);
+
+    // `core` stages: 0 everything, 1 metronome and keys as icons, 2 no clock time, 3 no time
+    // signature, 4 no toggles. The window buttons come off before each of those.
+    const auto coreWidth = [&](int core)
     {
         int w = ui::buttonWidth("PAT", h) + ui::buttonWidth("SONG", h) + gap + 150 + gap + h +
                 dividerSpace + 2 * playWidth + gap + dividerSpace + tempoDisplay.preferredWidth(h) +
-                gap + positionWidth + (stage < 2 ? timeWidth : 0);
-        if (stage < 4)
-            w += dividerSpace + (stage < 3 ? ui::metrics::comboWidth - 4 + gap : 0) +
-                 (stage < 1 ? metronomeButton.preferredWidth(h) + typingButton.preferredWidth(h)
-                            : 2 * h) +
+                gap + positionWidth + (core < 2 ? timeWidth : 0);
+        if (core < 4)
+            w += dividerSpace + (core < 3 ? ui::metrics::comboWidth - 4 + gap : 0) +
+                 (core < 1 ? metronomeButton.preferredWidth(h) + typingButton.preferredWidth(h)
+                           : 2 * h) +
                  gap;
         return w;
     };
+    // Stage 0: window buttons with labels (and room for the oscilloscope); 1: icons only; 2-5:
+    // core stages 1-4 (icons only, and no window buttons at the last).
+    constexpr int minScopeWidth = 120;
+    constexpr int maxScopeWidth = 220;
+    const auto widths = [&](int stage)
+    {
+        const int core = std::max(0, stage - 1);
+        if (stage == 0)
+            return coreWidth(0) + windowsLabelled + minScopeWidth + gap;
+        return coreWidth(core) + (core < 4 ? windowsIconsOnly : 0);
+    };
     int stage = 0;
-    while (stage < 4 && widths(stage) > bar.getWidth())
+    while (stage < 5 && widths(stage) > bar.getWidth())
         ++stage;
-    if (stage >= 1)
+    const int core = std::max(0, stage - 1);
+    if (core >= 1)
     {
         metronomeButton.setButtonText({});
         typingButton.setButtonText({});
@@ -871,34 +949,54 @@ void MainComponent::layoutTransportBar(juce::Rectangle<int> bar)
     stopButton.setBounds(take(playWidth));
     divider();
     tempoDisplay.setBounds(take(tempoDisplay.preferredWidth(h)));
-    clockBounds = take(positionWidth + (stage < 2 ? timeWidth : 0));
+    clockBounds = take(positionWidth + (core < 2 ? timeWidth : 0));
     {
         auto clock = clockBounds;
         positionLabel.setBounds(clock.removeFromLeft(positionWidth));
-        timeLabel.setVisible(stage < 2);
+        timeLabel.setVisible(core < 2);
         timeLabel.setBounds(clock);
     }
-    timeSignatureBox.setVisible(stage < 3);
-    metronomeButton.setVisible(stage < 4);
-    typingButton.setVisible(stage < 4);
-    if (stage < 4)
+    timeSignatureBox.setVisible(core < 3);
+    metronomeButton.setVisible(core < 4);
+    typingButton.setVisible(core < 4);
+    if (core < 4)
     {
         divider();
-        if (stage < 3)
+        if (core < 3)
             timeSignatureBox.setBounds(take(ui::metrics::comboWidth - 4));
         metronomeButton.setBounds(take(metronomeButton.preferredWidth(h)));
         typingButton.setBounds(take(typingButton.preferredWidth(h)));
     }
 
     // The oscilloscope takes the room that's left at the right end; it's the first to go.
-    constexpr int minScopeWidth = 120;
-    constexpr int maxScopeWidth = 220;
-    const bool roomForScope = stage == 0 && bar.getWidth() >= minScopeWidth;
+    const int windowsWidth = stage == 0 ? windowsLabelled : core < 4 ? windowsIconsOnly : 0;
+    const int spare = bar.getWidth() - windowsWidth;
+    const bool roomForScope = core == 0 && spare >= minScopeWidth;
     scope.setVisible(roomForScope);
     if (roomForScope)
     {
-        const int width = std::min(maxScopeWidth, bar.getWidth());
+        const int width = std::min(maxScopeWidth, spare);
         scope.setBounds(bar.removeFromRight(width).withSizeKeepingCentre(width, h));
+        bar.removeFromRight(gap);
+    }
+
+    // The window buttons, right-aligned next to the oscilloscope (or the bar's end).
+    for (std::size_t i = 0; i < windows.size(); ++i)
+    {
+        auto* button = windows[i].first;
+        button->setVisible(windowsWidth > 0);
+        if (stage > 0)
+            button->setButtonText({});
+    }
+    if (windowsWidth > 0)
+    {
+        for (std::size_t i = windows.size(); i-- > 0;)
+        {
+            const int width = stage == 0 ? labelledWidths[i] : h;
+            windows[i].first->setBounds(bar.removeFromRight(width).withSizeKeepingCentre(width, h));
+            bar.removeFromRight(gap);
+        }
+        transportDividers.push_back(bar.getRight() - 1);
     }
 }
 
@@ -1554,6 +1652,11 @@ void MainComponent::updateShortcutHints()
                         {"fine down", tempoDownFine}});
     hint(metronomeButton, {{"", toggleMetronome}});
     hint(typingButton, {{"", toggleTypingKeyboard}});
+    hint(playlistButton, {{"", jls::commands::showPlaylist}});
+    hint(rackButton, {{"", jls::commands::toggleChannelRack}});
+    hint(pianoRollButton, {{"", jls::commands::showPianoRoll}});
+    hint(mixerButton, {{"", jls::commands::toggleMixer}});
+    hint(browserButton, {{"", jls::commands::toggleBrowser}});
     hint(channelRack.loopSwitch(), {{"", toggleRackLoop}});
     for (int i = 0; i < 3; ++i)
         hint(channelRack.lengthButton(i), {{"", rackShow16 + i}});
@@ -1814,6 +1917,9 @@ void MainComponent::showAbout()
 void MainComponent::timerCallback()
 {
     engine.collectGarbage();
+    // Windows are shown and hidden from many places (commands, menus, their close buttons):
+    // keep the window buttons' LEDs in step. Cheap when nothing changed.
+    updateWindowButtons();
 
     // The audio device (re)started with a new format: rebuild effect processors for it.
     const double rate = engine.preparedSampleRate();

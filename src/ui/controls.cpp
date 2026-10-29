@@ -3,6 +3,7 @@
 #include "BinaryData.h"
 #include "ui/theme.h"
 
+#include <array>
 #include <cmath>
 
 namespace jls::ui
@@ -134,6 +135,54 @@ juce::Path iconPath(Icon icon, bool& filled)
         p.lineTo(19, 15);
         p.lineTo(15, 15);
         break;
+    case Icon::channelRack:
+        for (float y : {3.5f, 10.0f, 16.5f})
+            for (float x : {3.5f, 10.0f, 16.5f})
+                p.addRoundedRectangle(x, y, 4.0f, 4.0f, 1.0f);
+        break;
+    case Icon::playlist:
+        p.addRoundedRectangle(3.0f, 4.0f, 10.0f, 4.0f, 1.0f);
+        p.addRoundedRectangle(10.0f, 10.0f, 11.0f, 4.0f, 1.0f);
+        p.addRoundedRectangle(5.0f, 16.0f, 9.0f, 4.0f, 1.0f);
+        break;
+    case Icon::pianoRoll:
+        p.startNewSubPath(6, 3);
+        p.lineTo(6, 21);
+        for (float y : {7.0f, 12.0f, 17.0f})
+        {
+            p.startNewSubPath(2.5f, y);
+            p.lineTo(6.0f, y);
+        }
+        p.startNewSubPath(10, 6);
+        p.lineTo(15, 6);
+        p.startNewSubPath(13, 12);
+        p.lineTo(21, 12);
+        p.startNewSubPath(10, 18);
+        p.lineTo(16, 18);
+        break;
+    case Icon::browser:
+        p.startNewSubPath(3, 17);
+        p.lineTo(3, 7);
+        p.quadraticTo(3, 5, 5, 5);
+        p.lineTo(9, 5);
+        p.lineTo(11, 7);
+        p.lineTo(19, 7);
+        p.quadraticTo(21, 7, 21, 9);
+        p.lineTo(21, 17);
+        p.quadraticTo(21, 19, 19, 19);
+        p.lineTo(5, 19);
+        p.quadraticTo(3, 19, 3, 17);
+        p.closeSubPath();
+        break;
+    case Icon::mixer:
+        for (const auto [x, cap] : {std::pair{6.0f, 9.0f}, {12.0f, 15.0f}, {18.0f, 7.0f}})
+        {
+            p.startNewSubPath(x, 3);
+            p.lineTo(x, 21);
+            p.startNewSubPath(x - 2.5f, cap);
+            p.lineTo(x + 2.5f, cap);
+        }
+        break;
     case Icon::none:
         break;
     }
@@ -212,6 +261,14 @@ void IconButton::setFlat(bool shouldBeFlat)
     repaint();
 }
 
+juce::Colour IconButton::inkColour() const
+{
+    const auto& c = currentTheme().colours;
+    if (!isEnabled())
+        return colour(c.textDim).withMultipliedAlpha(0.6f);
+    return colour(getToggleState() ? c.activeText : c.text);
+}
+
 int IconButton::preferredWidth(int height) const
 {
     const auto label = getButtonText();
@@ -221,6 +278,63 @@ int IconButton::preferredWidth(int height) const
     if (icon != Icon::none)
         width += metrics::iconSize + iconLabelGap;
     return width;
+}
+
+// ------------------------------------------------------------------------------- WindowButton
+
+namespace
+{
+// LED brightness by steps from the focused window; further than this stays at the last.
+constexpr std::array windowLedLevels{1.0f, 0.6f, 0.35f, 0.18f};
+constexpr float windowLedInset = 9.0f; // from the button's sides
+constexpr float windowLedTop = 5.0f;
+constexpr float windowLedHeight = 3.0f;
+} // namespace
+
+void WindowButton::setOrder(int stepsFromFocus)
+{
+    if (stepsFromFocus != order)
+    {
+        order = stepsFromFocus;
+        repaint();
+    }
+}
+
+juce::Colour WindowButton::inkColour() const
+{
+    const auto& c = currentTheme().colours;
+    if (order < 0)
+        return colour(c.textDim);
+    return colour(order == 0 ? c.activeText : c.text);
+}
+
+juce::Rectangle<float> WindowButton::contentArea() const
+{
+    // Below the LED.
+    return getLocalBounds().toFloat().withTrimmedTop(windowLedTop);
+}
+
+void WindowButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
+{
+    IconButton::paintButton(g, highlighted, down);
+
+    // The LED, like the step keys': the theme's step colour, by order.
+    const auto bounds = getLocalBounds().toFloat();
+    juce::Path led;
+    led.addRoundedRectangle(bounds.getX() + windowLedInset, bounds.getY() + windowLedTop,
+                            bounds.getWidth() - 2.0f * windowLedInset, windowLedHeight,
+                            windowLedHeight / 2.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.45f));
+    g.fillPath(led);
+    if (order < 0)
+        return;
+    const float level =
+        windowLedLevels[std::min(static_cast<std::size_t>(order), windowLedLevels.size() - 1)];
+    const auto lit = colour(currentTheme().colours.stepOn).withMultipliedAlpha(level);
+    if (order == 0)
+        juce::DropShadow(lit, 6, {}).drawForPath(g, led);
+    g.setColour(order == 0 ? lit.brighter(0.3f) : lit);
+    g.fillPath(led);
 }
 
 void IconButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
@@ -250,9 +364,8 @@ void IconButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
         g.drawRoundedRectangle(box, metrics::cornerRadius, metrics::borderWidth);
     }
 
-    auto ink = colour(on ? c.activeText : c.text);
-    if (!isEnabled())
-        ink = colour(c.textDim).withMultipliedAlpha(0.6f);
+    const auto ink = inkColour();
+    bounds = contentArea();
     const auto label = getButtonText();
     const auto iconSize = static_cast<float>(metrics::iconSize);
     if (label.isEmpty())

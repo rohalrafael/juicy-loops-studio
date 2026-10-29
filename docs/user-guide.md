@@ -139,11 +139,19 @@ Details of the file format: [project-format.md](project-format.md).
   for the **spectrum** (levels by frequency, 30 Hz to 16 kHz), and again for the waveform; the
   choice is remembered.
 
-In a narrow window the oscilloscope goes first, then Metronome and Keys show only their icons, then the clock's time and the
-time signature are hidden.
 - **Time signature:** beats per bar (n/4).
 - **Metronome:** on/off.
 - **Keys:** typing keyboard to piano on/off (Ctrl+T).
+- **Window buttons** (right end, next to the oscilloscope): **Playlist** (F5), **Channel rack**
+  (F6), **Piano roll** (F7), **Mixer** (F9) and **Browser** (Alt+F8), the same as their keys and
+  the View menu. The LED on each shows the Ctrl+Tab order: brightest for the area that has the
+  focus, dimmer for each Tab further along, dark while the window is hidden (its label is dimmed
+  too). It follows Settings › Ctrl+Tab order and moves along while you cycle. The buttons show
+  their names when there's room beside the oscilloscope, otherwise just their icons (the tooltip
+  names the window and its key).
+
+In a narrow window the oscilloscope goes first, then Metronome and Keys show only their icons,
+then the clock's time and the time signature are hidden.
 
 Plugins follow the tempo, time signature and position, so arpeggiators, tempo-synced delays
 and LFOs stay in time with the song. In PAT mode they see the pattern as a loop, in SONG mode

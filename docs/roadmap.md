@@ -19,14 +19,6 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
-- Window buttons in the transport bar (2026-10-29, maintainer's request): buttons that show the
-  Channel Rack, Playlist, Browser and Piano Roll, left of the oscilloscope, so they're one click
-  away instead of only in the View menu. They run the existing commands (F6, F5, Alt+F8, F7; the
-  tooltips show the keys) and show which windows are open. The buttons also show the Ctrl+Tab
-  focus order (e.g. colour fading along the order); the maintainer is choosing the cue from
-  mockups. Chosen: an LED on each button (bright for the focused window, dimmer along the
-  order, dark when hidden), a Mixer (F9) button too, and drawn icons (icon + label when there's
-  room, icon only when the bar is narrow).
 - LED toggles instead of "On" text buttons (2026-10-29): the Sampler's Cut itself and Volume
   envelope, the effect panel's bypass. Same LED as the step keys and window buttons.
 - Piano Roll look (2026-10-29): calmer keys and grid, notes lit from above, a framed velocity

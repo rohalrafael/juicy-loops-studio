@@ -38,6 +38,12 @@ enum class Icon
     windowMinimize,
     windowMaximize,
     windowRestore, // un-maximize
+    // The windows (the transport bar's window buttons):
+    channelRack, // a grid of step keys
+    playlist,    // clips on tracks
+    pianoRoll,   // a keyboard edge and notes
+    browser,     // a folder
+    mixer,       // three faders
 };
 
 // Draws `icon` centred in `area`, scaled to fit, stroked (or filled) in `colour`.
@@ -68,9 +74,37 @@ class IconButton : public juce::Button
 
     void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
 
+  protected:
+    // The icon's and label's colour (WindowButton dims the buttons of hidden windows).
+    virtual juce::Colour inkColour() const;
+    // Where the icon and label are centred (WindowButton leaves room for its LED).
+    virtual juce::Rectangle<float> contentArea() const { return getLocalBounds().toFloat(); }
+
   private:
     Icon icon;
     bool flat = false;
+};
+
+// A transport-bar button that shows a window (Playlist, Channel rack...). An LED on it shows the
+// window's place in the Ctrl+Tab order: brightest (with a glow) for the focused window, dimmer
+// for each step further along the order, dark while the window is hidden, whose label is dimmed
+// too. With an empty label it shows just the icon (a narrow transport bar).
+class WindowButton final : public IconButton
+{
+  public:
+    using IconButton::IconButton;
+
+    // Steps from the focused window in the Ctrl+Tab order: 0 = focused, 1 = the next Tab, ...;
+    // -1 = hidden.
+    void setOrder(int stepsFromFocus);
+
+    void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
+
+  private:
+    juce::Colour inkColour() const override;
+    juce::Rectangle<float> contentArea() const override;
+
+    int order = -1;
 };
 
 // Letter keys for a popup menu while it's open, as in FL (right-click a channel, press D to

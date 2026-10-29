@@ -27,12 +27,6 @@ starting one.
   is `model/clipboard`. Decided: pasting replaces the target channel's steps in that pattern, as
   in FL (undoable).
 
-- A click in empty space deselects and adds a note (2026-10-29, maintainer's request): with notes
-  selected in the Piano Roll, a left-click elsewhere should both clear the selection and place a
-  note, instead of only deselecting. This reverses the 2026-10-17 choice ("a click outside a
-  selection only deselects, as in FL"; user guide, *Piano Roll*). Decided: the Playlist follows
-  (a click in empty space deselects and places a clip).
-
 - Plugin windows can go to the background (2026-10-29, maintainer's request): today a plugin's
   panel always stays in front of the Playlist, Channel Rack and the rest, because on Linux the
   plugin draws in its own native window that the app can't draw over (user guide, *Windows*).

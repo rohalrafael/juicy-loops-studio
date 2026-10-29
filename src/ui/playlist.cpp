@@ -9,7 +9,8 @@ namespace jls::ui
 namespace
 {
 
-constexpr float edgeGrabWidth = 6.0f; // pixels at a clip's ends that resize / trim it
+constexpr float edgeGrabWidth = 6.0f;  // pixels at a clip's ends that resize / trim it
+constexpr float clickTolerance = 4.0f; // a Ctrl+drag smaller than this is a Ctrl+click
 constexpr int minimumBars = 64;
 constexpr int spareBars = 8; // empty room after the last clip
 
@@ -237,14 +238,8 @@ void PlaylistGrid::mouseDown(const juce::MouseEvent& e)
         grabTrack = view.trackAtY(e.position.y);
         return;
     }
-    if (dragClip < 0 && !view.selection.empty())
-    {
-        // A click on empty space with a selection only deselects (FL does the same).
-        view.clearSelection();
-        drag = Drag::none;
-        dragClip = -1;
-        return;
-    }
+    if (dragClip < 0)
+        view.clearSelection(); // empty space: deselect, then place a clip below
     if (dragClip >= 0)
     {
         // A clip's edges resize or trim just that clip.
@@ -372,13 +367,28 @@ void PlaylistGrid::mouseUp(const juce::MouseEvent&)
 {
     if (drag == Drag::select)
     {
-        // Every clip the rectangle touches.
         const auto band = juce::Rectangle<float>(bandStart, bandEnd);
-        view.selection.clear();
-        const auto& clips = view.document().project().playlist.clips;
-        for (std::size_t i = 0; i < clips.size(); ++i)
-            if (band.intersects(clipBounds(clips[i])))
-                view.selection.push_back(static_cast<int>(i));
+        if (band.getWidth() < clickTolerance && band.getHeight() < clickTolerance)
+        {
+            // Ctrl+click without a drag: the clip under the mouse joins the selection or leaves
+            // it, like Shift+click (with nothing selected, that selects just it).
+            if (const int index = clipAt(bandStart); index >= 0)
+            {
+                if (view.isSelected(index))
+                    std::erase(view.selection, index);
+                else
+                    view.selection.push_back(index);
+            }
+        }
+        else
+        {
+            // Every clip the rectangle touches.
+            view.selection.clear();
+            const auto& clips = view.document().project().playlist.clips;
+            for (std::size_t i = 0; i < clips.size(); ++i)
+                if (band.intersects(clipBounds(clips[i])))
+                    view.selection.push_back(static_cast<int>(i));
+        }
         repaint();
     }
     drag = Drag::none;

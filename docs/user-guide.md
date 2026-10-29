@@ -240,7 +240,7 @@ installed, the channel stays silent and keeps them.
 
 | Do this | To |
 |---|---|
-| Left-click empty space | Place the selected pattern (snapped), and keep dragging to move it |
+| Left-click empty space | Place the selected pattern (snapped), and keep dragging to move it (with clips selected, it also deselects them) |
 | Click a clip | Select it (just it); drag to move it in time or to another track |
 | Shift + click a clip | Add it to the selection, or take it out |
 | Drag a clip's right end | Make it longer (the pattern repeats) or shorter |
@@ -268,6 +268,7 @@ The parts' clips are labelled with just the channel ("Kick"); the full names are
 picker. It's one step to undo.
 | Drag an item from the picker | Place it where you drop it (a chip with its name follows the mouse) |
 | Ctrl + drag | Select the clips in a rectangle (outlined) |
+| Ctrl + click a clip | Add it to the selection, or take it out (like Shift + click) |
 | Drag a selected clip | Move all selected clips together |
 | Delete / Ctrl+A / Esc | Delete the selected clips / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected clips; paste them right after the copied bars (again: after the last paste) |
@@ -323,6 +324,7 @@ The right-hand column has cutting and the envelope:
 | Snap (top right) | Beat, step, ½ step, ⅓ step or none |
 | Click / drag the ruler | Move the playhead there (snapped); switches to PAT mode |
 | Ctrl + drag | Select the notes in a rectangle (outlined) |
+| Ctrl + click a note | Add it to the selection, or take it out (like Shift + click) |
 | Drag a selected note | Move all selected notes together (its right end resizes them all) |
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected notes; paste them right after the copied beats (again: after the last paste), also into another channel or pattern |
@@ -336,7 +338,7 @@ The right-hand column has cutting and the envelope:
 
 The slicer is for rolls (hi-hats, snares): draw one long note, slice it, then shape the pieces'
 velocities. The pieces stay selected, so slicing again makes them finer.
-With a selection, a click elsewhere only deselects (it doesn't add a note), as in FL.
+With a selection, a click in empty space deselects and adds a note there, in one go.
 Clicking a note (or adding one) plays it on the channel for as long as you hold the button;
 while you drag it up or down you hear the new pitch. That's only while the song is stopped or paused: during playback, editing notes is silent (and a preview still sounding stops when playback starts), while clicking a key on the keyboard still plays it.
 

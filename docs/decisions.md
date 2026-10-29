@@ -467,3 +467,9 @@ not). Older entries describe the project as it was then; later entries may super
   (`PianoRollView::previewNote`), and a preview still sounding stops as soon as playback starts
   (the view's timer). Clicking a keyboard key still sounds while playing: that's a deliberate "let
   me hear this note".
+
+- 2026-10-29: **Selecting in the Piano Roll and the Playlist** (maintainer's requests). A click in
+  empty space with a selection now deselects *and* adds a note / places a clip, reversing the
+  2026-10-17 "only deselects, as in FL". Ctrl+click without dragging (under 4 px) toggles the
+  note or clip under the mouse in the selection, like Shift+click; it used to start an empty
+  rubber band, which cleared the selection.

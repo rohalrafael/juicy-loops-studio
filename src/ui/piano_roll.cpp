@@ -12,6 +12,7 @@ namespace
 
 constexpr float edgeGrabWidth = 6.0f;
 constexpr float minLabelledNoteWidth = 34.0f; // narrower notes go without their name
+constexpr float clickTolerance = 4.0f;        // a Ctrl+drag smaller than this is a Ctrl+click
 constexpr int minimumBars = 4;
 constexpr int spareBars = 2;
 
@@ -429,16 +430,8 @@ void NoteGrid::mouseDown(const juce::MouseEvent& e)
         view.previewNote(note.pitch, note.velocity);
         return;
     }
-    if (!view.selection.empty())
-    {
-        // A click on empty space with a selection only deselects (FL does the same).
-        view.clearSelection();
-        drag = Drag::none;
-        dragNote = -1;
-        return;
-    }
-
-    // Empty space: add a note here, then keep dragging it.
+    // Empty space: deselect, add a note here, then keep dragging it.
+    view.clearSelection();
     model::Note note;
     note.startTick = view.snapDown(view.tickAtX(e.position.x));
     note.pitch = juce::jlimit(0, PianoRollView::numPitches - 1, view.pitchAtY(e.position.y));
@@ -538,13 +531,28 @@ void NoteGrid::mouseUp(const juce::MouseEvent&)
 {
     if (drag == Drag::select)
     {
-        // Every note the rectangle touches.
         const auto band = juce::Rectangle<float>(bandStart, bandEnd);
-        view.selection.clear();
-        const auto& notes = view.notes();
-        for (std::size_t i = 0; i < notes.size(); ++i)
-            if (band.intersects(noteBounds(notes[i])))
-                view.selection.push_back(static_cast<int>(i));
+        if (band.getWidth() < clickTolerance && band.getHeight() < clickTolerance)
+        {
+            // Ctrl+click without a drag: the note under the mouse joins the selection or leaves
+            // it, like Shift+click (with nothing selected, that selects just it).
+            if (const int index = noteAt(bandStart); index >= 0)
+            {
+                if (view.isSelected(index))
+                    std::erase(view.selection, index);
+                else
+                    view.selection.push_back(index);
+            }
+        }
+        else
+        {
+            // Every note the rectangle touches.
+            view.selection.clear();
+            const auto& notes = view.notes();
+            for (std::size_t i = 0; i < notes.size(); ++i)
+                if (band.intersects(noteBounds(notes[i])))
+                    view.selection.push_back(static_cast<int>(i));
+        }
         repaint();
     }
     drag = Drag::none;

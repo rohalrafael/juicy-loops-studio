@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds an optimized app (with debug symbols, so crash backtraces stay readable) and puts it in
-# dist/ for the user to run on their machine. Meant for the sandbox, whose Arch toolchain and
-# libraries match the user's desktop:
+# dist/ for the user to run on their machine. Meant for the sandbox: built on Ubuntu LTS, it runs
+# on that release and newer ones (see docs/sandbox.md):
 #
 #   tools/sandbox.sh run tools/dist.sh
 #   ./dist/juicy-loops-studio        # on the host

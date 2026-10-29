@@ -33,7 +33,10 @@ and AI agents): start with [AGENTS.md](AGENTS.md).
 Requirements: CMake ≥ 3.24, a C++20 compiler (GCC 11+, Clang 14+, MSVC 2022), git.
 
 On Linux you also need the ALSA, JACK, FreeType, fontconfig and X11 development
-packages. Arch: `sudo pacman -S cmake ninja alsa-lib jack2 freetype2 fontconfig libx11 libxrandr libxinerama libxcursor libxcomposite libxi`
+packages. Ubuntu / Debian: `sudo apt install build-essential cmake ninja-build libasound2-dev
+libjack-jackd2-dev libfreetype-dev libfontconfig1-dev libx11-dev libxext-dev libxrandr-dev
+libxinerama-dev libxcursor-dev libxcomposite-dev libxi-dev libxrender-dev libgl1-mesa-dev`.
+Arch: `sudo pacman -S cmake ninja alsa-lib jack2 freetype2 fontconfig libx11 libxrandr libxinerama libxcursor libxcomposite libxi`
 
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug

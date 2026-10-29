@@ -1,7 +1,7 @@
 # Decision log
 
 Why things are the way they are, newest last. Each entry records *what* was decided and *why*,
-plus known gaps at the time. Add an entry when you make a decision others would otherwise
+plus known gaps at the time (the current list is in `roadmap.md`). Add an entry when you make a decision others would otherwise
 second-guess (a convention, a trade-off, a dependency, a behaviour copied from FL or deliberately
 not). Older entries describe the project as it was then; later entries may supersede them.
 
@@ -378,3 +378,11 @@ not). Older entries describe the project as it was then; later entries may super
   `SpscQueue`'s intended `alignas(64)` padding, missing `<algorithm>` includes, JACK only on
   Linux. All tests pass on Windows. Development stays Linux-first; dispatch Windows only when
   needed.
+
+- 2026-10-29: The sandbox moved from Arch to **Ubuntu 26.04 LTS** (the maintainer's desktop is
+  now Ubuntu 26.10). A binary runs on the glibc it was built against and newer, so building on
+  the LTS gives a `dist/` binary for 26.04, 26.10 and later (and most Ubuntu users), where
+  building on 26.10 would shut 26.04 out. Same GCC (15.2) either way; the LTS image changes less
+  and is supported until 2031. Surge XT isn't in Ubuntu, so it comes from its pinned official
+  `.deb`. Docker 29's BuildKit refuses `docker build --network bridge`, so `sandbox.sh` passes
+  `--network` to builds only for `host`.

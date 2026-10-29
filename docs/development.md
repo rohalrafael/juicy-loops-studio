@@ -20,7 +20,7 @@ JUCE is fetched by CMake and patched (`patches/`, applied by `cmake/apply_patch.
 `tools/sandbox.sh` runs a Docker container with the toolchain, Xvfb/xdotool/ImageMagick, JACK
 (dummy driver), alsa-utils, gdb and test plugins (LSP, Surge XT): nothing to install on your
 machine. It builds into `build-docker/`. `tools/sandbox.sh run tools/dist.sh` makes an optimized
-binary in `dist/` that runs on a host with the same distribution. Details: [sandbox.md](sandbox.md).
+binary in `dist/` that runs on Ubuntu 26.04 or newer. Details: [sandbox.md](sandbox.md).
 
 ## Testing the UI
 

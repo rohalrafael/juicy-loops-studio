@@ -24,7 +24,10 @@ NETWORK="${JLS_SANDBOX_NETWORK:-bridge}"
 running() { [ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null)" = "true" ]; }
 
 build() {
-    docker build --network "$NETWORK" -t "$IMAGE" \
+    # BuildKit only takes "host" or "none" for --network; its default is the bridge.
+    local net=()
+    [ "$NETWORK" = "bridge" ] || net=(--network "$NETWORK")
+    docker build "${net[@]}" -t "$IMAGE" \
         --build-arg USERNAME="$USER_NAME" --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" \
         "$ROOT/docker"
 }

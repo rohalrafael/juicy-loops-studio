@@ -2,23 +2,26 @@
 
 A container with everything needed to build, test and drive the app, so tools and test plugins
 don't have to be installed on the developer's machine. Defined in `docker/Dockerfile`
-(Arch Linux, matching the main developer's desktop; CI keeps testing Ubuntu) and run through
+(Ubuntu 26.04 LTS, the same family as the main developer's desktop and CI) and run through
 `tools/sandbox.sh`.
 
 ## What's inside
 
 | For | Packages |
 |---|---|
-| Building | base-devel, cmake, ninja, clang (clang-format), ccache, git, github-cli |
-| JUCE on Linux | alsa-lib, freetype2, fontconfig, X11 libraries, mesa |
-| UI testing | xorg-server-xvfb, xdotool, imagemagick (see `tools/ui-test.sh`) |
-| Audio / MIDI | jack2 + jack-example-tools (a dummy JACK server runs in the container), alsa-utils |
+| Building | build-essential (GCC), cmake, ninja-build, clang, clang-format, ccache, git, gh |
+| JUCE on Linux | ALSA, JACK, FreeType, fontconfig, X11 and GL development packages |
+| UI testing | xvfb, xdotool, imagemagick (see `tools/ui-test.sh`) |
+| Audio / MIDI | jackd2 + jack-example-tools (a dummy JACK server runs in the container), alsa-utils |
 | Debugging | gdb |
-| Test plugins | lsp-plugins (VST3 + LV2), surge-xt |
+| Test plugins | lsp-plugins (VST3 + LV2) from Ubuntu; Surge XT from its official `.deb` (pinned) |
 | Claude Code | installed with the official script into the home volume (updates itself) |
 
-Inside, you have passwordless `sudo`, so anything else is a `sudo pacman -S` away. Add packages
-that are needed for good to the Dockerfile.
+Inside, you have passwordless `sudo`, so anything else is a `sudo apt-get install` away (after `sudo apt-get update`: the image
+drops the package lists). Add packages that are needed for good to the Dockerfile.
+
+The Ubuntu release is the Dockerfile's `UBUNTU_VERSION` argument. Stay on an LTS: a binary
+works on the release it was built on and on newer ones, not on older ones.
 
 ## Using it
 
@@ -60,10 +63,15 @@ with `dist/BUILD-INFO.txt` (version, commit, date). Run it on the host:
 ./dist/juicy-loops-studio
 ```
 
-It works on the host because the sandbox is the same distribution (check with
-`ldd dist/juicy-loops-studio | grep "not found"`). It uses the host's own settings and plugins.
-If the sandbox image gets much newer libraries than the host (e.g. the host hasn't been updated
-in a while), update the host or rebuild the image from an older snapshot.
+It runs on Ubuntu 26.04 and newer (and on other distributions with glibc 2.43 or newer and the
+same libraries); check with `ldd dist/juicy-loops-studio | grep "not found"`. It uses the host's
+own settings and plugins.
+
+What it needs at run time is on any desktop install: glibc and libstdc++, ALSA (`libasound2t64`),
+FreeType and fontconfig, linked directly; the X11 libraries, loaded when it starts (on Wayland it
+runs through XWayland). Optional, loaded only if present: JACK (`libjack.so.0`; on a PipeWire
+desktop, install `pipewire-jack` to get the JACK device type, ALSA works without it) and
+`libxss1` (keeps the screen saver off).
 
 ## Plugins in the sandbox
 

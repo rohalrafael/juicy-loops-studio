@@ -25,7 +25,7 @@
 #   features      close-ups for the README's feature list (feature-*.webp), at twice the pixels
 #                 (interface size 200 % on a screen twice as large: the same layout, sharp when
 #                 shown large): the scale control, the shortcuts window, the Ctrl+Tab setting,
-#                 the Browser's list, parts looping under longer ones, and Split by channel
+#                 parts looping under longer ones, and Split by channel
 #
 # The project decides what's in the pictures: its patterns, notes, arrangement, mixer effects,
 # and which pattern is current. Panels are found by their native windows' titles (MainComponent
@@ -363,11 +363,6 @@ scene_features() {
     xdotool key ctrl+comma
     sleep 1.5
     shot_part feature-ctrl-tab "Settings" 0 548 442 92 # the Focus section
-    stop_app
-
-    start_app "$THEME" 2
-    open_first_sample
-    shot_part feature-browser "Browser" 0 0 260 300
     stop_app
 
     start_app "$THEME" 2

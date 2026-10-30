@@ -25,6 +25,9 @@ The workflow is FL's, so there's nothing to relearn:
 - The habits carry over too. Loading a sample renames the channel after it, the Channel Rack
   floats over the Playlist and goes behind it when you click there, patterns can be made unique
   or split by channel, and the mixer's green lights mute and solo.
+- You can audition samples inside the song: while it plays, Ctrl+↑ / ↓ in the Browser loads
+  the previous or next sample straight into the selected channel, so you hear each 808 in the
+  beat.
 
 ## Made easier
 
@@ -52,19 +55,6 @@ that's already taken asks before it moves. Export your set and import it on anot
 menus and tooltips always show your current keys.
 
 <img src="docs/images/feature-shortcuts.webp" alt="The Keyboard shortcuts window, with two keys on Redo and on Delete selection" width="568">
-
-### Audition samples inside the song
-
-<img src="docs/images/feature-browser.webp" alt="The Browser with an 808 selected" width="260" align="right">
-
-While the song plays, Ctrl+↑ / ↓ in the Browser loads the previous or next sample straight
-into the selected channel. You hear each 808 in the beat instead of on its own, and keep the one
-that fits.
-
-Clicking a sample or landing on it with the arrow keys previews it and draws its waveform.
-Previews load in the background, so even long samples don't hold anything up.
-
-<br clear="right">
 
 ### Short parts loop by themselves
 

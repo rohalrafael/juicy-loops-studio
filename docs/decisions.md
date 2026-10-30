@@ -608,8 +608,9 @@ not). Older entries describe the project as it was then; later entries may super
 
 - 2026-10-30: **The README shows the app, from a generated project.** The README leads with a
   screenshot and explains the app to FL users: what's the same (concepts, keys, mouse), then
-  what saves time (scale switch, Ctrl+Tab, rebindable shortcuts, auditioning samples in the
-  song, looping parts, Split by channel laying parts out on their own tracks). It names FL only
+  what saves time (scale switch, Ctrl+Tab, rebindable shortcuts, looping parts, Split by
+  channel laying parts out on their own tracks). Auditioning samples in the song with
+  Ctrl+↑ / ↓ was first listed there too; FL does it already, so it moved to the familiar list. It names FL only
   descriptively and claims nothing about what FL lacks, since those claims haven't been checked
   against FL's manual. (Split by channel was first pitched as keeping the song sounding the same;
   the maintainer pointed out FL's does that too, and what helps is the layout.) The images come

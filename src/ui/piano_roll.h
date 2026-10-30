@@ -193,12 +193,13 @@ class PianoRollView final : public juce::Component, private juce::Timer
 
     juce::String subtitle;              // the channel and pattern, after the title
     juce::Rectangle<int> snapLabelArea; // "Snap" and "Scale", painted
-    juce::Rectangle<int> scaleLabelArea;
+    juce::Rectangle<int> subtitleArea;  // after the scale controls
     juce::ComboBox snapBox;
     IconButton sliceButton{Icon::slice, "Slice"};
     juce::ComboBox sliceBox; // piece size, as an id in ticks
-    juce::ComboBox rootBox;  // C .. B
-    juce::ComboBox scaleBox; // Off / Major / Minor
+    LedToggle scaleToggle;   // the scale highlight on / off
+    juce::ComboBox rootBox;  // C .. B; choosing one turns the highlight on
+    juce::ComboBox scaleBox; // Major / Minor
     std::unique_ptr<Keyboard> keyboard;
     std::unique_ptr<Ruler> ruler;
     std::unique_ptr<VelocityLane> velocityLane;

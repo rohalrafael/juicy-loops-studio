@@ -60,6 +60,7 @@ class MixerView final : public juce::Component
 {
   public:
     static constexpr int preferredHeight = 268;
+    static constexpr int minHeight = 200;
 
     explicit MixerView(model::Document& document);
     ~MixerView() override;
@@ -79,6 +80,8 @@ class MixerView final : public juce::Component
     std::function<bool(model::EffectId)> isEffectAvailable;
 
     model::Document& document() { return doc; }
+    // Along its top edge: the owner wires it and keeps the height.
+    EdgeResizer edge{false};
     void selectTrack(int track);
     void editTrack(int track, const std::function<void(model::MixerTrack&)>& change, int gesture);
 

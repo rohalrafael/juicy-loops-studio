@@ -47,6 +47,11 @@ bool pianoRollDarkKeys(juce::PropertiesFile& file)
     return file.getValue(pianoRollKeysKey, "ivory") == "dark";
 }
 
+bool defaultScaleMinor(juce::PropertiesFile& file)
+{
+    return file.getValue(defaultScaleKey, "major") == "minor";
+}
+
 double uiScale(juce::PropertiesFile& file)
 {
     return std::clamp(file.getDoubleValue(uiScaleKey, 1.0), 0.75, 2.0);
@@ -132,6 +137,15 @@ class SettingsPanel final : public FormPanel
                           pianoRollKeys.getSelectedItemIndex() == 0 ? "ivory" : "dark");
         };
 
+        defaultScale.addItemList({"Major", "Minor"}, 1);
+        defaultScale.setSelectedItemIndex(settings::defaultScaleMinor(file) ? 1 : 0,
+                                          juce::dontSendNotification);
+        defaultScale.onChange = [this]
+        {
+            file.setValue(settings::defaultScaleKey,
+                          defaultScale.getSelectedItemIndex() == 0 ? "major" : "minor");
+        };
+
         const int field = tempoStep.preferredWidth(metrics::controlHeight);
         addSection("Tempo");
         addRow("Tempo step", {{&tempoStep, field}});
@@ -153,6 +167,8 @@ class SettingsPanel final : public FormPanel
         addNote(
             "Ivory keys like a piano's, or dark keys in the panel colours. Either way only C and "
             "the scale's root are labelled; point at a key, or its row, to see its name.");
+        addRow("Default scale", {{&defaultScale, 160}});
+        addNote("The scale new projects start with (the scale highlight itself starts off).");
         addSection("Focus");
         addRow("Ctrl+Tab order", {{&focusOrder, 160}});
         addNote("Last used first works like Alt+Tab: press once to go back to the previous area, "
@@ -187,6 +203,7 @@ class SettingsPanel final : public FormPanel
     juce::ComboBox interfaceSize;
     juce::ComboBox loopedStepClick;
     juce::ComboBox pianoRollKeys;
+    juce::ComboBox defaultScale;
 };
 
 // JUCE's key-mapping editor plus Import / Export of whole shortcut sets (an XML file).

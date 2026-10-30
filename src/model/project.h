@@ -244,6 +244,11 @@ std::vector<Note> sliceNote(const Note& note, int pieceTicks);
 // nothing moved.
 bool moveNotes(std::vector<Note>& notes, const std::vector<int>& indices, int ticks, int semitones);
 
+// Quick legato (FL's Ctrl+L): each of `notes[indices]` lasts until the next later start among
+// them, so notes starting together (a chord) end together; the last ones keep their length.
+// Returns false if nothing changed.
+bool legatoNotes(std::vector<Note>& notes, const std::vector<int>& indices);
+
 // Scales the Piano Roll can highlight.
 enum class Scale
 {
@@ -273,8 +278,11 @@ struct Project
     ChannelId selectedChannel = 0; // 0 = none; the Piano Roll (F7) edits this channel
     int selectedMixerTrack = 1;    // the mixer track whose effect slots are shown
     bool showAudioClips = false;   // Channel Rack also lists audio-clip channels
-    Scale scale = Scale::none;     // Piano Roll scale highlight
-    int scaleRoot = 0;             // 0 = C ... 11 = B
+    // The Piano Roll's scale highlight: on or off, and its key and mode, kept while it's off.
+    bool scaleOn = false;
+    Scale scale = Scale::major; // major or minor (the new-project default is a setting)
+    int scaleRoot = 0;          // 0 = C ... 11 = B
+    Scale shownScale() const { return scaleOn ? scale : Scale::none; }
     bool songMode = false;
 
     ChannelId nextChannelId = 1;
@@ -347,11 +355,10 @@ struct Project
     int stepsPerBar() const { return beatsPerBar * stepsPerBeat; }
     double secondsPerStep() const { return 60.0 / tempo / stepsPerBeat; }
     int lengthInSteps(const Pattern& pattern) const { return pattern.lengthInSteps(stepsPerBar()); }
-    // Steps the Channel Rack shows: its grid setting, or more when the notes reach further.
-    int gridLengthInSteps(const Pattern& pattern) const
-    {
-        return std::max(pattern.gridSteps, lengthInSteps(pattern));
-    }
+    // Steps the Channel Rack shows: its grid setting (16 / 32 / 64, or dragged). It doesn't grow
+    // with the notes (long Piano Roll parts made it run off the screen): notes further on are
+    // only in the Piano Roll.
+    int gridLengthInSteps(const Pattern& pattern) const { return pattern.gridSteps; }
     // Length of the arrangement: end of the last clip, rounded up to a whole bar (0 if empty).
     int songLengthInSteps() const;
 

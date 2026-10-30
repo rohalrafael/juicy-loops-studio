@@ -563,3 +563,21 @@ not). Older entries describe the project as it was then; later entries may super
   highlighted strip or row too. Esc closes the Sampler (after opening or clicking it) or
   the focused plugin panel, as in FL, and otherwise deselects as before; the action is also the
   "Close window" command (no default key besides Esc).
+
+- 2026-10-30: **Piano Roll, Channel Rack and panel requests** (maintainer's list).
+  - Shift / Ctrl + arrows move every note when none are selected, as in FL.
+  - Legato (FL's quick legato, Ctrl+L, since Alt+L is the rack's Loop): each note lasts until the
+    next later start among the notes it works on, so a chord ends together; the last notes keep
+    their length (`model::legatoNotes`).
+  - The Channel Rack no longer grows with the notes (maintainer's choice: never, not even up to
+    64 steps): long Piano Roll parts made it run off the screen. It shows its 16 / 32 / 64 or
+    dragged length; what plays is unchanged.
+  - Each row's loop switch is at the end of the row, after the steps.
+  - The Browser's width, the Mixer's height and the picker's width are dragged at their inner
+    edges (`ui::EdgeResizer`) and kept in the settings, not the project: they're about the
+    screen, not the song.
+  - The Piano Roll's scale moved next to the title: an on/off light, the key (choosing one turns
+    the highlight on) and Major / Minor, kept while off (`Project::scaleOn`). New projects take
+    the mode from Settings › Default scale (Major).
+  - The window buttons' LEDs only say whether a window is open; the Ctrl+Tab order cue is gone
+    (the maintainer wants to rethink Ctrl+Tab as a whole).

@@ -52,6 +52,8 @@ class BrowserPanel final : public juce::Component,
     std::function<void(const juce::File&)> onUseSample; // load into the selected channel
     std::function<void()> onSideChanged;                // the owner re-lays out
     std::function<void()> onClose;
+    // Along its inner edge (beside the main area): the owner wires it and keeps the width.
+    EdgeResizer edge{true};
 
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }

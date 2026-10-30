@@ -28,7 +28,7 @@ constexpr int stepMargin = 3;   // above and below the step keys (and a note pre
 // A row, left to right (see ChannelRow::resized): mute LED, pan and volume knobs, mixer track,
 // name, loop switch, steps.
 constexpr int columnGap = 4;  // after the LED, each knob and the mixer track
-constexpr int loopWidth = 20; // a row's loop switch, between the name and the steps
+constexpr int loopWidth = 20; // a row's loop switch, after the steps
 constexpr int nameX = metrics::ledWidth + columnGap + 2 * (metrics::knobSize + columnGap) +
                       metrics::insertWidth + columnGap;
 // Everything in a row except the steps.
@@ -581,7 +581,7 @@ void ChannelRow::resized()
     insert.setBounds(area.removeFromLeft(metrics::insertWidth));
     area.removeFromLeft(columnGap);
     name.setBounds(area.removeFromLeft(metrics::nameWidth).reduced(0, 2));
-    loop.setBounds(area.removeFromLeft(loopWidth));
+    loop.setBounds(area.removeFromRight(loopWidth)); // at the end of the row
     steps.setBounds(area);
 }
 
@@ -741,7 +741,7 @@ void ChannelRack::setUpButtons()
 
     loopButton.setClickingTogglesState(true);
     loopButton.setTooltip("Loop: channels whose notes are shorter than the pattern repeat them "
-                          "(each channel's loop switch is next to its name)");
+                          "(each channel's loop switch is at the end of its row)");
     loopButton.onClick = [this]
     {
         const bool on = loopButton.getToggleState();

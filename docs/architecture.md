@@ -470,9 +470,12 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
 - `IconButton`: icon, icon + label or label; toggles show the active colours
 - `LedToggle` / `paintLed()`: on/off switches drawn as a round light, the same as a channel's
   mute light (lit in the theme's `led` colour)
-- `WindowButton`: the transport bar's window buttons, an `IconButton` with an LED showing the
-  window's place in the Ctrl+Tab order (`MainComponent::tabSteps`, refreshed on focus changes and
-  by the 30 Hz timer, since windows are shown and hidden from many places)
+- `WindowButton`: the transport bar's window buttons, an `IconButton` with an LED lit while its
+  window is open (refreshed by the 30 Hz timer, since windows are shown and hidden from many
+  places)
+- `EdgeResizer`: a thin strip along a panel's edge that resizes it (Browser, Mixer, picker); it
+  reports the mouse's movement since the press, read from the system, so it holds while the panel
+  (a native window) moves. `MainComponent` keeps the sizes, in the settings
 - `joinSegments()`: buttons drawn as one segmented control (PAT | SONG, 16 | 32 | 64)
 - `paintPanelHeader()` + `HeaderLayout`: every panel's header (title, dim subtitle, controls
   from the right)

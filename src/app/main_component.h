@@ -131,12 +131,15 @@ class MainComponent final : public juce::AudioAppComponent,
     bool closeFocusedWindow();
     bool samplerFocused = false; // opened or clicked since the last focus change
     void layoutTransportBar(juce::Rectangle<int> bar);
-    void raiseFocusedArea();  // stacking of the floating Channel Rack follows the focus
-    void updateFocusFrames(); // the focused docked panel's accent frame
-    // How many Ctrl+Tab presses reach `area` from the focused one (0 = it has the focus), or -1
-    // while it's hidden. Follows Settings > Ctrl+Tab order, and a cycle in progress.
-    int tabSteps(Area area);
-    void updateWindowButtons(); // their LEDs: the windows' Ctrl+Tab order
+    void raiseFocusedArea();    // stacking of the floating Channel Rack follows the focus
+    void updateFocusFrames();   // the focused docked panel's accent frame
+    void updateWindowButtons(); // their LEDs: which windows are open
+    void setUpPanelResizing();  // the Browser, Mixer and picker edges
+    static constexpr int minBrowserWidth = 160;
+    static constexpr int maxBrowserWidth = 700;
+    int browserWidth = 0; // as dragged (settings)
+    int mixerHeight = 0;
+    int sizeDragStart = 0; // the width or height when a drag started
     void cycleFocus(int direction);
     void modifierKeysChanged(const juce::ModifierKeys& modifiers) override; // ends an MRU cycle
     void navigate(juce::CommandID command);

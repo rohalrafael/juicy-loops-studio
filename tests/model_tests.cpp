@@ -458,9 +458,10 @@ TEST_CASE("The rack's grid length doesn't change what plays; notes do")
 
     pattern.set(drums, 20, true); // a note in the second bar: now both bars play
     CHECK(project.lengthInSteps(pattern) == 32);
-    // Notes past the grid widen it.
-    pattern.notes[drums].push_back({60 * ticksPerStep, ticksPerStep, 60, 0.8f});
-    CHECK(project.gridLengthInSteps(pattern) == 64);
+    // Notes past the grid don't widen the rack (long Piano Roll parts ran off the screen).
+    pattern.notes[drums].push_back({200 * ticksPerStep, ticksPerStep, 60, 0.8f});
+    CHECK(project.gridLengthInSteps(pattern) == 32);
+    CHECK(project.lengthInSteps(pattern) == 208); // but they still play
 }
 
 TEST_CASE("Loop switches are saved")
@@ -499,14 +500,30 @@ TEST_CASE("Scales: major and minor degrees from any root")
     doc.setViewState(
         [](Project& p)
         {
+            p.scaleOn = true;
             p.scale = Scale::minor;
             p.scaleRoot = 9;
         });
     doc.undo();
     CHECK(doc.project().scale == Scale::minor);
+    CHECK(doc.project().shownScale() == Scale::minor);
     const auto loaded = loadProject(saveProject(doc.project(), "/p/s.jlp"), "/p/s.jlp", {});
+    CHECK(loaded.project->scaleOn);
     CHECK(loaded.project->scale == Scale::minor);
     CHECK(loaded.project->scaleRoot == 9);
+
+    // Off keeps the key and mode; files from before "scaleOn" map "none" to off.
+    doc.setViewState([](Project& p) { p.scaleOn = false; });
+    CHECK(doc.project().shownScale() == Scale::none);
+    const auto off = loadProject(saveProject(doc.project(), "/p/s.jlp"), "/p/s.jlp", {});
+    CHECK_FALSE(off.project->scaleOn);
+    CHECK(off.project->scale == Scale::minor);
+    auto old = saveProject(doc.project(), "/p/s.jlp");
+    for (const auto& [before, after] :
+         {std::pair{"\"scaleOn\": false", "\"x\": 0"}, std::pair{"\"minor\"", "\"none\""}})
+        old.replace(old.find(before), std::string(before).size(), after);
+    const auto older = loadProject(old, "/p/s.jlp", {});
+    CHECK_FALSE(older.project->scaleOn);
 }
 
 TEST_CASE("Slicing a note into rolls keeps pitch, velocity and the overall span")
@@ -617,4 +634,21 @@ TEST_CASE("Copied clips paste a whole number of bars later, on their own tracks"
     CHECK(pasted[0].startStep == 32);
     CHECK(pasted[1].startStep == 40);
     CHECK(pasted[1].track == 3);
+}
+
+TEST_CASE("Legato stretches each note to the next start; chords end together")
+{
+    std::vector<Note> notes{
+        {0, 24, 60},   {0, 12, 64}, // a chord at the start
+        {96, 10, 62},               // a beat later
+        {200, 30, 65},              // the last note keeps its length
+        {400, 5, 70},               // not part of the selection
+    };
+    CHECK(legatoNotes(notes, {0, 1, 2, 3}));
+    CHECK(notes[0].lengthTicks == 96);
+    CHECK(notes[1].lengthTicks == 96);
+    CHECK(notes[2].lengthTicks == 104);
+    CHECK(notes[3].lengthTicks == 30);
+    CHECK(notes[4].lengthTicks == 5);
+    CHECK_FALSE(legatoNotes(notes, {0, 1, 2, 3})); // already legato
 }

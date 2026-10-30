@@ -127,8 +127,7 @@ class PianoRollView::Keyboard final : public juce::Component
                 g.setColour(seam);
                 g.fillRect(row.withHeight(1.0f));
             }
-            const bool root =
-                project.scale != model::Scale::none && (pitch - project.scaleRoot + 120) % 12 == 0;
+            const bool root = project.scaleOn && (pitch - project.scaleRoot + 120) % 12 == 0;
             if (pitch % 12 == 0 || root || pitch == view.hoverPitch)
             {
                 // On a black key the name sits in the white part beside it.
@@ -589,7 +588,7 @@ void NoteGrid::paint(juce::Graphics& g)
         const auto light = towardsText(t, 0.045f);
         const auto dark = colour(t.colours.lane);
         juce::Colour rowColour = isBlackKey(pitch) ? dark : light;
-        if (project.scale != model::Scale::none)
+        if (project.scaleOn)
         {
             if (!model::isInScale(pitch, project.scaleRoot, project.scale))
                 rowColour = dark;
@@ -723,29 +722,39 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     sliceBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(sliceBox);
 
-    // Scale highlight: Off / Major / Minor, on a root note.
-    scaleBox.addItem("Off", 1);
-    scaleBox.addItem("Major", 2);
-    scaleBox.addItem("Minor", 3);
-    scaleBox.setTooltip("Highlight the notes of a scale");
-    rootBox.setTooltip("Root note of the scale");
+    // Scale highlight: a light to turn it on or off, the key (choosing one turns it on) and
+    // Major / Minor. Key and mode are kept while it's off.
+    scaleToggle.setTooltip("Scale highlight on / off");
+    scaleToggle.onClick = [this]
+    {
+        const bool on = scaleToggle.getToggleState();
+        doc.setViewState([on](model::Project& p) { p.scaleOn = on; });
+    };
+    scaleToggle.setWantsKeyboardFocus(false);
+    scaleToggle.setMouseClickGrabsKeyboardFocus(false);
+    addAndMakeVisible(scaleToggle);
+    rootBox.setTooltip("Key of the scale (turns the highlight on)");
     for (int root = 0; root < 12; ++root)
         rootBox.addItem(noteName(root + 60).dropLastCharacters(1), root + 1);
-    const auto setScale = [this]
+    rootBox.onChange = [this]
     {
-        const auto scale = static_cast<model::Scale>(std::max(0, scaleBox.getSelectedId() - 1));
         const int root = std::max(0, rootBox.getSelectedId() - 1);
-        const auto& p = doc.project();
-        if (scale != p.scale || root != p.scaleRoot)
-            doc.setViewState(
-                [scale, root](model::Project& project)
-                {
-                    project.scale = scale;
-                    project.scaleRoot = root;
-                });
+        doc.setViewState(
+            [root](model::Project& p)
+            {
+                p.scaleRoot = root;
+                p.scaleOn = true;
+            });
     };
-    scaleBox.onChange = setScale;
-    rootBox.onChange = setScale;
+    scaleBox.addItem("Major", static_cast<int>(model::Scale::major));
+    scaleBox.addItem("Minor", static_cast<int>(model::Scale::minor));
+    scaleBox.setTooltip("Major or minor scale");
+    scaleBox.onChange = [this]
+    {
+        const auto scale = static_cast<model::Scale>(scaleBox.getSelectedId());
+        if (scale != doc.project().scale)
+            doc.setViewState([scale](model::Project& p) { p.scale = scale; });
+    };
     for (auto* box : {&scaleBox, &rootBox})
     {
         box->setWantsKeyboardFocus(false);
@@ -908,6 +917,19 @@ bool PianoRollView::edit(EditAction action)
         sliceNotes();
         return true;
     }
+    if (action == EditAction::legato)
+    {
+        // The selection, or all notes when none are selected (they stay unselected).
+        auto indices = selection;
+        if (indices.empty())
+            for (int i = 0; i < static_cast<int>(notes().size()); ++i)
+                indices.push_back(i);
+        auto stretched = notes();
+        if (model::legatoNotes(stretched, indices))
+            editNotes([stretched](std::vector<model::Note>& list) { list = stretched; }, 0);
+        grid.repaint();
+        return true;
+    }
     if (action == EditAction::duplicate || action == EditAction::lengthToStep)
     {
         // These work on the selection, or on all notes when none are selected.
@@ -947,7 +969,12 @@ bool PianoRollView::edit(EditAction action)
         action == EditAction::moveLeft || action == EditAction::moveRight ||
         action == EditAction::moveOctaveUp || action == EditAction::moveOctaveDown)
     {
-        if (selection.empty())
+        // The selection, or all notes when none are selected (as in FL); they stay unselected.
+        auto indices = selection;
+        if (indices.empty())
+            for (int i = 0; i < static_cast<int>(notes().size()); ++i)
+                indices.push_back(i);
+        if (indices.empty())
             return false;
         const int ticks = action == EditAction::moveLeft    ? -snapTicks()
                           : action == EditAction::moveRight ? snapTicks()
@@ -958,7 +985,7 @@ bool PianoRollView::edit(EditAction action)
                               : action == EditAction::moveOctaveDown ? -12
                                                                      : 0;
         auto moved = notes();
-        if (model::moveNotes(moved, selection, ticks, semitones))
+        if (model::moveNotes(moved, indices, ticks, semitones))
             editNotes([moved](std::vector<model::Note>& list) { list = moved; }, 0);
         return true;
     }
@@ -1088,9 +1115,9 @@ void PianoRollView::refresh()
         subtitle = text;
         repaint(0, 0, getWidth(), headerHeight);
     }
-    scaleBox.setSelectedId(static_cast<int>(project.scale) + 1, juce::dontSendNotification);
+    scaleToggle.setToggleState(project.scaleOn, juce::dontSendNotification);
+    scaleBox.setSelectedId(static_cast<int>(project.scale), juce::dontSendNotification);
     rootBox.setSelectedId(project.scaleRoot + 1, juce::dontSendNotification);
-    rootBox.setEnabled(project.scale != model::Scale::none);
     updateGridSize();
     grid.repaint();
     keyboard->repaint();
@@ -1146,11 +1173,13 @@ void PianoRollView::paint(juce::Graphics& g)
 {
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
-    juce::ignoreUnused(t);
-    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Piano roll", subtitle,
-                     sliceButton.getX() - metrics::controlGap);
+    paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Piano roll", {},
+                     scaleToggle.getX());
+    // The channel and pattern, after the scale controls.
+    g.setColour(colour(t.colours.textDim));
+    g.setFont(juce::FontOptions(metrics::textBody));
+    g.drawText(subtitle, subtitleArea, juce::Justification::centredLeft, true);
     paintHeaderLabel(g, "Snap", snapLabelArea);
-    paintHeaderLabel(g, "Scale", scaleLabelArea);
 }
 
 void PianoRollView::resized()
@@ -1160,12 +1189,15 @@ void PianoRollView::resized()
     snapBox.setBounds(header.fromRight(metrics::comboWidth));
     snapLabelArea = header.fromRight(headerLabelWidth("Snap"));
     header.space(metrics::controlGap);
-    scaleBox.setBounds(header.fromRight(metrics::comboWidth));
-    rootBox.setBounds(header.fromRight(metrics::narrowComboWidth));
-    scaleLabelArea = header.fromRight(headerLabelWidth("Scale"));
-    header.space(metrics::controlGap);
     sliceBox.setBounds(header.fromRight(metrics::comboWidth));
     sliceButton.setBounds(header.fromRight(sliceButton.preferredWidth(metrics::controlHeight)));
+    // Right after the title: the scale highlight, then the channel and pattern.
+    header.fromLeft(textWidth(semiboldFont(metrics::textLarge), "Piano roll") +
+                    metrics::controlGap);
+    scaleToggle.setBounds(header.fromLeft(metrics::ledWidth + 6));
+    rootBox.setBounds(header.fromLeft(metrics::narrowComboWidth));
+    scaleBox.setBounds(header.fromLeft(metrics::comboWidth));
+    subtitleArea = header.remaining();
 
     auto top = area.removeFromTop(rulerHeight);
     top.removeFromLeft(keyboardWidth);

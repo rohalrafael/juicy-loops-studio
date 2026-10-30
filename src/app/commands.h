@@ -77,6 +77,7 @@ enum ID : juce::CommandID
     snapFiner,
     snapCoarser,
     notesToStepLength,
+    legato, // stretch the selected notes (or all) to the next one
 
     // Channel Rack
     toggleRackLoop = 0x1601,

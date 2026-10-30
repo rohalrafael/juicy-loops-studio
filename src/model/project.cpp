@@ -648,6 +648,29 @@ std::vector<Note> sliceNote(const Note& note, int pieceTicks)
     return pieces;
 }
 
+bool legatoNotes(std::vector<Note>& notes, const std::vector<int>& indices)
+{
+    std::vector<int> starts;
+    for (int i : indices)
+        if (i >= 0 && i < static_cast<int>(notes.size()))
+            starts.push_back(notes[static_cast<std::size_t>(i)].startTick);
+    std::sort(starts.begin(), starts.end());
+    bool changed = false;
+    for (int i : indices)
+    {
+        if (i < 0 || i >= static_cast<int>(notes.size()))
+            continue;
+        auto& note = notes[static_cast<std::size_t>(i)];
+        const auto next = std::upper_bound(starts.begin(), starts.end(), note.startTick);
+        if (next == starts.end())
+            continue; // the last notes keep their length
+        const int length = *next - note.startTick;
+        changed = changed || length != note.lengthTicks;
+        note.lengthTicks = length;
+    }
+    return changed;
+}
+
 bool moveNotes(std::vector<Note>& notes, const std::vector<int>& indices, int ticks, int semitones)
 {
     int dt = ticks;

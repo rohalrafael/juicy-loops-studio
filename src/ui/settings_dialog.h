@@ -32,6 +32,8 @@ inline constexpr const char* pluginWindowsKey = "pluginWindows";
 inline constexpr const char* loopedStepClickKey = "loopedStepClick";
 // The Piano Roll's keyboard: "ivory" (the default) or "dark" (in the panel colours).
 inline constexpr const char* pianoRollKeysKey = "pianoRollKeys";
+// The scale mode new projects start with in the Piano Roll: "major" (the default) or "minor".
+inline constexpr const char* defaultScaleKey = "defaultScale";
 
 double tempoStep(juce::PropertiesFile& file);
 double tempoStepFine(juce::PropertiesFile& file);
@@ -40,6 +42,7 @@ bool focusOrderRecent(juce::PropertiesFile& file);
 bool pluginsInsideApp(juce::PropertiesFile& file);
 bool loopedStepClickCopies(juce::PropertiesFile& file);
 bool pianoRollDarkKeys(juce::PropertiesFile& file);
+bool defaultScaleMinor(juce::PropertiesFile& file);
 } // namespace settings
 
 void showSettingsDialog(juce::PropertiesFile& file);

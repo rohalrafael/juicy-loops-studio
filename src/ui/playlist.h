@@ -155,6 +155,10 @@ class PlaylistView final : public juce::Component,
     // Set by the owner: Split by channel (right-click a pattern in the picker).
     std::function<void(model::PatternId)> onSplitPattern;
     void setPickerVisible(bool shouldShow);
+    // The picker's width, dragged at its right edge (double-click resets); the owner saves it.
+    static constexpr int defaultPickerWidth = 130;
+    void setPickerWidth(int width);
+    std::function<void(int width)> onPickerWidthChanged;
     bool isPickerVisible() const;
 
     void paint(juce::Graphics& g) override;
@@ -186,6 +190,9 @@ class PlaylistView final : public juce::Component,
     model::ClipClipboard clipboard;                         // Ctrl+C / Ctrl+V
     std::map<const engine::SampleBuffer*, Peaks> peakCache; // audio clips' waveforms
     std::unique_ptr<Picker> picker;
+    int pickerWidth = defaultPickerWidth;
+    int pickerDragStart = 0;
+    EdgeResizer pickerEdge{true};
     IconButton pickerButton{Icon::list, "Picker"};
     float zoom = 4.0f; // pixels per step: a 4/4 bar is 64 px
 

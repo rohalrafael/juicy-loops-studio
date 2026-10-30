@@ -447,7 +447,8 @@ class MixerView::Slots final : public juce::Component
 MixerView::MixerView(model::Document& document)
     : doc(document), slots(std::make_unique<Slots>(*this))
 {
-
+    addAndMakeVisible(edge);
+    edge.setAlwaysOnTop(true);
     for (int i = 0; i <= model::Mixer::numInserts; ++i)
     {
         strips.push_back(std::make_unique<MixerStrip>(*this, i));
@@ -513,6 +514,7 @@ void MixerView::resized()
     for (std::size_t i = 0; i < strips.size(); ++i)
         strips[i]->setBounds(static_cast<int>(i) * MixerStrip::width, 0, MixerStrip::width,
                              stripHeight);
+    edge.setBounds(getLocalBounds().withHeight(EdgeResizer::thickness));
 }
 
 // ---------------------------------------------------------------------------- EffectPanel

@@ -688,7 +688,6 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
 class PlaylistView::Picker final : public juce::Component
 {
   public:
-    static constexpr int width = 130;
     static constexpr int rowHeight = 22;
 
     explicit Picker(PlaylistView& v) : view(v) {}
@@ -908,6 +907,21 @@ PlaylistView::PlaylistView(model::Document& document, engine::Transport& transpo
     pickerButton.setToggleState(true, juce::dontSendNotification);
     pickerButton.setTooltip("Show the picker: all patterns and audio clips");
     pickerButton.onClick = [this] { setPickerVisible(pickerButton.getToggleState()); };
+    addChildComponent(pickerEdge);
+    pickerEdge.setAlwaysOnTop(true);
+    pickerEdge.onStart = [this] { pickerDragStart = pickerWidth; };
+    pickerEdge.onDrag = [this](int delta) { setPickerWidth(pickerDragStart + delta); };
+    const auto saveWidth = [this]
+    {
+        if (onPickerWidthChanged)
+            onPickerWidthChanged(pickerWidth);
+    };
+    pickerEdge.onEnd = saveWidth;
+    pickerEdge.onReset = [this, saveWidth]
+    {
+        setPickerWidth(defaultPickerWidth);
+        saveWidth();
+    };
     pickerButton.setWantsKeyboardFocus(false);
     pickerButton.setMouseClickGrabsKeyboardFocus(false);
     addAndMakeVisible(pickerButton);
@@ -963,6 +977,16 @@ double PlaylistView::playheadStep() const
         return -1.0;
     // An empty song doesn't loop: show where the ruler was clicked.
     return songLength > 0 ? std::fmod(position, static_cast<double>(songLength)) : position;
+}
+
+void PlaylistView::setPickerWidth(int width)
+{
+    width = std::clamp(width, 90, 400);
+    if (width != pickerWidth)
+    {
+        pickerWidth = width;
+        resized();
+    }
 }
 
 void PlaylistView::setPickerVisible(bool shouldShow)
@@ -1220,7 +1244,12 @@ void PlaylistView::resized()
     pickerButton.setBounds(header.fromLeft(pickerButton.preferredWidth(metrics::controlHeight)));
 
     if (picker->isVisible())
-        picker->setBounds(area.removeFromLeft(Picker::width));
+    {
+        picker->setBounds(area.removeFromLeft(pickerWidth));
+        pickerEdge.setBounds(
+            picker->getBounds().withTrimmedLeft(pickerWidth - EdgeResizer::thickness));
+    }
+    pickerEdge.setVisible(picker->isVisible());
     auto top = area.removeFromTop(rulerHeight);
     top.removeFromLeft(trackNameWidth);
     ruler->setBounds(top);

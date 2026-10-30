@@ -190,6 +190,8 @@ class BrowserPanel::Waveform final : public juce::Component, public juce::Settab
 BrowserPanel::BrowserPanel(engine::PreviewPlayer& p, juce::PropertiesFile& s)
     : preview(p), settings(s), waveform(std::make_unique<Waveform>())
 {
+    addAndMakeVisible(edge);
+    edge.setAlwaysOnTop(true);
     right = settings.getBoolValue("browserOnRight", false);
     folders = juce::StringArray::fromLines(settings.getValue("browserFolders"));
     folders.removeEmptyStrings();
@@ -474,6 +476,9 @@ void BrowserPanel::resized()
     nameLabel.setBounds(footer.remaining());
     waveform->setBounds(area.removeFromBottom(waveformHeight));
     tree.setBounds(area.reduced(2));
+    const auto bounds = getLocalBounds();
+    edge.setBounds(right ? bounds.withWidth(EdgeResizer::thickness)
+                         : bounds.withTrimmedLeft(bounds.getWidth() - EdgeResizer::thickness));
 }
 
 } // namespace jls::ui

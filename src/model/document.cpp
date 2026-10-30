@@ -16,6 +16,7 @@ void keepViewState(const Project& from, Project& to)
     if (to.findChannel(from.selectedChannel) != nullptr)
         to.selectedChannel = from.selectedChannel;
     to.selectedMixerTrack = from.selectedMixerTrack;
+    to.scaleOn = from.scaleOn;
     to.scale = from.scale;
     to.showAudioClips = from.showAudioClips;
     to.scaleRoot = from.scaleRoot;

@@ -315,6 +315,49 @@ void LedButton::mouseDown(const juce::MouseEvent& e)
         onClick(e.mods.isCommandDown() || e.mods.isPopupMenu());
 }
 
+EdgeResizer::EdgeResizer(bool isHorizontal) : horizontal(isHorizontal)
+{
+    setMouseCursor(horizontal ? juce::MouseCursor::LeftRightResizeCursor
+                              : juce::MouseCursor::UpDownResizeCursor);
+    setRepaintsOnMouseActivity(true);
+}
+
+void EdgeResizer::paint(juce::Graphics& g)
+{
+    if (!isMouseOverOrDragging())
+        return;
+    g.setColour(colour(currentTheme().colours.accent).withAlpha(0.6f));
+    const auto bounds = getLocalBounds().toFloat();
+    g.fillRect(horizontal ? bounds.withSizeKeepingCentre(2.0f, bounds.getHeight())
+                          : bounds.withSizeKeepingCentre(bounds.getWidth(), 2.0f));
+}
+
+void EdgeResizer::mouseDown(const juce::MouseEvent&)
+{
+    start = juce::Desktop::getMousePosition();
+    if (onStart)
+        onStart();
+}
+
+void EdgeResizer::mouseDrag(const juce::MouseEvent&)
+{
+    const auto moved = juce::Desktop::getMousePosition() - start;
+    if (onDrag)
+        onDrag(horizontal ? moved.x : moved.y);
+}
+
+void EdgeResizer::mouseUp(const juce::MouseEvent&)
+{
+    if (onEnd)
+        onEnd();
+}
+
+void EdgeResizer::mouseDoubleClick(const juce::MouseEvent&)
+{
+    if (onReset)
+        onReset();
+}
+
 LedToggle::LedToggle() : juce::Button({})
 {
     setClickingTogglesState(true);
@@ -329,18 +372,16 @@ void LedToggle::paintButton(juce::Graphics& g, bool highlighted, bool)
 
 namespace
 {
-// LED brightness by steps from the focused window; further than this stays at the last.
-constexpr std::array windowLedLevels{1.0f, 0.6f, 0.35f, 0.18f};
 constexpr float windowLedInset = 9.0f; // from the button's sides
 constexpr float windowLedTop = 5.0f;
 constexpr float windowLedHeight = 3.0f;
 } // namespace
 
-void WindowButton::setOrder(int stepsFromFocus)
+void WindowButton::setOpen(bool isOpen)
 {
-    if (stepsFromFocus != order)
+    if (isOpen != open)
     {
-        order = stepsFromFocus;
+        open = isOpen;
         repaint();
     }
 }
@@ -348,9 +389,7 @@ void WindowButton::setOrder(int stepsFromFocus)
 juce::Colour WindowButton::inkColour() const
 {
     const auto& c = currentTheme().colours;
-    if (order < 0)
-        return colour(c.textDim);
-    return colour(order == 0 ? c.activeText : c.text);
+    return colour(open ? c.text : c.textDim);
 }
 
 juce::Rectangle<float> WindowButton::contentArea() const
@@ -363,7 +402,7 @@ void WindowButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
 {
     IconButton::paintButton(g, highlighted, down);
 
-    // The LED, like the step keys': the theme's step colour, by order.
+    // The LED, like the step keys': the theme's step colour while the window is open.
     const auto bounds = getLocalBounds().toFloat();
     juce::Path led;
     led.addRoundedRectangle(bounds.getX() + windowLedInset, bounds.getY() + windowLedTop,
@@ -371,14 +410,11 @@ void WindowButton::paintButton(juce::Graphics& g, bool highlighted, bool down)
                             windowLedHeight / 2.0f);
     g.setColour(juce::Colours::black.withAlpha(0.45f));
     g.fillPath(led);
-    if (order < 0)
+    if (!open)
         return;
-    const float level =
-        windowLedLevels[std::min(static_cast<std::size_t>(order), windowLedLevels.size() - 1)];
-    const auto lit = colour(currentTheme().colours.stepOn).withMultipliedAlpha(level);
-    if (order == 0)
-        juce::DropShadow(lit, 6, {}).drawForPath(g, led);
-    g.setColour(order == 0 ? lit.brighter(0.3f) : lit);
+    const auto lit = colour(currentTheme().colours.stepOn);
+    juce::DropShadow(lit, 6, {}).drawForPath(g, led);
+    g.setColour(lit.brighter(0.3f));
     g.fillPath(led);
 }
 

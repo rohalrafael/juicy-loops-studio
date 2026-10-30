@@ -36,7 +36,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
                      "params": { "Size": 0.6, "Damping": 0.4, "Width": 1.0, "Mix": 0.25 } } ] }
   ] },
   "view": { "currentPattern": 1, "selectedChannel": 1, "selectedMixerTrack": 1, "songMode": false,
-            "scale": "minor", "scaleRoot": 9 },
+            "scaleOn": true, "scale": "minor", "scaleRoot": 9 },
   "nextIds": { "channel": 7, "pattern": 2, "effect": 2 }
 }
 ```
@@ -61,7 +61,7 @@ references them, like FL Studio does. Code: `src/model/project_file.{h,cpp}`.
 | `mixer.tracks[]` | Index 0 is the Master, then inserts 1 to 16. `volumeDb` runs from -60 (silence) to +6. `width` is the stereo width, 0 (mono) to 2 (twice as wide); 1, the default for older files, leaves the sound as it is. `solo` comes from older versions (soloing now mutes the other inserts); it's still honoured when set |
 | `mixer.tracks[].effects[]` | In processing order. `type` is an effect id (`filter`, `eq`, `delay`, `reverb`, `compressor`, `softclip`); `params` are by name, in real units |
 | `effects[].plugin` | For `"type": "plugin"`: `{"id": host identifier, "name": display name, "state": base64 of the plugin's own state}`. Kept even if the plugin is missing |
-| `view` | Selections, PAT/SONG mode, `showAudioClips` (Channel Rack filter) and the Piano Roll scale (`scale`: `none`/`major`/`minor`, `scaleRoot`: 0 = C ... 11 = B), restored on open |
+| `view` | Selections, PAT/SONG mode, `showAudioClips` (Channel Rack filter) and the Piano Roll scale (`scaleOn`, `scale`: `major`/`minor`, `scaleRoot`: 0 = C ... 11 = B), restored on open. Files from before `scaleOn` stored `"scale": "none"` for off |
 | `nextIds` | Id counters for new channels, patterns and effects |
 
 ## Loading rules

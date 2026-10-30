@@ -80,10 +80,11 @@ Channel Rack's 16 | 32 | 64: "(Alt+1)"). The defaults, FL's where FL has one:
 | Delete or Backspace / Ctrl+A / Esc | Delete selection / select all / deselect |
 | Esc (Sampler or plugin focused) | Close it: the Sampler after opening or clicking it, a plugin panel while it has the focus (View › Close window) |
 | Ctrl+B | Duplicate: copy the selection and paste it right after (Piano Roll or Playlist) |
-| Shift+↑ / ↓ | Move the selected notes up / down a semitone (Piano Roll) |
-| Ctrl+↑ / ↓ | Piano Roll focused: move the selected notes up / down an octave (Browser focused: previous / next sample into the channel) |
-| Shift+← / → | Move the selected notes earlier / later by the snap (Piano Roll) |
+| Shift+↑ / ↓ | Move the selected notes (all if none are selected) up / down a semitone (Piano Roll) |
+| Ctrl+↑ / ↓ | Piano Roll focused: move the selected notes (or all) up / down an octave (Browser focused: previous / next sample into the channel) |
+| Shift+← / → | Move the selected notes (or all) earlier / later by the snap (Piano Roll) |
 | Shift+D | Shorten the selected notes (all if none are selected) to one step |
+| Ctrl+L | Legato: stretch the selected notes (or all) until the next note; chords end together (Piano Roll) |
 | Alt+U | Slice notes (Piano Roll) |
 | Alt+↑ / Alt+↓ | Slice size smaller / larger |
 | Alt+→ / Alt+← | Snap finer / coarser (Piano Roll or Playlist) |
@@ -155,11 +156,14 @@ Details of the file format: [project-format.md](project-format.md).
 - **Keys:** typing keyboard to piano on/off (Ctrl+T).
 - **Window buttons** (right end, next to the oscilloscope): **Playlist** (F5), **Channel rack**
   (F6), **Piano roll** (F7), **Mixer** (F9) and **Browser** (Alt+F8), the same as their keys and
-  the View menu. The LED on each shows the Ctrl+Tab order: brightest for the area that has the
-  focus, dimmer for each Tab further along, dark while the window is hidden (its label is dimmed
-  too). It follows Settings › Ctrl+Tab order and moves along while you cycle. The buttons show
+  the View menu. The LED on each is lit while that window is open, dark (and its label dimmed)
+  while it's closed. The buttons show
   their names when there's room beside the oscilloscope, otherwise just their icons (the tooltip
   names the window and its key).
+
+**Panel sizes.** Drag the Browser's inner edge, the Mixer's top edge or the Playlist picker's
+right edge to make them wider or taller (a line in the accent colour shows the edge under the
+mouse); double-click the edge to reset. The sizes are remembered.
 
 In a narrow window the oscilloscope goes first, then Metronome and Keys show only their icons,
 then the clock's time and the time signature are hidden.
@@ -216,10 +220,10 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Drop audio files below the rows | Add channels |
 | Click + | Add a channel: **Sample…** or **Instrument ›** (a plugin synth) |
 | Click a note preview | Open the Piano Roll for that channel |
-| 16 \| 32 \| 64 (title bar) | How many steps the rack shows |
+| 16 \| 32 \| 64 (title bar) | How many steps the rack shows. It doesn't grow by itself: a Piano Roll part longer than that still plays in full, but the rack shows only these steps |
 | Drag the handle after the last step | Show more or fewer steps, 4 at a time |
 | **Loop** (title bar) | Loop on/off for the whole rack |
-| Circular arrow next to a name | Loop on/off for that channel |
+| Circular arrow at the end of a row | Loop on/off for that channel |
 
 **Pattern length and looping.** 16 | 32 | 64 and the handle only set how many steps you see.
 The pattern *plays* as far as its notes go, rounded up to whole bars: with notes only in the
@@ -341,13 +345,14 @@ The right-hand column has cutting and the envelope:
 | Drag a selected note | Move all selected notes together (its right end resizes them all) |
 | Delete / Ctrl+A / Esc | Delete the selected notes / select all / deselect |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut the selected notes; paste them right after the copied beats (again: after the last paste), also into another channel or pattern |
-| Shift + arrows | Move the selected notes: ↑ / ↓ a semitone, ← / → by the snap |
-| Ctrl + ↑ / ↓ | Move the selected notes an octave |
+| Shift + arrows | Move the selected notes (all if none are selected): ↑ / ↓ a semitone, ← / → by the snap |
+| Ctrl + ↑ / ↓ | Move the selected notes (or all) an octave |
+| Ctrl+L | Legato: each selected note (or every note) lasts until the next one starts; notes starting together end together; the last ones keep their length |
 | Ctrl+B | Duplicate the selected notes (all if none are selected) right after their beats; the copies get selected, so pressing again keeps going. The clipboard is left alone |
 | Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
 | Click and hold a key on the left | Play that note (slide to play others) |
-| Scale (top right) | Highlight a scale: root note + Major / Minor (Off = plain keys) |
+| Scale (title bar, after "Piano roll") | The green light turns the scale highlight on / off; then the key (choosing one turns the highlight on) and Major / Minor. Key and mode are kept while it's off; new projects start with Settings › Default scale |
 
 The slicer is for rolls (hi-hats, snares): draw one long note, slice it, then shape the pieces'
 velocities. The pieces stay selected, so slicing again makes them finer.
@@ -401,6 +406,7 @@ their end, like FL's default sampler.
 | Plugin windows | Inside the app (panels, the default) or separate windows |
 | Clicking a looped step | Discards the loop (as in FL, the default) or copies the loop in first (see *Channel Rack*) |
 | Keys (Piano Roll) | Ivory (the default) or dark keys in the panel colours |
+| Default scale (Piano Roll) | Major (the default) or Minor: the scale new projects start with |
 | Interface size | Scales the whole interface, text included: 100, 110, 125 or 150 % |
 
 Shortcuts have their own window, **Options › Keyboard shortcuts…** (see *Keyboard* above); audio

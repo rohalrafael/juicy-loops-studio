@@ -23,6 +23,7 @@ enum class EditAction
     moveOctaveUp, // 12 semitones
     moveOctaveDown,
     lengthToStep, // shorten notes to one step
+    legato,       // stretch notes to the next one (FL's quick legato)
 };
 
 } // namespace jls::ui

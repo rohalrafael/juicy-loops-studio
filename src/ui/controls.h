@@ -105,6 +105,35 @@ class LedButton final : public juce::Component, public juce::SettableTooltipClie
     bool on = true;
 };
 
+// A thin strip along a panel's edge that resizes it (the Browser, the Mixer, the Playlist's
+// picker): drag it, double-click to reset. It reports how far the mouse has moved since the press,
+// read from the system so it holds while the panel (a native window) moves under it. Shows a line
+// in the accent colour on hover. The owner keeps the size; the panel places the strip.
+class EdgeResizer final : public juce::Component
+{
+  public:
+    static constexpr int thickness = 7;
+
+    explicit EdgeResizer(bool horizontal); // true: drags left / right (a width)
+
+    std::function<void()> onStart;
+    std::function<void(int delta)> onDrag; // pixels right / down since the press
+    std::function<void()> onEnd;
+    std::function<void()> onReset; // double-click
+
+    void paint(juce::Graphics& g) override;
+    void mouseEnter(const juce::MouseEvent&) override { repaint(); }
+    void mouseExit(const juce::MouseEvent&) override { repaint(); }
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseDrag(const juce::MouseEvent&) override;
+    void mouseUp(const juce::MouseEvent&) override;
+    void mouseDoubleClick(const juce::MouseEvent&) override;
+
+  private:
+    bool horizontal;
+    juce::Point<int> start;
+};
+
 // An on/off switch drawn as a round light, like a channel's mute light: lit while on; a click
 // toggles it. Used instead of buttons labelled "On" (the Sampler, the effect panel's bypass).
 class LedToggle final : public juce::Button
@@ -114,18 +143,15 @@ class LedToggle final : public juce::Button
     void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
 };
 
-// A transport-bar button that shows a window (Playlist, Channel rack...). An LED on it shows the
-// window's place in the Ctrl+Tab order: brightest (with a glow) for the focused window, dimmer
-// for each step further along the order, dark while the window is hidden, whose label is dimmed
-// too. With an empty label it shows just the icon (a narrow transport bar).
+// A transport-bar button that shows a window (Playlist, Channel rack...). An LED on it is lit
+// while the window is open, dark (and the label dimmed) while it's closed. With an empty label it
+// shows just the icon (a narrow transport bar).
 class WindowButton final : public IconButton
 {
   public:
     using IconButton::IconButton;
 
-    // Steps from the focused window in the Ctrl+Tab order: 0 = focused, 1 = the next Tab, ...;
-    // -1 = hidden.
-    void setOrder(int stepsFromFocus);
+    void setOpen(bool isOpen); // whether its window is showing
 
     void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
 
@@ -133,7 +159,7 @@ class WindowButton final : public IconButton
     juce::Colour inkColour() const override;
     juce::Rectangle<float> contentArea() const override;
 
-    int order = -1;
+    bool open = false;
 };
 
 // Letter keys for a popup menu while it's open, as in FL (right-click a channel, press D to

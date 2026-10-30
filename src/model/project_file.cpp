@@ -205,9 +205,8 @@ std::string saveProject(const Project& project, const fs::path& projectFile)
           {"selectedChannel", project.selectedChannel},
           {"selectedMixerTrack", project.selectedMixerTrack},
           {"songMode", project.songMode},
-          {"scale", project.scale == Scale::major   ? "major"
-                    : project.scale == Scale::minor ? "minor"
-                                                    : "none"},
+          {"scaleOn", project.scaleOn},
+          {"scale", project.scale == Scale::minor ? "minor" : "major"},
           {"scaleRoot", project.scaleRoot},
           {"showAudioClips", project.showAudioClips}}},
         {"nextIds",
@@ -529,8 +528,10 @@ LoadResult loadProject(std::string_view text, const fs::path& projectFile,
     project.selectedMixerTrack =
         read.clamped<int>(viewObj, "selectedMixerTrack", 1, 0, Mixer::numInserts);
     project.songMode = read.get<bool>(viewObj, "songMode", false);
+    // Before "scaleOn", "none" meant off and a mode meant on.
     const auto scale = read.get<std::string>(viewObj, "scale", "none");
-    project.scale = scale == "major" ? Scale::major : scale == "minor" ? Scale::minor : Scale::none;
+    project.scale = scale == "minor" ? Scale::minor : Scale::major;
+    project.scaleOn = read.get<bool>(viewObj, "scaleOn", scale == "major" || scale == "minor");
     project.scaleRoot = read.clamped<int>(viewObj, "scaleRoot", 0, 0, 11);
     project.showAudioClips = read.get<bool>(viewObj, "showAudioClips", false);
 

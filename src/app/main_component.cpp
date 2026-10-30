@@ -33,11 +33,20 @@ void noFocus(juce::Component& c)
     c.setMouseClickGrabsKeyboardFocus(false);
 }
 
+// A new project, with the user's default scale mode (Settings > Piano Roll).
+model::Project freshProject(ui::ThemeManager& themes)
+{
+    auto project = model::makeDefaultProject();
+    project.scale = ui::settings::defaultScaleMinor(themes.settingsFile()) ? model::Scale::minor
+                                                                           : model::Scale::major;
+    return project;
+}
+
 } // namespace
 
 MainComponent::MainComponent(ui::ThemeManager& themeManager)
     : themes(themeManager), pluginHost(themeManager.themesFolder().getParentDirectory()),
-      document(model::makeDefaultProject()), playlist(document, engine.transport()),
+      document(freshProject(themeManager)), playlist(document, engine.transport()),
       pianoRoll(document, engine.transport()), mixer(document),
       browser(engine.preview(), themeManager.settingsFile()), effectPanel(document),
       projectFolder(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)),
@@ -138,6 +147,7 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
     browser.previewSeconds = [this] { return ui::settings::previewSeconds(themes.settingsFile()); };
     browser.onSideChanged = [this] { resized(); };
     browser.onClose = [this] { toggleBrowser(); };
+    setUpPanelResizing();
     browser.onUseSample = [this](const juce::File& file) { channelRack.loadIntoSelected(file); };
     playlist.loadSample = [this](const juce::File& file) { return sampleLoader.load(file); };
     playlist.onOpenAudioChannel = [this](model::ChannelId id) { showSampler(id, false); };
@@ -808,29 +818,58 @@ void MainComponent::updateFocusFrames()
     updateWindowButtons();
 }
 
-int MainComponent::tabSteps(Area area)
+void MainComponent::setUpPanelResizing()
 {
-    const auto order = tabOrder();
-    const auto index = [&order](const FocusStop& stop)
-    { return static_cast<int>(std::find(order.begin(), order.end(), stop) - order.begin()); };
-    const int n = static_cast<int>(order.size());
-    const int at = index({area});
-    if (at == n)
-        return -1;
-    const int from = index({focusArea, focusArea == Area::plugin ? focusPlugin : nullptr});
-    if (from == n) // the focused area was just hidden: count from before the first
-        return at + 1;
-    return (at - from + n) % n;
+    // The Browser's width, the Mixer's height and the picker's width are dragged at their inner
+    // edges (double-click resets) and remembered between sessions, in the settings.
+    auto& settings = themes.settingsFile();
+    browserWidth = std::max(minBrowserWidth,
+                            settings.getIntValue("browserWidth", ui::BrowserPanel::preferredWidth));
+    mixerHeight = std::max(ui::MixerView::minHeight,
+                           settings.getIntValue("mixerHeight", ui::MixerView::preferredHeight));
+    playlist.setPickerWidth(
+        settings.getIntValue("pickerWidth", ui::PlaylistView::defaultPickerWidth));
+    playlist.onPickerWidthChanged = [this](int width)
+    { themes.settingsFile().setValue("pickerWidth", width); };
+
+    browser.edge.onStart = [this] { sizeDragStart = browserWidth; };
+    browser.edge.onDrag = [this](int delta)
+    {
+        // Its inner edge is on the right when the Browser is on the left, and the other way.
+        browserWidth = std::clamp(sizeDragStart + (browser.onRight() ? -delta : delta),
+                                  minBrowserWidth, maxBrowserWidth);
+        resized();
+    };
+    browser.edge.onEnd = [this] { themes.settingsFile().setValue("browserWidth", browserWidth); };
+    browser.edge.onReset = [this]
+    {
+        browserWidth = ui::BrowserPanel::preferredWidth;
+        resized();
+        themes.settingsFile().setValue("browserWidth", browserWidth);
+    };
+
+    mixer.edge.onStart = [this] { sizeDragStart = mixerHeight; };
+    mixer.edge.onDrag = [this](int delta)
+    {
+        mixerHeight = std::clamp(sizeDragStart - delta, ui::MixerView::minHeight, 2000);
+        resized();
+    };
+    mixer.edge.onEnd = [this] { themes.settingsFile().setValue("mixerHeight", mixerHeight); };
+    mixer.edge.onReset = [this]
+    {
+        mixerHeight = ui::MixerView::preferredHeight;
+        resized();
+        themes.settingsFile().setValue("mixerHeight", mixerHeight);
+    };
 }
 
 void MainComponent::updateWindowButtons()
 {
-    const int main = tabSteps(Area::mainView);
-    playlistButton.setOrder(playlist.isVisible() ? main : -1);
-    pianoRollButton.setOrder(pianoRoll.isVisible() ? main : -1);
-    rackButton.setOrder(tabSteps(Area::channelRack));
-    mixerButton.setOrder(tabSteps(Area::mixer));
-    browserButton.setOrder(tabSteps(Area::browser));
+    playlistButton.setOpen(playlist.isVisible());
+    pianoRollButton.setOpen(pianoRoll.isVisible());
+    rackButton.setOpen(channelRack.isVisible());
+    mixerButton.setOpen(mixer.isVisible());
+    browserButton.setOpen(browser.isVisible());
 }
 
 void MainComponent::modifierKeysChanged(const juce::ModifierKeys& modifiers)
@@ -1219,9 +1258,10 @@ void MainComponent::resized()
     if (browser.isVisible())
     {
         // Full height next to everything below the transport bar.
-        areas.setBounds(browser, browser.onRight()
-                                     ? area.removeFromRight(ui::BrowserPanel::preferredWidth)
-                                     : area.removeFromLeft(ui::BrowserPanel::preferredWidth));
+        // As dragged at its edge, leaving the main area at least half the window.
+        const int width = std::min(browserWidth, std::max(minBrowserWidth, area.getWidth() / 2));
+        areas.setBounds(browser, browser.onRight() ? area.removeFromRight(width)
+                                                   : area.removeFromLeft(width));
         if (browser.onRight())
             area.removeFromRight(panelGap);
         else
@@ -1229,7 +1269,9 @@ void MainComponent::resized()
     }
     if (mixer.isVisible())
     {
-        const int height = std::min(ui::MixerView::preferredHeight, area.getHeight() / 2);
+        // As dragged at its top edge, up to two thirds of the space.
+        const int height =
+            std::min(mixerHeight, std::max(ui::MixerView::minHeight, area.getHeight() * 2 / 3));
         areas.setBounds(mixer, area.removeFromBottom(height));
         area.removeFromBottom(panelGap);
     }
@@ -1320,6 +1362,7 @@ juce::PopupMenu MainComponent::getMenuForIndex(int index, const juce::String&)
              jls::commands::moveSelectionLeft,
              jls::commands::moveSelectionRight,
              jls::commands::notesToStepLength,
+             jls::commands::legato,
              0,
              jls::commands::sliceNotes,
              jls::commands::sliceFiner,
@@ -1456,6 +1499,7 @@ void MainComponent::getCommandInfo(juce::CommandID id, juce::ApplicationCommandI
     case moveSelectionLeft:
     case moveSelectionRight:
     case notesToStepLength:
+    case jls::commands::legato:
         info.setActive(pianoRoll.isVisible());
         break;
     case jls::commands::deletePattern:
@@ -1589,6 +1633,9 @@ bool MainComponent::perform(const InvocationInfo& info)
         break;
     case notesToStepLength:
         pianoRoll.edit(ui::EditAction::lengthToStep);
+        break;
+    case jls::commands::legato:
+        pianoRoll.edit(ui::EditAction::legato);
         break;
     case selectAll:
         editInMainView(ui::EditAction::selectAll);
@@ -1963,7 +2010,7 @@ void MainComponent::newProject()
         {
             engine.transport().stop();
             currentFile = juce::File();
-            document.reset(model::makeDefaultProject());
+            document.reset(freshProject(themes));
         });
 }
 

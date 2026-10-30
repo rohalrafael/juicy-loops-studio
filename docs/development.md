@@ -57,6 +57,28 @@ your pointer). Things to know about Xvfb (no window manager):
   `import -window "Juicy Loops Studio" out.png`. Don't `pkill -f` the app path from a shell
   script: it matches the script itself.
 
+- F-keys sent by name (`xdotool key F9`) arrive as Alt+F9 with Xvfb's default keymap: send
+  keycodes instead (F5 71, F6 72, F7 73, F8 74, F9 75).
+- The areas' native windows are titled with their names ("Playlist", "Channel rack", "Mixer",
+  ...): `xdotool search --onlyvisible --name '^Mixer$'` + `xwininfo` give a panel's position.
+
+### Screenshots for the README and docs
+
+`tools/screenshots.sh` photographs the app from a project: the whole window, the Channel Rack,
+Piano Roll, Mixer, Browser (a generated sample folder unless you give one), the Keyboard
+shortcuts dialog, and the overview in every built-in theme plus a grid of them. Each scene starts
+the app with settings of its own (never yours), a borderless window of a fixed size, and writes
+WebP files:
+
+```sh
+tools/sandbox.sh run tools/screenshots.sh path/to/project.jlp               # all scenes
+tools/sandbox.sh run tools/screenshots.sh --only "mixer themes" --out docs/images project.jlp
+```
+
+The project decides what's in the pictures (its patterns, notes, arrangement, effects, current
+pattern); `--help` lists the options. Panels are cropped by their windows' titles, so the
+crops follow layout changes; it warns when a panel is larger than the screen.
+
 Sound can't be checked this way: export a WAV and analyse it (length, level, pitch), or listen.
 
 ## CI

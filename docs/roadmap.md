@@ -24,7 +24,9 @@ starting one.
   1. A showcase project: a full, good-looking beat (original, our own sounds) to photograph.
   2. A screenshot script (sandbox, Xvfb, fixed window size) that regenerates every README image
      from that project, so the images never go stale; small WebP files in `docs/images/`.
-  3. More themes (direction to agree first), and a theme gallery image.
+     Done: `tools/screenshots.sh` (2026-10-30); images not taken for real yet.
+  3. More themes (direction to agree first), and a theme gallery image. Themes done (seven
+     built in, 2026-10-30); the gallery is the script's `themes` scene.
   4. The README itself: hero shot, "Coming from FL Studio" (same concepts, same shortcuts),
      what's different or extra (each claim about FL checked against its current manual),
      install, build. FL named only descriptively, with the existing not-affiliated note.

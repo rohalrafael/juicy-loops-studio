@@ -139,7 +139,14 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
              &rackButton, &pianoRollButton, &mixerButton, &browserButton, &positionLabel, &scope,
              &timeLabel})
         addAndMakeVisible(c);
-    // The areas, back to front (the floating ones last).
+    // The areas, back to front (the floating ones last). Named, so their native windows have
+    // titles: tools find them by name (tools/screenshots.sh).
+    playlist.setName("Playlist");
+    pianoRoll.setName("Piano roll");
+    mixer.setName("Mixer");
+    browser.setName("Browser");
+    channelRack.setName("Channel rack");
+    effectPanel.setName("Effect");
     for (auto* c : std::initializer_list<juce::Component*>{&playlist, &pianoRoll, &mixer, &browser})
         areas.add(*c);
     playlist.setVisible(true);
@@ -481,6 +488,7 @@ MainComponent::openPluginView(std::shared_ptr<void> owner, juce::AudioPluginInst
     panel->setMovableArea(floatingArea);
     panel->placeInitially(static_cast<int>(pluginWindows.size() + instrumentWindows.size()) % 6);
     panel->setKeyboardReturn([this] { returnKeyboard(); });
+    panel->setName(title);
     areas.add(*panel);
     panel->setVisible(true);
     panel->toFront(false);
@@ -981,6 +989,7 @@ void MainComponent::showSampler(model::ChannelId id, bool toggle)
     sampler = content.get();
     samplerPanel = std::make_unique<ui::FloatingPanel>(std::move(content));
     samplerPanel->onClose = [this] { juce::MessageManager::callAsync([this] { closeSampler(); }); };
+    samplerPanel->setName("Sampler");
     // Placed before it shows: a native window shown first would flash at the window's corner.
     samplerPanel->setMovableArea(floatingArea);
     if (samplerPosition)

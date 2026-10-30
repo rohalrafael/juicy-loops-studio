@@ -65,8 +65,8 @@ your pointer). Things to know about Xvfb (no window manager):
 ### Screenshots for the README and docs
 
 `tools/screenshots.sh` photographs the app from a project: the whole window, the Channel Rack,
-Piano Roll, Mixer, Browser (a generated sample folder unless you give one), the Keyboard
-shortcuts dialog, and the overview in every built-in theme plus a grid of them. Each scene starts
+Piano Roll, Mixer, Browser (a generated sample folder unless you give one), the overview in
+every built-in theme plus a grid of them, and close-ups for the README's features. Each scene starts
 the app with settings of its own (never yours), a borderless window of a fixed size, and writes
 WebP files:
 
@@ -91,7 +91,7 @@ tools/sandbox.sh run tools/screenshots.sh --play 9 --out docs/images \
 `--play SECONDS` shoots while the project plays (the sandbox's JACK dummy device drives it), so
 the time display, play heads, meters and scope show it. The Channel Rack and Piano Roll scenes
 switch to PAT mode first, since in song mode their play heads give way to the Playlist's; the
-Browser and shortcuts scenes stay stopped.
+Browser scene and the close-ups of dialogs stay stopped.
 
 The `features` scene takes the README's close-ups (`feature-*.webp`): the app at interface size
 200 % on a screen twice as large, so the layout is the one the other scenes see but the crops

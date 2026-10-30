@@ -21,7 +21,6 @@
 #   piano-roll    the Piano Roll (with the project's scale highlight)
 #   mixer         the Mixer
 #   browser       the Browser, a folder open and a sample picked (its waveform below)
-#   shortcuts     the Keyboard shortcuts dialog
 #   themes        the overview in every built-in theme, one image each, plus themes.webp (a grid)
 #   features      close-ups for the README's feature list (feature-*.webp), at twice the pixels
 #                 (interface size 200 % on a screen twice as large: the same layout, sharp when
@@ -39,7 +38,7 @@ OUT=/tmp/jls-ui-test/screenshots
 SIZE=1600x1000
 SAMPLES=""
 THEME=blackberry
-ONLY="overview channel-rack piano-roll mixer browser shortcuts themes features"
+ONLY="overview channel-rack piano-roll mixer browser themes features"
 KEEP_PNG=0
 PLAY=0
 PROJECT=""
@@ -52,7 +51,7 @@ while [ $# -gt 0 ]; do
         --only) ONLY="$2"; shift ;;
         --play) PLAY="$2"; shift ;;
         --png) KEEP_PNG=1 ;;
-        -h|--help) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PROJECT="$1" ;;
     esac
     shift
@@ -305,24 +304,6 @@ scene_browser() {
     start_app "$THEME"
     open_first_sample
     shot_panel browser "Browser"
-    stop_app
-}
-
-scene_shortcuts() {
-    start_app "$THEME"
-    xdotool key ctrl+shift+k
-    sleep 1.5
-    local id
-    id=$(xdotool search --onlyvisible --name "Keyboard shortcuts" 2>/dev/null | head -1)
-    if [ -n "$id" ]; then
-        local geometry
-        geometry=$(xwininfo -id "$id" | awk '/Absolute upper-left X/ {x=$NF} /Absolute upper-left Y/ {y=$NF}
-            /Width:/ {w=$NF} /Height:/ {h=$NF} END {print x, y, w, h}')
-        # shellcheck disable=SC2086
-        shot shortcuts $geometry
-    else
-        echo "screenshots.sh: the Keyboard shortcuts dialog didn't open; skipped" >&2
-    fi
     stop_app
 }
 

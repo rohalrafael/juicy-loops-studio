@@ -596,3 +596,10 @@ not). Older entries describe the project as it was then; later entries may super
     (`ui::LedSwitch` + `paintSegmentGroup()`), with the key and mode dimmed while off. The
     maintainer chose it over a recessed well (heavy, a new surface) and an accent-lit block (the
     light already says "on"). The rack's loop column also widened from 20 to 30 px.
+
+- 2026-10-30: **More built-in themes, in the maintainer's direction** (dark, neon, underground
+  trap / EDM). Of five drafts shown as real screenshots, four became built-in: Nightshade
+  (black + hot pink), Bloodline (black + red), Chrome (black + silver) and Ice (black + baby
+  blue). Frost (white + baby blue) was dropped; it also showed that a light theme needs code
+  changes, not just colours (the Piano Roll keyboard and some overlays assume a dark theme).
+  Blackberry stays the default.

@@ -21,7 +21,8 @@ by Image-Line, and it contains no Image-Line code or assets.
 - **Projects** (`.jlp`) and **export to WAV**
 - **Keyboard shortcuts for everything**, FL Studio's by default, all customizable (with
   import/export)
-- Two colour themes (Blackberry, Graphite), plus custom theme files
+- Six colour themes (Blackberry, Graphite, Nightshade, Bloodline, Chrome, Ice), plus custom
+  theme files
 
 Not there yet: recording, automation, mixer sends. See the [roadmap](docs/roadmap.md).
 

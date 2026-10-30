@@ -3,8 +3,10 @@
 A theme sets the app's **colours**. Shapes (corner radii, borders), sizes and the font
 (Inter) are the same in every theme, so the app looks consistent whichever you pick.
 
-Juicy Loops Studio ships with two themes: **Blackberry** (the default: near-black with
-lavender, mint and pink) and **Graphite** (neutral grey with a blue accent and amber displays).
+Juicy Loops Studio ships with six themes: **Blackberry** (the default: near-black with
+lavender, mint and pink), **Graphite** (neutral grey with a blue accent and amber displays),
+**Nightshade** (black with hot pink), **Bloodline** (black with deep red), **Chrome** (black and
+silver, an ice-blue light) and **Ice** (black with baby blue).
 Pick one under **Options › Theme…**. The choice is saved in your settings, not in the project.
 
 You can also make your own. A theme is a small JSON file. The quickest start is

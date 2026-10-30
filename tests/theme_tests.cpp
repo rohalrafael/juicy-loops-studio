@@ -45,9 +45,11 @@ TEST_CASE("Colours format back to text")
 TEST_CASE("The built-in themes load, Blackberry first and default")
 {
     const auto& themes = builtInThemes();
-    REQUIRE(themes.size() == 2);
+    REQUIRE(themes.size() == 6);
     CHECK(themes[0].id == "blackberry");
     CHECK(themes[1].id == "graphite");
+    CHECK(themes[2].id == "nightshade");
+    CHECK(themes[5].id == "ice");
     CHECK(defaultTheme().id == "blackberry");
     CHECK(themes[1].colours.accent == 0xff5aa9ffu);
 }

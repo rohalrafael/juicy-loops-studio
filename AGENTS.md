@@ -60,7 +60,7 @@ folders (`jls::engine`, `jls::model`, ...).
    (`ui::currentTheme()`), read in `paint()` since themes switch at runtime. Shapes, sizes and
    the font are the same for every theme: `ui::metrics` and Inter, never theme data. Text sizes
    come from the type scale in `ui::metrics` (`textTiny` ... `textHeading`), never a literal. A
-   new colour goes into `theme::Colours`, its parse/serialize table, both built-in themes and
+   new colour goes into `theme::Colours`, its parse/serialize table, every built-in theme and
    `docs/themes.md`.
 6. **Tests are the gate.** Engine and model changes come with Catch2 tests; timing is tested to
    the sample. UI changes are checked visually on Xvfb (see `docs/development.md`); sound by

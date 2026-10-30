@@ -414,6 +414,7 @@ and MIDI devices are in **Options › Audio settings…**.
 
 ## Themes
 
-**Options › Theme…** offers **Blackberry** (the default) and **Graphite**, and can import or
+**Options › Theme…** offers **Blackberry** (the default), **Graphite**, **Nightshade**,
+**Bloodline**, **Chrome** and **Ice**, and can import or
 export your own theme files. Themes change the colours only; the shapes and the font are the same
 in every theme. See [themes.md](themes.md).

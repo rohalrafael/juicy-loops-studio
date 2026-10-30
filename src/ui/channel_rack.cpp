@@ -28,7 +28,7 @@ constexpr int stepMargin = 3;   // above and below the step keys (and a note pre
 // A row, left to right (see ChannelRow::resized): mute LED, pan and volume knobs, mixer track,
 // name, loop switch, steps.
 constexpr int columnGap = 4;  // after the LED, each knob and the mixer track
-constexpr int loopWidth = 20; // a row's loop switch, after the steps
+constexpr int loopWidth = 30; // a row's loop switch, after the steps, with room around it
 constexpr int nameX = metrics::ledWidth + columnGap + 2 * (metrics::knobSize + columnGap) +
                       metrics::insertWidth + columnGap;
 // Everything in a row except the steps.

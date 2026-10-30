@@ -10,6 +10,9 @@
 #   --samples DIR   the folder the Browser shows (default: a few generated one-shots)
 #   --theme ID      theme of every scene but "themes" (default blackberry)
 #   --only "A B"    just these scenes
+#   --play SECONDS  shoot while the project plays, this long after pressing Space (time, play
+#                   heads, meters and the scope then show it; the Channel Rack and Piano Roll
+#                   play their pattern, in PAT mode); default: stopped
 #   --png           keep the PNGs next to the WebP files
 #
 # Scenes (each starts the app afresh, with settings of its own, never yours):
@@ -34,6 +37,7 @@ SAMPLES=""
 THEME=blackberry
 ONLY="overview channel-rack piano-roll mixer browser shortcuts themes"
 KEEP_PNG=0
+PLAY=0
 PROJECT=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -42,8 +46,9 @@ while [ $# -gt 0 ]; do
         --samples) SAMPLES="$2"; shift ;;
         --theme) THEME="$2"; shift ;;
         --only) ONLY="$2"; shift ;;
+        --play) PLAY="$2"; shift ;;
         --png) KEEP_PNG=1 ;;
-        -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) PROJECT="$1" ;;
     esac
     shift
@@ -155,6 +160,15 @@ EOF
     sleep 0.3
 }
 
+play() { # [pat]: with --play, start playback (in PAT mode with "pat") and let it run
+    [ "$PLAY" != 0 ] || return 0
+    # The Channel Rack and Piano Roll only show a play head while their pattern plays: in song
+    # mode it belongs to the Playlist.
+    [ "${1:-}" = pat ] && xdotool key l
+    xdotool key space
+    sleep "$PLAY"
+}
+
 stop_app() {
     kill "$APP_PID" 2>/dev/null
     wait "$APP_PID" 2>/dev/null
@@ -212,12 +226,14 @@ shot_panel() { # FILE PANEL
 scene_overview() {
     start_app "$THEME"
     key_f 9 # Mixer
+    play
     shot overview
     stop_app
 }
 
 scene_channel_rack() {
     start_app "$THEME"
+    play pat
     shot_panel channel-rack "Channel rack"
     stop_app
 }
@@ -225,6 +241,7 @@ scene_channel_rack() {
 scene_piano_roll() {
     start_app "$THEME"
     key_f 7
+    play pat
     shot_panel piano-roll "Piano roll"
     stop_app
 }
@@ -232,6 +249,7 @@ scene_piano_roll() {
 scene_mixer() {
     start_app "$THEME"
     key_f 9
+    play
     shot_panel mixer "Mixer"
     stop_app
 }
@@ -278,6 +296,7 @@ scene_themes() {
     for id in $ids; do
         start_app "$id"
         key_f 9
+        play
         shot "theme-$id"
         tiles+=("$WORK/theme-$id.png")
         stop_app

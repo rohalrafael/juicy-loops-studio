@@ -79,6 +79,11 @@ The project decides what's in the pictures (its patterns, notes, arrangement, ef
 pattern); `--help` lists the options. Panels are cropped by their windows' titles, so the
 crops follow layout changes; it warns when a panel is larger than the screen.
 
+`--play SECONDS` shoots while the project plays (the sandbox's JACK dummy device drives it), so
+the time display, play heads, meters and scope show it. The Channel Rack and Piano Roll scenes
+switch to PAT mode first, since in song mode their play heads give way to the Playlist's; the
+Browser and shortcuts scenes stay stopped.
+
 Sound can't be checked this way: export a WAV and analyse it (length, level, pitch), or listen.
 
 ## CI

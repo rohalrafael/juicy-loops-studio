@@ -281,8 +281,8 @@ installed, the channel stays silent and keeps them.
 
 **Split by channel** replaces a pattern with one pattern per channel, named after the channel
 ("Kick", or "Kick 2" if a pattern already has that name),
-in its place in the list (the original is removed). Unlike FL it keeps the arrangement tidy and
-sounding the same:
+in its place in the list (the original is removed). The song sounds the same, and the parts are
+laid out for you, each on its own track with nothing overlapping:
 - each part is exactly as long as the original: a channel that looped a shorter part gets its
   repeats written out, and a part whose notes end early keeps the full length
 - in the Playlist, every clip of the pattern is replaced by one clip per part, each on its own

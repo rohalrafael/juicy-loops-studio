@@ -616,3 +616,7 @@ not). Older entries describe the project as it was then; later entries may super
   audio and no third-party samples) through `tools/screenshots.sh --play 9` (shots while
   playing, so the time, play heads and meters show). The script's per-theme images are
   ignored by git; the README uses only the grid.
+  - Follow-up, the maintainer's choice of five drafted styles: features as small headings with
+    a paragraph each (not bold lead-ins, which put bold in every line), each with a close-up.
+    Close-ups are taken at interface size 200 % on a double-size screen, not by enlarging a
+    normal shot, so they stay sharp. The not-affiliated note is at the top and the bottom.

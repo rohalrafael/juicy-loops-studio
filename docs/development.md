@@ -93,6 +93,12 @@ the time display, play heads, meters and scope show it. The Channel Rack and Pia
 switch to PAT mode first, since in song mode their play heads give way to the Playlist's; the
 Browser and shortcuts scenes stay stopped.
 
+The `features` scene takes the README's close-ups (`feature-*.webp`): the app at interface size
+200 % on a screen twice as large, so the layout is the one the other scenes see but the crops
+have twice the pixels and stay sharp shown large. Its crops are in interface pixels from a
+panel's or dialog's corner (`shot_part`), so a layout change may need them adjusted: check the
+images after a UI change.
+
 Sound can't be checked this way: export a WAV and analyse it (length, level, pitch), or listen.
 
 ## CI

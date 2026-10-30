@@ -1,9 +1,10 @@
 name: CI
 
-# Builds and tests every pull request and every push to main on Ubuntu 24.04 and Windows, and
-# uploads the apps to download for 14 days. A tag like v0.1.0 also publishes them as a GitHub
-# release. macOS runs only when asked (Actions tab -> CI -> Run workflow, or
-# `gh workflow run ci.yml -f platforms=all`): on a private repo its minutes bill 10x.
+# Builds and tests every pull request and every push to main on Ubuntu 26.04, Ubuntu 24.04 and
+# Windows. The Linux app is packaged from 24.04, so it runs there and on everything newer
+# (Linux Mint 22, Pop!_OS 24.04, Ubuntu 26.04); 26.04 checks the newer compiler. The apps can be
+# downloaded for 14 days, and a tag like v0.1.0 publishes them as a GitHub release. macOS isn't
+# built for now.
 #
 # Changes that only touch docs skip the build. The "CI result" job always runs and is the one
 # check branch protection requires, so those changes can still be merged.
@@ -13,12 +14,6 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      platforms:
-        description: Which OSes to build
-        type: choice
-        options: [linux+windows, all, linux, windows, macos]
-        default: linux+windows
 
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event_name }}
@@ -62,14 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: >-
-          ${{ github.event_name != 'workflow_dispatch'
-              && fromJSON('["ubuntu-24.04", "windows-2022"]')
-          || inputs.platforms == 'all' && fromJSON('["ubuntu-24.04", "windows-2022", "macos-14"]')
-          || inputs.platforms == 'linux' && fromJSON('["ubuntu-24.04"]')
-          || inputs.platforms == 'windows' && fromJSON('["windows-2022"]')
-          || inputs.platforms == 'macos' && fromJSON('["macos-14"]')
-          || fromJSON('["ubuntu-24.04", "windows-2022"]') }}
+        os: [ubuntu-26.04, ubuntu-24.04, windows-2022]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
@@ -105,18 +93,16 @@ jobs:
         if: runner.os == 'Windows'
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
-      - name: Configure (macOS)
-        if: runner.os == 'macOS'
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-
       - name: Build
         run: cmake --build build --config Release --parallel
 
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
 
-      # Packed so the files keep their permissions (artifacts are zipped without them).
+      # Packed so the files keep their permissions (artifacts are zipped without them). Linux
+      # ships the 24.04 build: it runs on 24.04 and newer.
       - name: Package
+        if: matrix.os != 'ubuntu-26.04'
         shell: bash
         run: |
           mkdir -p package
@@ -126,11 +112,10 @@ jobs:
                      "Juicy Loops Studio" ;;
             Windows) 7z a "$GITHUB_WORKSPACE/package/juicy-loops-studio-windows-x64.zip" \
                        "Juicy Loops Studio.exe" ;;
-            macOS) ditto -c -k --keepParent "Juicy Loops Studio.app" \
-                     "$GITHUB_WORKSPACE/package/juicy-loops-studio-macos.zip" ;;
           esac
 
       - name: Upload app
+        if: matrix.os != 'ubuntu-26.04'
         uses: actions/upload-artifact@v4
         with:
           name: juicy-loops-studio-${{ runner.os }}

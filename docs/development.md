@@ -104,18 +104,18 @@ Sound can't be checked this way: export a WAV and analyse it (length, level, pit
 ## CI
 
 `.github/workflows/ci.yml` builds and tests every pull request and every push to `main` on
-Ubuntu 24.04 and Windows. `main` is protected: changes reach it only through pull requests, and
+Ubuntu 26.04, Ubuntu 24.04 and Windows. `main` is protected: changes reach it only through pull requests, and
 a pull request merges once the **CI result** check passes. Changes that only touch `docs/`,
 Markdown files, `LICENSE` or `.clang-format` skip the build (CI result still passes).
 
 Each build uploads the app, kept for 14 days; download it from the run's page or with
 `gh run download`:
-- `juicy-loops-studio-linux-x64.tar.gz`: the binary (built on 24.04: needs glibc 2.39 or newer)
+- `juicy-loops-studio-linux-x64.tar.gz`: the binary, built on 24.04 so it runs there and on
+  anything newer (Linux Mint 22, Pop!_OS 24.04, Ubuntu 26.04); 26.04 builds only to test the
+  newer compiler
 - `juicy-loops-studio-windows-x64.zip`: a single `.exe` with the MSVC runtime linked in
-- `juicy-loops-studio-macos.zip`: the `.app` (Apple silicon), only from manual runs
 
-macOS runs only when asked: `gh workflow run ci.yml -f platforms=all` (or `macos`, `linux`,
-`windows`); on a private repo its minutes bill 10x.
+macOS isn't built or tested for now.
 
 **Releases.** Pushing a tag like `v0.1.0` builds both and publishes a GitHub release with the
 two packages and notes generated from the merged pull requests:

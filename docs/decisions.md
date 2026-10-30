@@ -624,9 +624,13 @@ not). Older entries describe the project as it was then; later entries may super
 
 - 2026-10-30: **`main` is protected; CI runs on every pull request** (maintainer's request).
   Nobody pushes to `main`, not even its admin: changes arrive as pull requests, merged once the
-  "CI result" check passes. CI (back on after being manual-only since 2026-10-18) builds and
-  tests on Ubuntu 24.04 and Windows; macOS stays manual, since on a private repo its minutes
-  bill 10x and an unsigned, un-notarized app needs extra steps to open on a Mac anyway. Docs-only
+  "CI result" check passes. The repo went public for it (free plans protect branches of public
+  repos only), which also makes CI minutes free. CI (back on after being manual-only since
+  2026-10-18) builds and tests on Ubuntu 26.04, Ubuntu 24.04 and Windows. The Linux download
+  is built on 24.04, the oldest of the two: a binary needs a glibc at least as new as the one it
+  was built with, so a 26.04 build wouldn't start on Linux Mint 22 or Pop!_OS 24.04. macOS is
+  left out for now (maintainer's choice; an unsigned, un-notarized app also needs extra steps
+  to open on a Mac, and signing needs Apple's paid developer programme). Docs-only
   changes skip the build; a single always-running "CI result" job is the required check, so
   they can still merge (a skipped matrix job can't be required reliably). A `v*` tag publishes a
   release with the Linux and Windows packages.

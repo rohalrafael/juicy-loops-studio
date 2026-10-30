@@ -309,6 +309,7 @@ not). Older entries describe the project as it was then; later entries may super
     (no ClearType), which we can't change; Settings › Interface size (100-150 %) scales the
     whole UI.
   - CI's automatic runs are off for now (maintainer's choice); manual dispatch still works.
+    (Back on since 2026-10-30, see below.)
 
 - 2026-10-18: The Sampler and plugin editors float **inside** the main window (maintainer's
   choice, FL-like; separate OS windows caused the focus bug, Hyprland placing them, and couldn't
@@ -620,3 +621,12 @@ not). Older entries describe the project as it was then; later entries may super
     a paragraph each (not bold lead-ins, which put bold in every line), each with a close-up.
     Close-ups are taken at interface size 200 % on a double-size screen, not by enlarging a
     normal shot, so they stay sharp. The not-affiliated note is at the top and the bottom.
+
+- 2026-10-30: **`main` is protected; CI runs on every pull request** (maintainer's request).
+  Nobody pushes to `main`, not even its admin: changes arrive as pull requests, merged once the
+  "CI result" check passes. CI (back on after being manual-only since 2026-10-18) builds and
+  tests on Ubuntu 24.04 and Windows; macOS stays manual, since on a private repo its minutes
+  bill 10x and an unsigned, un-notarized app needs extra steps to open on a Mac anyway. Docs-only
+  changes skip the build; a single always-running "CI result" job is the required check, so
+  they can still merge (a skipped matrix job can't be required reliably). A `v*` tag publishes a
+  release with the Linux and Windows packages.

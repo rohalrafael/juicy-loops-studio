@@ -93,6 +93,8 @@ clang-format -i <files you touched>
 - Docs and `docs/decisions.md` updated; `docs/roadmap.md` if a milestone or backlog item moved.
 - Commits: a short summary line, then what changed and why. Keep the tree building at every
   commit.
+- `main` is protected: nobody pushes to it. Work on a branch and open a pull request; it merges
+  once CI (Ubuntu 24.04 and Windows) passes.
 
 ## 6. Picking work
 

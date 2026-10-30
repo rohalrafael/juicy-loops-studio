@@ -1,40 +1,77 @@
 name: CI
 
-# Private repo with limited CI minutes (macOS bills 10x, Windows 2x):
-# when on, pushes/PRs build on Linux only; other OSes run only when triggered manually
-# (Actions tab -> CI -> Run workflow, or `gh workflow run ci.yml -f platforms=windows`).
-# Windows and macOS runs upload the built app as an artifact to download.
+# Builds and tests every pull request and every push to main on Ubuntu 24.04 and Windows, and
+# uploads the apps to download for 14 days. A tag like v0.1.0 also publishes them as a GitHub
+# release. macOS runs only when asked (Actions tab -> CI -> Run workflow, or
+# `gh workflow run ci.yml -f platforms=all`): on a private repo its minutes bill 10x.
 #
-# Automatic runs are off for now (maintainer's choice, 2026-10-18): build and test happen in the
-# sandbox. To turn them back on, restore:
-#   push: {branches: [main], paths-ignore: ['**.md', 'LICENSE', '.clang-format']}
-#   pull_request: {paths-ignore: ['**.md', 'LICENSE', '.clang-format']}
+# Changes that only touch docs skip the build. The "CI result" job always runs and is the one
+# check branch protection requires, so those changes can still be merged.
 on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       platforms:
         description: Which OSes to build
         type: choice
-        options: [all, windows, macos, linux]
-        default: all
+        options: [linux+windows, all, linux, windows, macos]
+        default: linux+windows
 
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Anything outside docs/, Markdown files, LICENSE and .clang-format counts as code. Tags,
+      # manual runs and new branches always build.
+      - id: filter
+        run: |
+          base=""
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = push ] && [ "${{ github.ref_type }}" = branch ] &&
+               [ "${{ github.event.before }}" != 0000000000000000000000000000000000000000 ]; then
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] ||
+             git diff --name-only "$base" HEAD | grep -qvE '^docs/|\.md$|^LICENSE$|^\.clang-format$'; then
+            echo "code=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "code=false" >>"$GITHUB_OUTPUT"
+          fi
+
   build:
+    name: Build (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: >-
-          ${{ github.event_name != 'workflow_dispatch' && fromJSON('["ubuntu-latest"]')
-          || inputs.platforms == 'windows' && fromJSON('["windows-latest"]')
-          || inputs.platforms == 'macos' && fromJSON('["macos-latest"]')
-          || inputs.platforms == 'linux' && fromJSON('["ubuntu-latest"]')
-          || fromJSON('["ubuntu-latest", "windows-latest", "macos-latest"]') }}
+          ${{ github.event_name != 'workflow_dispatch'
+              && fromJSON('["ubuntu-24.04", "windows-2022"]')
+          || inputs.platforms == 'all' && fromJSON('["ubuntu-24.04", "windows-2022", "macos-14"]')
+          || inputs.platforms == 'linux' && fromJSON('["ubuntu-24.04"]')
+          || inputs.platforms == 'windows' && fromJSON('["windows-2022"]')
+          || inputs.platforms == 'macos' && fromJSON('["macos-14"]')
+          || fromJSON('["ubuntu-24.04", "windows-2022"]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +91,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: ccache-${{ runner.os }}-
+          key: ccache-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.os }}-
 
       - name: Configure (Linux)
         if: runner.os == 'Linux'
@@ -75,22 +112,58 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      # Before the tests, so a test failure on a rarely built OS still leaves an app to try.
-      - name: Upload app (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: juicy-loops-studio-windows
-          path: build/src/app/JuicyLoopsStudio_artefacts/Release/*.exe
-          retention-days: 14
-
-      - name: Upload app (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
-        with:
-          name: juicy-loops-studio-macos
-          path: build/src/app/JuicyLoopsStudio_artefacts/Release/*.app
-          retention-days: 14
-
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+      # Packed so the files keep their permissions (artifacts are zipped without them).
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p package
+          cd build/src/app/JuicyLoopsStudio_artefacts/Release
+          case "${{ runner.os }}" in
+            Linux) tar -czf "$GITHUB_WORKSPACE/package/juicy-loops-studio-linux-x64.tar.gz" \
+                     "Juicy Loops Studio" ;;
+            Windows) 7z a "$GITHUB_WORKSPACE/package/juicy-loops-studio-windows-x64.zip" \
+                       "Juicy Loops Studio.exe" ;;
+            macOS) ditto -c -k --keepParent "Juicy Loops Studio.app" \
+                     "$GITHUB_WORKSPACE/package/juicy-loops-studio-macos.zip" ;;
+          esac
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: juicy-loops-studio-${{ runner.os }}
+          path: package/*
+          retention-days: 14
+
+  result:
+    name: CI result
+    needs: [changes, build]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the build
+        run: |
+          echo "changes: ${{ needs.changes.result }}, build: ${{ needs.build.result }}"
+          [ "${{ needs.changes.result }}" = success ] &&
+            { [ "${{ needs.build.result }}" = success ] || [ "${{ needs.build.result }}" = skipped ]; }
+
+  release:
+    name: Release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: package
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" package/* --repo "${{ github.repository }}" \
+            --title "Juicy Loops Studio ${{ github.ref_name }}" --generate-notes

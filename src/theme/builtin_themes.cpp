@@ -214,6 +214,41 @@ constexpr const char* iceJson = R"({
   }
 })";
 
+// Colours from the Dracula theme (draculatheme.com, MIT licence, Zeno Rocha and contributors).
+constexpr const char *draculaJson = R"({
+  "name": "Dracula",
+  "author": "Juicy Loops Studio, after Dracula by Zeno Rocha and contributors",
+                     "description" : "Dracula's purple, pink and green",
+                     "formatVersion" : 2,
+                     "colours" : {
+                         "background" : "#191a21",
+                         "panel" : "#21222c",
+                         "panelRaised" : "#343746",
+                         "chrome" : "#343746",
+                         "header" : "#282a36",
+                         "outline" : "#303241",
+                         "text" : "#f8f8f2",
+                         "textDim" : "#8890bd",
+                         "accent" : "#bd93f9",
+                         "accentAlt" : "#ff79c6",
+                         "display" : "#16171d",
+                         "displayText" : "#50fa7b",
+                         "displayDim" : "#6272a4",
+                         "stepOff" : [ "#343746", "#3d3a52" ],
+                         "stepOn" : "#bd93f9",
+                         "playhead" : "#f8f8f2",
+                         "led" : "#50fa7b",
+                         "ledOff" : "#3a3c4e",
+                         "activeBackground" : "#3a3552",
+                         "activeText" : "#ff79c6",
+                         "shadow" : "#000000a8",
+                         "lane" : "#1d1e26",
+                         "grid" : "#2b2d3a",
+                         "clip" : "#ff79c6",
+                         "clipText" : "#21222c"
+                     }
+})";
+
 Theme load(const char* id, const char* json)
 {
     auto result = parseTheme(json);
@@ -231,6 +266,7 @@ const std::vector<Theme>& builtInThemes()
         load("blackberry", blackberryJson), load("graphite", graphiteJson),
         load("nightshade", nightshadeJson), load("bloodline", bloodlineJson),
         load("chrome", chromeJson),         load("ice", iceJson),
+        load("dracula", draculaJson),
     };
     return themes;
 }

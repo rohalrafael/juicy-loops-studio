@@ -602,4 +602,5 @@ not). Older entries describe the project as it was then; later entries may super
   (black + hot pink), Bloodline (black + red), Chrome (black + silver) and Ice (black + baby
   blue). Frost (white + baby blue) was dropped; it also showed that a light theme needs code
   changes, not just colours (the Piano Roll keyboard and some overlays assume a dark theme).
-  Blackberry stays the default.
+  Blackberry stays the default. A second round (Gruvbox, Tokyo Night, Dracula, and a studio
+  grey in the style of Ableton's) kept only Dracula, credited to its authors (MIT).

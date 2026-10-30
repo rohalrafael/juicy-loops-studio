@@ -46,7 +46,8 @@ class TitleBar final : public juce::Component, private juce::Timer
     std::function<bool()> isMaximised;
     std::function<void(bool)> setMaximised;
     // Called when JUCE's idea of the window (full screen or not) disagrees with isMaximised a
-    // moment after a resize, to make JUCE read it again (optional).
+    // moment after a resize, to make JUCE read it again (optional). JUCE reads it without laying
+    // the window out again (the size hasn't changed), so the title bar then does that itself.
     std::function<void()> resyncWindow;
 
     // Call when the window's name changes (it's drawn in the middle).
@@ -70,6 +71,7 @@ class TitleBar final : public juce::Component, private juce::Timer
     TitleButton maximise{Icon::windowMaximize, false};
     TitleButton close{Icon::close, true};
     juce::ComponentDragger dragger;
+    int resyncsLeft = 0; // after a resync: checks left before giving up (see timerCallback)
 };
 
 } // namespace jls::ui

@@ -540,7 +540,10 @@ not). Older entries describe the project as it was then; later entries may super
   remembers where the window was. Windows keeps JUCE's (real) maximize. JUCE also reads the
   maximized state at each resize, which GNOME updates just after: JUCE lagged a step (a resize
   border while maximized, none after restoring), so the title bar has JUCE read it again a
-  moment later when the two disagree (`refreshNativeWindowState`).
+  moment later when the two disagree (`refreshNativeWindowState`). Follow-up: that alone didn't
+  fix it. JUCE then had the state right but lays the window out only when its size changes, so
+  the border kept the old state until the next resize; the title bar now lays it out itself once
+  JUCE agrees. Reproduced on Xvfb by playing GNOME's order (`tools/gnome-maximize-test.sh`).
 
 - 2026-10-30: **Surfaces and data: a more serious look** (maintainer's choice from the second
   look study, branch `pro-look-2`). Three directions were prototyped as real screenshots:

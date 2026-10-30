@@ -33,7 +33,8 @@ bool isNativeWindowMaximised(void* nativeWindow);
 // Makes JUCE read the window's geometry and the window manager's state again, by sending the
 // window a ConfigureNotify. JUCE reads whether it's maximized at each resize, but GNOME updates
 // that state just after resizing, so JUCE lagged a step: a resize border on the maximized window
-// and none (no resizing at the edges) after restoring it.
+// and none (no resizing at the edges) after restoring it. JUCE doesn't lay the window out again
+// for this (the size is the same): the caller does (see TitleBar::timerCallback).
 void refreshNativeWindowState(void* nativeWindow);
 // Whether a window manager that maximizes on request is running (it lists the maximized states
 // in _NET_SUPPORTED); without one, JUCE's resize is all there is.

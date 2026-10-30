@@ -44,6 +44,11 @@ your pointer). Things to know about Xvfb (no window manager):
 - Plugins may show their own popups (LSP shows a one-time greeting).
 - The app uses the real settings file of the user running it (`~/.config/JuicyLoopsStudio/`):
   reset what you changed (e.g. the theme) after testing.
+- Maximize and restore depend on the window manager, and Xvfb has none.
+  `tools/gnome-maximize-test.sh` plays GNOME's part (the resize first, `_NET_WM_STATE` just
+  after) and checks the resize border follows. Faking a window manager by hand: start Xvfb with
+  `-noreset`, list `_NET_WM_STATE` in the root's `_NET_SUPPORTED` before the app starts (JUCE
+  looks the atoms up once), and set atom lists with Xlib (`xprop -set` stores a single atom).
 - To screenshot a window on a real X/XWayland session without the rest of the screen:
   `import -window "Juicy Loops Studio" out.png`. Don't `pkill -f` the app path from a shell
   script: it matches the script itself.

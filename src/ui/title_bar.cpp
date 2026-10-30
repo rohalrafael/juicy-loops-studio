@@ -105,9 +105,30 @@ void TitleBar::updateMaximiseIcon()
 void TitleBar::timerCallback()
 {
     stopTimer();
-    if (isMaximised && resyncWindow)
-        if (const auto* w = window(); w != nullptr && w->isFullScreen() != isMaximised())
-            resyncWindow();
+    auto* w = window();
+    if (w != nullptr && isMaximised && resyncWindow)
+    {
+        if (w->isFullScreen() != isMaximised())
+        {
+            // JUCE missed the window manager's state (GNOME sets it just after resizing): make
+            // it read it again, then check back shortly, since that arrives as an X event.
+            if (resyncsLeft == 0)
+                resyncsLeft = 5;
+            if (--resyncsLeft > 0)
+            {
+                resyncWindow();
+                startTimer(50);
+            }
+        }
+        else if (resyncsLeft > 0)
+        {
+            // JUCE has the state now, but only lays the window out (with or without its resize
+            // border) on a size change, and the size is the same: do it here.
+            resyncsLeft = 0;
+            w->resized();
+            w->repaint();
+        }
+    }
     updateMaximiseIcon();
 }
 

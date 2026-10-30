@@ -47,8 +47,9 @@ Small things that save time every session:
 - **Short parts loop by themselves.** A 1-bar drum loop under a 4-bar melody keeps repeating
   for the whole pattern; the loop switch at the end of each Channel Rack row turns it off per
   channel.
-- **Split by channel keeps the song sounding the same.** Every part keeps the pattern's full
-  length and lands on its own Playlist track, in one undo step.
+- **Split by channel lays out the parts for you.** Each channel's part gets its own Playlist
+  track, right under the original clip and with nothing overlapping, so the arrangement stays
+  tidy and ready to edit.
 
 ## A look around
 

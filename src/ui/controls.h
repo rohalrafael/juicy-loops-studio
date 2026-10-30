@@ -143,6 +143,17 @@ class LedToggle final : public juce::Button
     void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
 };
 
+// An on/off switch with a label, drawn as the round light then the label (dimmed while off),
+// with no box of its own: the first segment of a group painted by paintSegmentGroup (the Piano
+// Roll's ● Scale | key | mode). Clicking anywhere on it toggles it.
+class LedSwitch final : public juce::Button
+{
+  public:
+    explicit LedSwitch(const juce::String& label);
+    int preferredWidth(int height) const;
+    void paintButton(juce::Graphics& g, bool highlighted, bool down) override;
+};
+
 // A transport-bar button that shows a window (Playlist, Channel rack...). An LED on it is lit
 // while the window is open, dark (and the label dimmed) while it's closed. With an empty label it
 // shows just the icon (a narrow transport bar).
@@ -182,6 +193,17 @@ class MenuKeys final : private juce::Timer
 // Joins buttons left to right into one segmented control (PAT | SONG, 16 | 32 | 64): shared
 // borders, rounded only at the outer ends.
 void joinSegments(std::initializer_list<juce::Button*> buttons);
+
+// Controls of different kinds as one segmented control: a raised, outlined box over `area` and a
+// hairline before each segment after the first. Paint it in the parent's paint(), under the
+// segments, which draw no box of their own (LedSwitch; drop-downs marked with makeSegment).
+void paintSegmentGroup(juce::Graphics& g, juce::Rectangle<int> area,
+                       std::initializer_list<const juce::Component*> segments);
+// Marks a drop-down as a segment of such a group: drawn without its box (a hover fill only).
+void makeSegment(juce::ComboBox& box);
+bool isSegment(const juce::ComboBox& box);
+// A segment's fill under the mouse (`down`: pressed), for segments with no box of their own.
+void paintSegmentHover(juce::Graphics& g, juce::Rectangle<float> area, bool down);
 
 // Width for a TextButton segment or button with `text` at `height`.
 int buttonWidth(const juce::String& text, int height);

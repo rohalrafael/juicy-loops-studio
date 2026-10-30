@@ -168,6 +168,7 @@ class PianoRollView final : public juce::Component, private juce::Timer
     void paint(juce::Graphics& g) override;
     void paintOverChildren(juce::Graphics& g) override { paintCardFrame(g, *this); }
     void resized() override;
+    void lookAndFeelChanged() override; // the theme changed
 
   private:
     class Keyboard;
@@ -186,6 +187,7 @@ class PianoRollView final : public juce::Component, private juce::Timer
 
     void timerCallback() override;
     void updateGridSize();
+    void updateScaleColours(); // the key and mode dimmed while the highlight is off
 
     model::Document& doc;
     engine::Transport& transport;
@@ -197,7 +199,9 @@ class PianoRollView final : public juce::Component, private juce::Timer
     juce::ComboBox snapBox;
     IconButton sliceButton{Icon::slice, "Slice"};
     juce::ComboBox sliceBox; // piece size, as an id in ticks
-    LedToggle scaleToggle;   // the scale highlight on / off
+    // One segmented control: ● Scale | key | mode (see paintSegmentGroup).
+    LedSwitch scaleToggle{"Scale"}; // the scale highlight on / off
+    juce::Rectangle<int> scaleGroupArea;
     juce::ComboBox rootBox;  // C .. B; choosing one turns the highlight on
     juce::ComboBox scaleBox; // Major / Minor
     std::unique_ptr<Keyboard> keyboard;

@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace jls::ui
 {
@@ -366,6 +367,83 @@ LedToggle::LedToggle() : juce::Button({})
 void LedToggle::paintButton(juce::Graphics& g, bool highlighted, bool)
 {
     paintLed(g, getLocalBounds().toFloat(), getToggleState(), highlighted);
+}
+
+namespace
+{
+constexpr float segmentInset = 8.0f; // before the switch's light
+constexpr float ledLabelGap = 7.0f;
+constexpr float ledSize = 9.0f; // paintLed's light
+} // namespace
+
+void paintSegmentHover(juce::Graphics& g, juce::Rectangle<float> area, bool down)
+{
+    constexpr float hoverAlpha = 0.05f;
+    constexpr float downAlpha = 0.10f;
+    g.setColour(juce::Colours::white.withAlpha(down ? downAlpha : hoverAlpha));
+    g.fillRoundedRectangle(area.reduced(1.0f), metrics::cornerRadius);
+}
+
+LedSwitch::LedSwitch(const juce::String& label) : juce::Button(label)
+{
+    setClickingTogglesState(true);
+}
+
+int LedSwitch::preferredWidth(int height) const
+{
+    return static_cast<int>(segmentInset + ledSize + ledLabelGap) +
+           textWidth(juce::FontOptions(controlTextSize(height)), getButtonText()) +
+           metrics::controlPadding;
+}
+
+void LedSwitch::paintButton(juce::Graphics& g, bool highlighted, bool down)
+{
+    const auto& c = currentTheme().colours;
+    const bool on = getToggleState();
+    auto area = getLocalBounds().toFloat();
+    if (highlighted || down)
+        paintSegmentHover(g, area, down);
+    area.removeFromLeft(segmentInset);
+    paintLed(g, area.removeFromLeft(ledSize), on);
+    area.removeFromLeft(ledLabelGap);
+    g.setColour(colour(on ? c.text : c.textDim));
+    g.setFont(juce::FontOptions(controlTextSize(getHeight())));
+    g.drawText(getButtonText(), area, juce::Justification::centredLeft, false);
+}
+
+void paintSegmentGroup(juce::Graphics& g, juce::Rectangle<int> area,
+                       std::initializer_list<const juce::Component*> segments)
+{
+    const auto box = area.toFloat().reduced(metrics::borderWidth / 2.0f);
+    juce::Path shape;
+    shape.addRoundedRectangle(box, metrics::cornerRadius);
+    fillRaisedOutlined(g, shape, colour(currentTheme().colours.panelRaised));
+    // Hairlines short of the top and bottom, so the segments read as parts of one control.
+    constexpr float hairlineInset = 4.0f;
+    g.setColour(colour(currentTheme().colours.outline));
+    bool first = true;
+    for (const auto* segment : segments)
+    {
+        if (!std::exchange(first, false))
+            g.fillRect(juce::Rectangle<float>(static_cast<float>(segment->getX()) - 0.5f,
+                                              box.getY() + hairlineInset, 1.0f,
+                                              box.getHeight() - 2.0f * hairlineInset));
+    }
+}
+
+namespace
+{
+const juce::Identifier segmentProperty{"segment"};
+}
+
+void makeSegment(juce::ComboBox& box)
+{
+    box.getProperties().set(segmentProperty, true);
+}
+
+bool isSegment(const juce::ComboBox& box)
+{
+    return box.getProperties()[segmentProperty];
 }
 
 // ------------------------------------------------------------------------------- WindowButton

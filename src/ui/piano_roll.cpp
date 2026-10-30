@@ -722,8 +722,8 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     sliceBox.setWantsKeyboardFocus(false);
     addAndMakeVisible(sliceBox);
 
-    // Scale highlight: a light to turn it on or off, the key (choosing one turns it on) and
-    // Major / Minor. Key and mode are kept while it's off.
+    // Scale highlight, one segmented control: ● Scale turns it on or off, then the key (choosing
+    // one turns it on) and Major / Minor. Key and mode are kept, dimmed, while it's off.
     scaleToggle.setTooltip("Scale highlight on / off");
     scaleToggle.onClick = [this]
     {
@@ -757,9 +757,11 @@ PianoRollView::PianoRollView(model::Document& document, engine::Transport& trans
     };
     for (auto* box : {&scaleBox, &rootBox})
     {
+        makeSegment(*box);
         box->setWantsKeyboardFocus(false);
         addAndMakeVisible(*box);
     }
+    updateScaleColours();
 
     viewport.setViewedComponent(&grid, false);
     viewport.setScrollBarsShown(true, true);
@@ -1116,6 +1118,7 @@ void PianoRollView::refresh()
         repaint(0, 0, getWidth(), headerHeight);
     }
     scaleToggle.setToggleState(project.scaleOn, juce::dontSendNotification);
+    updateScaleColours(); // a no-op unless the colour changes
     scaleBox.setSelectedId(static_cast<int>(project.scale), juce::dontSendNotification);
     rootBox.setSelectedId(project.scaleRoot + 1, juce::dontSendNotification);
     updateGridSize();
@@ -1174,12 +1177,26 @@ void PianoRollView::paint(juce::Graphics& g)
     const auto& t = currentTheme();
     g.fillAll(colour(t.colours.panel));
     paintPanelHeader(g, getLocalBounds().removeFromTop(headerHeight), "Piano roll", {},
-                     scaleToggle.getX());
+                     scaleGroupArea.getX());
+    paintSegmentGroup(g, scaleGroupArea, {&scaleToggle, &rootBox, &scaleBox});
     // The channel and pattern, after the scale controls.
     g.setColour(colour(t.colours.textDim));
     g.setFont(juce::FontOptions(metrics::textBody));
     g.drawText(subtitle, subtitleArea, juce::Justification::centredLeft, true);
     paintHeaderLabel(g, "Snap", snapLabelArea);
+}
+
+void PianoRollView::lookAndFeelChanged()
+{
+    updateScaleColours();
+}
+
+void PianoRollView::updateScaleColours()
+{
+    const auto& c = currentTheme().colours;
+    for (auto* box : {&rootBox, &scaleBox})
+        box->setColour(juce::ComboBox::textColourId,
+                       colour(scaleToggle.getToggleState() ? c.text : c.textDim));
 }
 
 void PianoRollView::resized()
@@ -1194,9 +1211,13 @@ void PianoRollView::resized()
     // Right after the title: the scale highlight, then the channel and pattern.
     header.fromLeft(textWidth(semiboldFont(metrics::textLarge), "Piano roll") +
                     metrics::controlGap);
-    scaleToggle.setBounds(header.fromLeft(metrics::ledWidth + 6));
-    rootBox.setBounds(header.fromLeft(metrics::narrowComboWidth));
-    scaleBox.setBounds(header.fromLeft(metrics::comboWidth));
+    const int switchWidth = scaleToggle.preferredWidth(metrics::controlHeight);
+    scaleGroupArea = header.fromLeft(switchWidth + metrics::narrowComboWidth + metrics::comboWidth);
+    auto group = scaleGroupArea;
+    scaleToggle.setBounds(group.removeFromLeft(switchWidth));
+    rootBox.setBounds(group.removeFromLeft(metrics::narrowComboWidth));
+    scaleBox.setBounds(group);
+    header.fromLeft(0); // a gap before the subtitle like the one after the title
     subtitleArea = header.remaining();
 
     auto top = area.removeFromTop(rulerHeight);

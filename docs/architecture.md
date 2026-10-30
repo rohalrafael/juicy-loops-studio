@@ -477,6 +477,9 @@ faders and knobs, step keys with an LED. The theme file format is in [themes.md]
   reports the mouse's movement since the press, read from the system, so it holds while the panel
   (a native window) moves. `MainComponent` keeps the sizes, in the settings
 - `joinSegments()`: buttons drawn as one segmented control (PAT | SONG, 16 | 32 | 64)
+- `paintSegmentGroup()` + `LedSwitch` + `makeSegment()`: controls of different kinds as one
+  segmented control (the Piano Roll's ● Scale | key | mode). The parent paints the raised box and
+  hairlines; the segments draw no box of their own
 - `paintPanelHeader()` + `HeaderLayout`: every panel's header (title, dim subtitle, controls
   from the right)
 - `paintDisplayBox()` and `NumberField`: recessed number boxes (tempo, settings, the Sampler),

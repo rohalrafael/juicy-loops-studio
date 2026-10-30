@@ -352,7 +352,7 @@ The right-hand column has cutting and the envelope:
 | Shift+D | Shorten the selected notes (all if none are selected) to one step |
 | Slice (top right) or Alt+U | Cut the selected notes (all notes if none are selected) into pieces of the chosen size: 1/4, 1/8, 1/8 T, 1/16, 1/16 T, 1/32, 1/64 |
 | Click and hold a key on the left | Play that note (slide to play others) |
-| Scale (title bar, after "Piano roll") | The green light turns the scale highlight on / off; then the key (choosing one turns the highlight on) and Major / Minor. Key and mode are kept while it's off; new projects start with Settings › Default scale |
+| Scale (title bar, after "Piano roll") | One control: click **● Scale** (the light or the word) to turn the scale highlight on / off; then the key (choosing one turns the highlight on) and Major / Minor. Key and mode are kept, greyed, while it's off; new projects start with Settings › Default scale |
 
 The slicer is for rolls (hi-hats, snares): draw one long note, slice it, then shape the pieces'
 velocities. The pieces stay selected, so slicing again makes them finer.

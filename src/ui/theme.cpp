@@ -148,7 +148,10 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool, i
         juce::Rectangle<float>(static_cast<float>(width), static_cast<float>(height))
             .reduced(metrics::borderWidth / 2.0f);
     const bool hover = box.isMouseOver(true) && box.isEnabled();
-    paintOutlinedBox(g, bounds, buttonFill(colour(c.panelRaised), hover, false));
+    if (!isSegment(box))
+        paintOutlinedBox(g, bounds, buttonFill(colour(c.panelRaised), hover, false));
+    else if (hover)
+        paintSegmentHover(g, bounds, false); // the group paints the box (paintSegmentGroup)
     const float icon = static_cast<float>(metrics::iconSize);
     const auto chevron =
         juce::Rectangle<float>(static_cast<float>(width - metrics::iconSize - chevronInset),

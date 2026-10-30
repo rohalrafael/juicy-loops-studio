@@ -581,3 +581,8 @@ not). Older entries describe the project as it was then; later entries may super
     the mode from Settings › Default scale (Major).
   - The window buttons' LEDs only say whether a window is open; the Ctrl+Tab order cue is gone
     (the maintainer wants to rethink Ctrl+Tab as a whole).
+  - Follow-up: a lone light didn't say what it switched, and the three controls read as
+    unrelated. They're now one segmented control, `● Scale | key | mode`
+    (`ui::LedSwitch` + `paintSegmentGroup()`), with the key and mode dimmed while off. The
+    maintainer chose it over a recessed well (heavy, a new surface) and an accent-lit block (the
+    light already says "on"). The rack's loop column also widened from 20 to 30 px.

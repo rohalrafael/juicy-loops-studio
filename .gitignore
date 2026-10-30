@@ -10,3 +10,5 @@ build-docker/
 build-dist/
 dist/
 CLAUDE.local.md
+# screenshots.sh writes one image per theme too; the README uses only the grid (themes.webp)
+docs/images/theme-*.webp

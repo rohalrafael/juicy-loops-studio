@@ -22,14 +22,19 @@ starting one.
 - A GitHub README that shows the app off (2026-10-30, maintainer's request): what it does, why
   it feels natural to FL users, what it adds, with screenshots, including the themes. Steps:
   1. A showcase project: a full, good-looking beat (original, our own sounds) to photograph.
+     Done: `tools/showcase-project.py` generates one, sounds included (2026-10-30); the
+     maintainer may swap in their own beat later.
   2. A screenshot script (sandbox, Xvfb, fixed window size) that regenerates every README image
      from that project, so the images never go stale; small WebP files in `docs/images/`.
-     Done: `tools/screenshots.sh` (2026-10-30); images not taken for real yet.
+     Done: `tools/screenshots.sh` (2026-10-30), with `--play` for shots while playing; the
+     images are in `docs/images/`. Redo them once the maintainer's UI changes are in.
   3. More themes (direction to agree first), and a theme gallery image. Themes done (seven
      built in, 2026-10-30); the gallery is the script's `themes` scene.
   4. The README itself: hero shot, "Coming from FL Studio" (same concepts, same shortcuts),
      what's different or extra (each claim about FL checked against its current manual),
      install, build. FL named only descriptively, with the existing not-affiliated note.
+     Done (2026-10-30), without claims about what FL lacks; check any such claim against FL's
+     manual before adding it.
   Maintainer's answers: images in the repo are fine; the README stresses how familiar it is to
   FL users and where it makes things easier (scale highlighting, Ctrl+Tab, key bindings) rather
   than what FL lacks; themes in a dark, neon, underground trap / EDM direction (black + pink,

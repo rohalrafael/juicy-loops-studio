@@ -79,6 +79,15 @@ The project decides what's in the pictures (its patterns, notes, arrangement, ef
 pattern); `--help` lists the options. Panels are cropped by their windows' titles, so the
 crops follow layout changes; it warns when a panel is larger than the screen.
 
+The README's images come from the showcase project, a beat and a drum kit that
+`tools/showcase-project.py` synthesises (no audio in the repo). To redo them after a UI change:
+
+```sh
+python3 tools/showcase-project.py /tmp/jls-ui-test/showcase
+tools/sandbox.sh run tools/screenshots.sh --play 9 --out docs/images \
+    --samples "/tmp/jls-ui-test/showcase/Neon Ruins Kit" "/tmp/jls-ui-test/showcase/Neon Ruins.jlp"
+```
+
 `--play SECONDS` shoots while the project plays (the sandbox's JACK dummy device drives it), so
 the time display, play heads, meters and scope show it. The Channel Rack and Piano Roll scenes
 switch to PAT mode first, since in song mode their play heads give way to the Playlist's; the

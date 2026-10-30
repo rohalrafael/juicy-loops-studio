@@ -257,6 +257,11 @@ class MainComponent final : public juce::AudioAppComponent,
     std::unique_ptr<ui::TitleBar> titleBar;
     // Where the window was before the title bar maximized it, without a window manager to ask.
     std::optional<juce::Rectangle<int>> boundsBeforeMaximise;
+    // Linux: the window is resized by invisible edges the window manager drives, with no border
+    // (app/native_windows). Fitted to the window after each resize and maximize / restore.
+    void updateResizeEdges();
+    bool resizeEdges = false;
+    bool resizeEdgesPlaced = false; // the window exists only after construction
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

@@ -410,7 +410,12 @@ which gives:
   it's inside our window (a plugin's child window counts), so `app/native_windows` sets it with
   Xlib (the app links libX11 for this). The same file maximizes and restores the main window
   through the window manager for our title bar (`ui::TitleBar::setMaximised`), since JUCE's full
-  screen only resizes a window without the system's title bar.
+  screen only resizes a window without the system's title bar. It also resizes the main window
+  with no visible border: twelve invisible input-only X windows along its edges and corners,
+  stacked above the areas (which reach the edges), hand a drag to the window manager
+  (`_NET_WM_MOVERESIZE`), as GTK's own title bars do; hidden while maximized. The main window
+  keeps its contents while resized (bit gravity), since its X background colour would otherwise
+  wipe it at every step.
 - **Areas as native windows (Linux).** JUCE can't draw over a plugin's native window, so on
   Linux every area that can overlap a plugin panel (Browser, Playlist, Piano Roll, Mixer,
   Channel Rack, effect panel, Sampler and the plugin panels themselves) is a native child window
@@ -435,7 +440,8 @@ which gives:
   dialogs, and plugin editors when set to separate windows
 - window frames: no system title bars (except on macOS). The main window's top row is
   `ui::TitleBar` (menus, name, minimize / maximize / close, drag to move, double-click to
-  maximize; the window keeps JUCE's resizable border). Other windows call
+  maximize). On Linux the window is resized by invisible edges (above); JUCE's resizable border
+  is only used where the window manager can't do that. Other windows call
   `ui::useOwnTitleBar()` and get the title bar the LookAndFeel draws
   (`drawDocumentWindowTitleBar`, `createDocumentWindowButton` -> `ui::TitleButton`).
   Turning the native title bar off makes JUCE create a new native window, so UI tests pick the

@@ -49,6 +49,8 @@ class TitleBar final : public juce::Component, private juce::Timer
     // moment after a resize, to make JUCE read it again (optional). JUCE reads it without laying
     // the window out again (the size hasn't changed), so the title bar then does that itself.
     std::function<void()> resyncWindow;
+    // Called a moment after each resize, once the window manager's state has settled (optional).
+    std::function<void()> windowSettled;
 
     // Call when the window's name changes (it's drawn in the middle).
     void titleChanged() { repaint(); }

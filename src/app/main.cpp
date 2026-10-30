@@ -2,6 +2,7 @@
 // window, and opens a project named on the command line. Shutdown closes dialogs first because
 // they reference the ThemeManager.
 
+#include "app/native_windows.h"
 #include "main_component.h"
 #include "model/project_file.h"
 #include "ui/settings_dialog.h"
@@ -52,6 +53,15 @@ class MainWindow final : public juce::DocumentWindow
         return DocumentWindow::hitTest(x, y);
     }
 
+    // Where the window manager can resize the window by invisible edges (app/native_windows), the
+    // content fills it: no border of JUCE's, the theme's background colour, around it.
+    juce::BorderSize<int> getContentComponentBorder() const override
+    {
+        if (resizesByEdges)
+            return {};
+        return DocumentWindow::getContentComponentBorder();
+    }
+
     void lookAndFeelChanged() override
     {
         DocumentWindow::lookAndFeelChanged();
@@ -59,6 +69,12 @@ class MainWindow final : public juce::DocumentWindow
     }
 
   private:
+#if JUCE_LINUX || JUCE_BSD
+    const bool resizesByEdges = app::canResizeNativeWindowEdges();
+#else
+    const bool resizesByEdges = false;
+#endif
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 

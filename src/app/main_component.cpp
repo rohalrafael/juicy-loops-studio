@@ -232,6 +232,11 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
             if (auto* peer = getPeer())
                 app::refreshNativeWindowState(peer->getNativeHandle());
         };
+        titleBar->windowSettled = [this] { updateResizeEdges(); };
+        resizeEdges = app::canResizeNativeWindowEdges();
+        if (resizeEdges)
+            juce::LinuxEventLoop::registerFdCallback(app::nativeEventsFd(),
+                                                     [](int) { app::handleNativeEvents(); });
     }
     else
     {
@@ -297,6 +302,10 @@ MainComponent::MainComponent(ui::ThemeManager& themeManager)
 
 MainComponent::~MainComponent()
 {
+#if JUCE_LINUX || JUCE_BSD
+    if (resizeEdges)
+        juce::LinuxEventLoop::unregisterFdCallback(app::nativeEventsFd());
+#endif
 #if JUCE_MAC
     juce::MenuBarModel::setMacMainMenu(nullptr);
 #endif
@@ -1243,8 +1252,21 @@ void MainComponent::paint(juce::Graphics& g)
         ui::paintDisplayBox(g, clockBounds.toFloat());
 }
 
+void MainComponent::updateResizeEdges()
+{
+    if (!resizeEdges)
+        return;
+    if (auto* peer = getPeer())
+    {
+        auto* window = peer->getNativeHandle();
+        app::updateNativeResizeEdges(window, !app::isNativeWindowMaximised(window));
+        resizeEdgesPlaced = true;
+    }
+}
+
 void MainComponent::resized()
 {
+    updateResizeEdges();
     auto bounds = getLocalBounds();
     if (titleBar)
         titleBar->setBounds(bounds.removeFromTop(ui::TitleBar::height));
@@ -2190,6 +2212,8 @@ void MainComponent::showAbout()
 void MainComponent::timerCallback()
 {
     areas.update(); // the main window exists only after construction (and may be recreated)
+    if (resizeEdges && !resizeEdgesPlaced)
+        updateResizeEdges();
     forgetClosedPlugins();
     // JUCE tells the component under the mouse when modifiers change, which reaches us only
     // through its parents: not from an area that is a native window of its own. Catch the

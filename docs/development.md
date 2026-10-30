@@ -46,7 +46,11 @@ your pointer). Things to know about Xvfb (no window manager):
   reset what you changed (e.g. the theme) after testing.
 - Maximize and restore depend on the window manager, and Xvfb has none.
   `tools/gnome-maximize-test.sh` plays GNOME's part (the resize first, `_NET_WM_STATE` just
-  after) and checks the resize border follows. Faking a window manager by hand: start Xvfb with
+  after) and checks the window's edges follow (no border; resize edges only while restored).
+  For real resizing by the edges, run the app under `openbox` (not in the sandbox image:
+  `apt install openbox` in the container as root, gone on the next `tools/sandbox.sh build`).
+  To see what the X server shows before the app repaints (flicker), stop the app with
+  `kill -STOP`, resize it, screenshot, then `kill -CONT`. Faking a window manager by hand: start Xvfb with
   `-noreset`, list `_NET_WM_STATE` in the root's `_NET_SUPPORTED` before the app starts (JUCE
   looks the atoms up once), and set atom lists with Xlib (`xprop -set` stores a single atom).
 - To screenshot a window on a real X/XWayland session without the rest of the screen:

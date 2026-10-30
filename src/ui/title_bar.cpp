@@ -129,6 +129,8 @@ void TitleBar::timerCallback()
             w->repaint();
         }
     }
+    if (resyncsLeft == 0 && windowSettled)
+        windowSettled();
     updateMaximiseIcon();
 }
 

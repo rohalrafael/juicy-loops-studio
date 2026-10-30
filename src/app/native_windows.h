@@ -16,11 +16,14 @@ namespace jls::app
 // app has the focus: it doesn't check.
 void focusNativeWindow(void* nativeWindow);
 
-// Stacks sibling child windows in this order, the first on top (see AreaStack).
+// Stacks sibling child windows in this order, the first on top (see AreaStack). The resize edges
+// (updateNativeResizeEdges) stay above them all.
 void restackNativeWindows(const std::vector<void*>& frontToBack);
 
 // The colour (0xRRGGBB) the X server fills a window with where it's exposed, before the app
-// repaints there: where a child window was just hidden or moved away.
+// repaints there: where a child window was just hidden or moved away. The window also keeps its
+// contents when resized (bit gravity), or the X server would fill all of it with this colour at
+// every step of a resize: the title and transport bars flickered.
 void setNativeWindowBackground(void* nativeWindow, std::uint32_t rgb);
 
 // Maximizes or restores a top-level window through the window manager (_NET_WM_STATE), as the
@@ -39,5 +42,19 @@ void refreshNativeWindowState(void* nativeWindow);
 // Whether a window manager that maximizes on request is running (it lists the maximized states
 // in _NET_SUPPORTED); without one, JUCE's resize is all there is.
 bool canMaximiseNativeWindows();
+
+// Resizing a top-level window without the system's frame (ours) by its edges, with no visible
+// border: invisible input-only windows along its edges and corners, stacked above its child
+// windows (the docked panels reach the edges), hand a drag to the window manager
+// (_NET_WM_MOVERESIZE), as GTK's own title bars do. Whether the window manager supports it; if
+// not, JUCE's resizable border it is.
+bool canResizeNativeWindowEdges();
+// Creates the edges on first use, fits them to the window's current size and shows them, or
+// hides them (while maximized). Call after every resize and change of maximized state.
+void updateNativeResizeEdges(void* nativeWindow, bool show);
+// Our X connection's file descriptor (-1 without one), to watch for the edges' mouse presses;
+// then call handleNativeEvents().
+int nativeEventsFd();
+void handleNativeEvents();
 
 } // namespace jls::app

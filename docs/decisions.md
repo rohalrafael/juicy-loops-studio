@@ -544,6 +544,13 @@ not). Older entries describe the project as it was then; later entries may super
   fix it. JUCE then had the state right but lays the window out only when its size changes, so
   the border kept the old state until the next resize; the title bar now lays it out itself once
   JUCE agrees. Reproduced on Xvfb by playing GNOME's order (`tools/gnome-maximize-test.sh`).
+  Then the maintainer asked for no border at all (GNOME windows have none), and pointed out
+  the title and transport bars flickering during a resize. The border is gone where the window
+  manager supports `_NET_WM_MOVERESIZE` (GNOME, KDE, most others): invisible edge windows hand
+  the drag to it, as GTK does, so the panels can reach the window's edges. JUCE's border can't
+  do that: it's drawn under the panels' native windows, which take the mouse. The flicker came
+  from the seam fix: an X background colour on the main window makes the X server wipe it at
+  every step of a resize, unless its bit gravity keeps the contents (now set).
 
 - 2026-10-30: **Surfaces and data: a more serious look** (maintainer's choice from the second
   look study, branch `pro-look-2`). Three directions were prototyped as real screenshots:

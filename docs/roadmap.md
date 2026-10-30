@@ -28,6 +28,11 @@ starting one.
   4. The README itself: hero shot, "Coming from FL Studio" (same concepts, same shortcuts),
      what's different or extra (each claim about FL checked against its current manual),
      install, build. FL named only descriptively, with the existing not-affiliated note.
+  Maintainer's answers: images in the repo are fine; the README stresses how familiar it is to
+  FL users and where it makes things easier (scale highlighting, Ctrl+Tab, key bindings) rather
+  than what FL lacks; themes in a dark, neon, underground trap / EDM direction (black + pink,
+  white + baby blue as starting points, drafts shown 2026-10-30); no final screenshots until the
+  maintainer's remaining UI changes are in.
 
 - Rethink Ctrl+Tab (2026-10-29, maintainer's note, to discuss): the whole focus / Ctrl+Tab
   model deserves a fresh look before adding more to it. (The window buttons' LEDs now just show

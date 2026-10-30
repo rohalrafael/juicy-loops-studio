@@ -1,6 +1,6 @@
 # Juicy Loops Studio
 
-A free, open-source beat-making DAW for Linux, Windows and macOS. If you've made beats in
+A free, open-source beat-making DAW for Linux and Windows. If you've made beats in
 FL Studio, you already know how to use it: the same Channel Rack, Piano Roll, pattern-based
 Playlist and Mixer, the same shortcuts, the same clicks. It runs natively on Linux (ALSA, JACK,
 PipeWire; no Wine).
@@ -143,6 +143,8 @@ projects (`.jlp`) and export to WAV.
 
 Not there yet: recording, automation and mixer sends. See the [roadmap](docs/roadmap.md).
 
+macOS isn't supported for now: the app isn't built or tested there yet.
+
 The [user guide](docs/user-guide.md) lists every window, click and shortcut.
 
 ## Building from source
@@ -169,7 +171,7 @@ sudo pacman -S base-devel cmake ninja git alsa-lib jack2 freetype2 fontconfig li
 ```
 
 On Windows, install Visual Studio 2022 with *Desktop development with C++*, which includes
-CMake. On macOS, install the Xcode command line tools and CMake (`brew install cmake`).
+CMake.
 
 ### 2. Build
 
@@ -183,8 +185,7 @@ cmake --build build --config Release --parallel
 ### 3. Run
 
 The app is in `build/src/app/JuicyLoopsStudio_artefacts/Release/`: `Juicy Loops Studio` on
-Linux, `Juicy Loops Studio.exe` on Windows, `Juicy Loops Studio.app` on macOS. Give it a
-project file to open it right away:
+Linux, `Juicy Loops Studio.exe` on Windows. Give it a project file to open it right away:
 
 ```sh
 "build/src/app/JuicyLoopsStudio_artefacts/Release/Juicy Loops Studio" song.jlp

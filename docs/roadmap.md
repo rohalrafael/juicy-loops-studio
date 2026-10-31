@@ -19,6 +19,13 @@
 Agreed features not started yet (newest first). Maintainers decide what's next; ask before
 starting one.
 
+- Installable packages (2026-10-31, maintainer's request; not before the first release, which
+  isn't ready yet). CI now makes a `.tar.gz` (Linux) and a `.zip` (Windows) per run, and a `v*`
+  tag publishes them as a GitHub release. Add, with CPack in the same CI jobs: a `.deb` (apt,
+  menu entry and icon; Debian, Ubuntu, Mint, Pop!_OS), an AppImage (one file, most distros;
+  built on 24.04 like the rest) and a Windows installer (NSIS: Start menu, uninstaller). Keep
+  the `.zip`. The apps aren't signed, so Windows SmartScreen warns "unknown publisher" until
+  someone pays for a code-signing certificate.
 - A GitHub README that shows the app off (2026-10-30, maintainer's request): what it does, why
   it feels natural to FL users, what it adds, with screenshots, including the themes. Steps:
   1. A showcase project: a full, good-looking beat (original, our own sounds) to photograph.

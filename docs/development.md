@@ -96,8 +96,10 @@ Browser scene and the close-ups of dialogs stay stopped.
 The `features` scene takes the README's close-ups (`feature-*.webp`): the app at interface size
 200 % on a screen twice as large, so the layout is the one the other scenes see but the crops
 have twice the pixels and stay sharp shown large. Its crops are in interface pixels from a
-panel's or dialog's corner (`shot_part`), so a layout change may need them adjusted: check the
-images after a UI change.
+panel's or dialog's corner (`shot_part`), so a layout change may need them adjusted.
+
+Every UI change retakes the images (the commands above) in the same pull request, and the crops
+are checked, so the README always shows the app as it is.
 
 Sound can't be checked this way: export a WAV and analyse it (length, level, pitch), or listen.
 

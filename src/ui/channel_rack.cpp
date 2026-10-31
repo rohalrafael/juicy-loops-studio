@@ -26,15 +26,44 @@ constexpr int handleWidth = 12; // the length handle after the last step column
 constexpr int stepMargin = 3;   // above and below the step keys (and a note preview)
 
 // A row, left to right (see ChannelRow::resized): mute LED, pan and volume knobs, mixer track,
-// name, loop switch, steps.
-constexpr int columnGap = 4;  // after the LED, each knob and the mixer track
-constexpr int loopWidth = 30; // a row's loop switch, after the steps, with room around it
+// name, selection light, steps, loop switch.
+constexpr int columnGap = 4;       // after the LED, each knob and the mixer track
+constexpr int selectionWidth = 14; // the selection light with room on both sides
+constexpr int loopWidth = 30;      // a row's loop switch, after the steps, with room around it
 constexpr int nameX = metrics::ledWidth + columnGap + 2 * (metrics::knobSize + columnGap) +
                       metrics::insertWidth + columnGap;
 // Everything in a row except the steps.
-constexpr int rowFixedWidth = nameX + metrics::nameWidth + loopWidth;
+constexpr int rowFixedWidth = nameX + metrics::nameWidth + selectionWidth + loopWidth;
 
 } // namespace
+
+// ------------------------------------------------------------------------------- SelectionLed
+
+void SelectionLed::setOn(bool shouldBeOn)
+{
+    if (on != shouldBeOn)
+    {
+        on = shouldBeOn;
+        repaint();
+    }
+}
+
+void SelectionLed::paint(juce::Graphics& g)
+{
+    const auto& c = currentTheme().colours;
+    const auto led = getLocalBounds().toFloat().withSizeKeepingCentre(5.0f, 18.0f);
+    // Unlit, a dark recessed lamp with a rim, like the mute light.
+    g.setColour(colour(on ? c.accent : c.display));
+    g.fillRoundedRectangle(led, 1.5f);
+    g.setColour(colour(on ? c.outline : c.ledOff));
+    g.drawRoundedRectangle(led, 1.5f, 1.0f);
+}
+
+void SelectionLed::mouseDown(const juce::MouseEvent&)
+{
+    if (onClick)
+        onClick();
+}
 
 // ---------------------------------------------------------------------------------- InsertBox
 
@@ -375,6 +404,7 @@ ChannelRow::ChannelRow(ChannelRack& owner, model::ChannelId channel) : rack(owne
     setUpKnobs();
     setUpInsert();
     setUpName();
+    setUpSelectionLed();
     setUpLoop();
     setUpSteps();
 }
@@ -470,6 +500,14 @@ void ChannelRow::setUpName()
     addAndMakeVisible(name);
 }
 
+void ChannelRow::setUpSelectionLed()
+{
+    selectionLed.setTooltip("Selected channel: the Piano Roll edits it, the Browser loads into it. "
+                            "Click to select");
+    selectionLed.onClick = [this] { rack.select(id); };
+    addAndMakeVisible(selectionLed);
+}
+
 void ChannelRow::setUpLoop()
 {
     loop.setTooltip("Loop this channel: repeat its notes when the pattern is longer");
@@ -525,6 +563,7 @@ void ChannelRow::update(const model::Channel& channel, const model::Project& pro
     insert.setValue(channel.mixerTrack);
     const bool isSelected = project.selectedChannel == channel.id;
     name.setToggleState(isSelected, juce::dontSendNotification);
+    selectionLed.setOn(isSelected);
     if (isSelected != selected)
     {
         selected = isSelected;
@@ -581,6 +620,7 @@ void ChannelRow::resized()
     insert.setBounds(area.removeFromLeft(metrics::insertWidth));
     area.removeFromLeft(columnGap);
     name.setBounds(area.removeFromLeft(metrics::nameWidth).reduced(0, 2));
+    selectionLed.setBounds(area.removeFromLeft(selectionWidth));
     loop.setBounds(area.removeFromRight(loopWidth)); // at the end of the row
     steps.setBounds(area);
 }
@@ -923,9 +963,7 @@ void ChannelRack::refresh()
         rows[i]->update(*shown[i], project);
 
     loopButton.setToggleState(project.loopChannels, juce::dontSendNotification);
-    const int gridSteps = project.current().gridSteps;
-    for (std::size_t i = 0; i < lengthButtons.size(); ++i)
-        lengthButtons[i].setToggleState(gridSteps == (16 << i), juce::dontSendNotification);
+    repaint(subtitleArea); // the pattern's name
     resized(); // places new rows; the step area (and the handle) follow the pattern length
 
     if (onSizeChanged)
@@ -946,10 +984,17 @@ int ChannelRack::preferredHeight() const
 
 void ChannelRack::paint(juce::Graphics& g)
 {
-    // Title bar: "Channel rack" and the pattern being edited.
-    paintFloatingPanel(g, *this, "Channel rack",
-                       juce::String::fromUTF8(doc.project().current().name.c_str()),
-                       loopButton.getX() - metrics::controlGap);
+    // Title bar: "Channel rack", 16 | 32 | 64, then the pattern being edited, all in the part
+    // that's in view (see resized()).
+    paintFloatingPanel(g, *this, {}, {}, 0);
+    const auto& t = currentTheme();
+    g.setColour(colour(t.colours.text));
+    g.setFont(semiboldFont(metrics::textLarge));
+    g.drawText("Channel rack", titleArea, juce::Justification::centredLeft, true);
+    g.setColour(colour(t.colours.textDim));
+    g.setFont(juce::FontOptions(metrics::textBody));
+    g.drawText(juce::String::fromUTF8(doc.project().current().name.c_str()), subtitleArea,
+               juce::Justification::centredLeft, true);
     paintFloatingBorder(g, *this);
 }
 
@@ -976,21 +1021,36 @@ void ChannelRack::paintOverChildren(juce::Graphics& g)
 void ChannelRack::resized()
 {
     auto bounds = getLocalBounds();
-    // A long pattern can make the rack wider than the window: the header's controls stay at the
-    // right edge of the part that's in view.
+    // A long pattern can make the rack wider than the window: the header (title and controls)
+    // stays within the part that's in view.
     constexpr int minHeaderWidth = 300;
     auto headerArea = bounds.removeFromTop(headerHeight);
     if (!movableArea.isEmpty())
+    {
         headerArea.setRight(
             std::min(getWidth(), std::max(minHeaderWidth, movableArea.getRight() - getX())));
+        headerArea.setLeft(
+            std::clamp(movableArea.getX() - getX(), 0, headerArea.getRight() - minHeaderWidth));
+    }
     HeaderLayout header(headerArea);
     closeButton.setBounds(header.fromRight(metrics::controlHeight));
-    // 16 | 32 | 64 as one segmented control: the segments touch.
+    loopButton.setBounds(header.fromRight(loopButton.preferredWidth(metrics::controlHeight)));
+    // Right after the title: 16 | 32 | 64 as one segmented control (the segments touch), then
+    // the pattern's name.
+    const auto oldTitle = titleArea;
+    titleArea = header
+                    .fromLeft(textWidth(semiboldFont(metrics::textLarge), "Channel rack") +
+                              metrics::controlGap)
+                    .withY(headerArea.getY())
+                    .withHeight(headerHeight);
     const int segment = buttonWidth("64", metrics::controlHeight);
-    auto lengths = header.fromRight(3 * segment);
+    auto lengths = header.fromLeft(3 * segment);
     for (auto& button : lengthButtons)
         button.setBounds(lengths.removeFromLeft(segment));
-    loopButton.setBounds(header.fromRight(loopButton.preferredWidth(metrics::controlHeight)));
+    header.fromLeft(0); // a gap before the pattern's name like the one after the title
+    subtitleArea = header.remaining();
+    if (titleArea != oldTitle) // moved: the title and the pattern's name are painted, not children
+        repaint(headerArea.withX(0).withWidth(getWidth()));
 
     auto area = bounds.reduced(padding);
     const int rowsTop = area.getY();

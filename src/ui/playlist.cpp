@@ -31,26 +31,32 @@ juce::Colour audioClipColour(const theme::Theme& t)
 // outlined in it, a solid name bar on top, and the notes or waveform in the colour itself.
 constexpr float nameBarHeight = 14.0f;
 
-void paintClipBody(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour clipColour,
-                   bool selected)
+void paintClipBody(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour clipColour)
 {
     const float radius = metrics::cornerRadius;
     g.setColour(clipColour.withAlpha(0.22f));
     g.fillRoundedRectangle(bounds, radius);
     g.setColour(clipColour.withAlpha(0.6f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), radius, 1.0f);
-    if (selected)
-    {
-        g.setColour(colour(currentTheme().colours.accentAlt));
-        g.drawRoundedRectangle(bounds.reduced(1.0f), radius, 2.0f);
-    }
+}
+
+// The selection outline, drawn last so it runs around the name bar too instead of under it.
+void paintClipSelection(juce::Graphics& g, juce::Rectangle<float> bounds)
+{
+    g.setColour(colour(currentTheme().colours.accentAlt));
+    g.drawRoundedRectangle(bounds.reduced(1.0f), metrics::cornerRadius, 2.0f);
 }
 
 void paintClipName(juce::Graphics& g, juce::Rectangle<float> bar, juce::Colour clipColour,
                    const juce::String& name)
 {
+    // Rounded at the top like the clip, so the bar reads as part of it.
+    juce::Path shape;
+    shape.addRoundedRectangle(bar.getX(), bar.getY(), bar.getWidth(), bar.getHeight(),
+                              metrics::cornerRadius, metrics::cornerRadius, true, true, false,
+                              false);
     g.setColour(clipColour);
-    g.fillRect(bar);
+    g.fillPath(shape);
     g.setColour(colour(currentTheme().colours.clipText));
     g.setFont(mediumFont(metrics::textSmall));
     g.drawText(name, bar.reduced(4.0f, 0.0f), juce::Justification::centredLeft, true);
@@ -602,7 +608,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         if (!g.getClipBounds().toFloat().intersects(bounds))
             return;
         const auto clipColour = audioClipColour(t);
-        paintClipBody(g, bounds, clipColour, selected);
+        paintClipBody(g, bounds, clipColour);
         juce::Graphics::ScopedSaveState state(g);
         g.reduceClipRegion(bounds.toNearestInt());
         auto body = bounds;
@@ -630,6 +636,8 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
                            std::max(1.0f, (high - low) * half));
             }
         }
+        if (selected)
+            paintClipSelection(g, bounds);
         return;
     }
     const auto* pattern = project.findPattern(clip.pattern);
@@ -641,7 +649,7 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         return;
 
     const auto clipColour = colour(t.colours.clip);
-    paintClipBody(g, bounds, clipColour, selected);
+    paintClipBody(g, bounds, clipColour);
 
     juce::Graphics::ScopedSaveState state(g);
     g.reduceClipRegion(bounds.toNearestInt());
@@ -679,6 +687,8 @@ void PlaylistGrid::paintClip(juce::Graphics& g, const model::Clip& clip, bool se
         for (int r = patternSteps; r < clip.lengthInSteps; r += patternSteps)
             g.fillRect(bounds.getX() + view.xForStep(r), body.getY(), 1.0f, body.getHeight());
     }
+    if (selected)
+        paintClipSelection(g, bounds);
 }
 
 // ------------------------------------------------------------------------------------ Picker

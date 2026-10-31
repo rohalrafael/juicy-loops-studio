@@ -27,7 +27,7 @@ starting one.
   2. A screenshot script (sandbox, Xvfb, fixed window size) that regenerates every README image
      from that project, so the images never go stale; small WebP files in `docs/images/`.
      Done: `tools/screenshots.sh` (2026-10-30), with `--play` for shots while playing; the
-     images are in `docs/images/`. Redo them once the maintainer's UI changes are in.
+     images are in `docs/images/`, retaken with every UI change.
   3. More themes (direction to agree first), and a theme gallery image. Themes done (seven
      built in, 2026-10-30); the gallery is the script's `themes` scene.
   4. The README itself: hero shot, "Coming from FL Studio" (same concepts, same shortcuts),

@@ -137,8 +137,24 @@ class StepGrid final : public juce::Component
     int lastPainted = -1; // the step the current press painted last
 };
 
+// A thin upright light between a channel's name and its steps: lit on the selected channel (the
+// one the Piano Roll edits and the Browser loads into), as in FL. Clicking it selects the channel
+// without showing its window.
+class SelectionLed final : public juce::Component, public juce::SettableTooltipClient
+{
+  public:
+    void setOn(bool shouldBeOn);
+    std::function<void()> onClick;
+
+    void paint(juce::Graphics& g) override;
+    void mouseDown(const juce::MouseEvent&) override;
+
+  private:
+    bool on = false;
+};
+
 // One channel's row in the rack, left to right: mute LED, pan and volume knobs, mixer track,
-// name button, loop switch and the steps. Its edits go through the rack.
+// name button, selection light, the steps and the loop switch. Its edits go through the rack.
 class ChannelRow final : public juce::Component
 {
   public:
@@ -159,6 +175,7 @@ class ChannelRow final : public juce::Component
     void setUpKnobs();
     void setUpInsert();
     void setUpName();
+    void setUpSelectionLed();
     void setUpLoop();
     void setUpSteps();
     // Applies `change` to this row's channel as an undoable edit.
@@ -174,6 +191,7 @@ class ChannelRow final : public juce::Component
     juce::Slider volume;
     InsertBox insert;
     juce::TextButton name;
+    SelectionLed selectionLed;
     LoopToggle loop;
     StepGrid steps;
     int knobGesture = 0;       // the gesture of the knob being dragged
@@ -297,11 +315,13 @@ class ChannelRack final : public juce::Component,
     std::vector<std::unique_ptr<ChannelRow>> rows;
     IconButton addButton{Icon::add};
     IconButton loopButton{Icon::loop, "Loop"}; // Project::loopChannels
-    // Steps shown: 16 | 32 | 64 (none lit after dragging the handle to another length).
+    // Show 16 | 32 | 64 steps: one-shot buttons, never lit, since the handle sets any length.
     std::array<juce::TextButton, 3> lengthButtons{juce::TextButton{"16"}, juce::TextButton{"32"},
                                                   juce::TextButton{"64"}};
     LengthHandle lengthHandle;
     IconButton closeButton{Icon::close};
+    juce::Rectangle<int> titleArea;    // "Channel rack", at the left of the part in view
+    juce::Rectangle<int> subtitleArea; // the pattern's name, after 16 | 32 | 64
     PanelDragger dragger;
     juce::Rectangle<int> movableArea;
     bool movingRack = false; // the current mouse press started on the title bar

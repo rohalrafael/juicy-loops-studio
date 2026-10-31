@@ -89,7 +89,8 @@ cmake --build build && ctest --test-dir build --output-on-failure
 clang-format -i <files you touched>
 ```
 
-- UI change: try it on Xvfb and look at the screenshots.
+- UI change: try it on Xvfb and look at the screenshots, then retake the README's images in the
+  same pull request (`docs/images/`, see `docs/development.md`).
 - Docs and `docs/decisions.md` updated; `docs/roadmap.md` if a milestone or backlog item moved.
 - Commits: a short summary line, then what changed and why. Keep the tree building at every
   commit.

@@ -635,3 +635,11 @@ not). Older entries describe the project as it was then; later entries may super
   changes skip the build; a single always-running "CI result" job is the required check, so
   they can still merge (a skipped matrix job can't be required reliably). A `v*` tag publishes a
   release with the Linux and Windows packages.
+- 2026-10-31: **A selection light in each Channel Rack row; 16 | 32 | 64 are one-shot buttons**
+  (maintainer's request). The name buttons ran straight into the steps. As in FL, a thin light
+  now sits between them, lit on the selected channel; clicking it selects without opening the
+  channel's window. 16 | 32 | 64 no longer stay lit, since dragging the length handle sets any
+  length and a lit button would mostly be wrong; they moved to the left of the title bar, after
+  its name, as the Piano Roll's scale controls do. A selected Playlist clip's outline is drawn
+  last, around its name bar too, so the bar no longer looks pasted on top. Screenshots are
+  retaken with every UI change.

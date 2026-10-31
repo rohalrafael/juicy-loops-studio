@@ -208,6 +208,7 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Left-click / drag over steps | Turn steps on (or off, if you started on a lit step); a step that's on lights the LED on its key |
 | Right-click / drag over steps | Turn steps off |
 | Click a channel name | Select the channel (the Piano Roll edits it), and show or hide its window: the plugin's for an instrument, the Sampler for a sample |
+| Light between the name and the steps | Lit on the selected channel; click it to select a channel without showing its window |
 | Right-click a channel name | Piano roll, show plugin / Sampler, Fill, **Clear** (remove its notes from this pattern), **Duplicate** (a copy of the channel right after it: its sample or plugin with the plugin's current settings, volume, pan and mixer track, without notes), rename, replace sample, use/replace an instrument plugin, delete (press **D** while the menu is open). Clear and Duplicate are also in View › Channel rack options, for the selected channel |
 | Delete (Channel Rack focused) | Delete the selected channel (Ctrl+Z brings it back) |
 | Ctrl+C / Ctrl+X / Ctrl+V (Channel Rack focused) | Copy or cut the selected channel's notes in this pattern; paste them into the selected channel (also another channel or pattern), replacing its notes |
@@ -220,7 +221,7 @@ longer than 2 minutes are cut at 2 minutes (for now).
 | Drop audio files below the rows | Add channels |
 | Click + | Add a channel: **Sample…** or **Instrument ›** (a plugin synth) |
 | Click a note preview | Open the Piano Roll for that channel |
-| 16 \| 32 \| 64 (title bar) | How many steps the rack shows. It doesn't grow by itself: a Piano Roll part longer than that still plays in full, but the rack shows only these steps |
+| 16 \| 32 \| 64 (title bar, after its name) | How many steps the rack shows (they don't stay lit: the handle sets other lengths too). It doesn't grow by itself: a Piano Roll part longer than that still plays in full, but the rack shows only these steps |
 | Drag the handle after the last step | Show more or fewer steps, 4 at a time |
 | **Loop** (title bar) | Loop on/off for the whole rack |
 | Circular arrow at the end of a row | Loop on/off for that channel |
@@ -241,7 +242,7 @@ again. Example: a 4-bar bass line with a 1-bar drum beat gives 4 bars of drums. 
 are greyed too. Because the loop length comes from the notes, a looping channel can't end with
 empty bars; switch its loop off (the arrow) to have it play once per pattern. Steps are always full
 size: at 32 or 64 steps the rack gets wider, past the window's edge if need be. Drag it by its
-title bar to see the rest; its Loop, 16 | 32 | 64 and close buttons stay in view.
+title bar to see the rest; its title, 16 | 32 | 64, Loop and close buttons stay in view.
 
 **Instrument plugins (VST3 / LV2).** Scan for plugins first (Options › Plugins…). Then add one
 with **+ › Instrument**, or turn an existing channel into one from its right-click menu. Its
